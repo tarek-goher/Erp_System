@@ -1,0 +1,269 @@
+/* ══════════════════════════════════════════════════════════
+   components/layout/Sidebar.css — ستايل الـ Sidebar
+   ══════════════════════════════════════════════════════════
+   الألوان كلها من متغيرات globals.css
+   هنا بس الـ layout والـ structure
+   ══════════════════════════════════════════════════════════ */
+
+/* ── الـ sidebar الأساسي ──────────────────────────────── */
+.sidebar {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: var(--sidebar-width);
+  background: var(--bg-sidebar);
+  border-color: var(--border);
+  border-style: solid;
+  border-width: 0;
+  display: flex;
+  flex-direction: column;
+  z-index: 200;
+  transition: width var(--transition-slow);
+  overflow: hidden;
+}
+
+/* اتجاه الحدود حسب اللغة */
+[dir="rtl"] .sidebar {
+  right: 0;
+  border-left-width: 1px;
+}
+[dir="ltr"] .sidebar {
+  left: 0;
+  border-right-width: 1px;
+}
+
+/* ── الـ sidebar لما ينكمش ────────────────────────────── */
+.sidebar.collapsed {
+  width: var(--sidebar-collapsed);
+}
+
+/* ── الـ header (اللوغو + زرار التبديل) ──────────────── */
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  height: var(--navbar-height);
+  border-bottom: 1px solid var(--border-light);
+  flex-shrink: 0;
+}
+
+/* لما ينكمش: ركّز الزرار في المنتصف */
+.sidebar.collapsed .sidebar-header {
+  justify-content: center;
+}
+
+/* ── اللوغو ───────────────────────────────────────────── */
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+.sidebar-logo-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.sidebar-logo-text {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+/* ── زرار فتح/غلق ─────────────────────────────────────── */
+.sidebar-toggle {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+  transition: all var(--transition);
+}
+
+.sidebar-toggle:hover {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+/* ── القائمة nav ─────────────────────────────────────── */
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0.75rem 0.6rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1;
+  min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+/* الـ nav التحتانية (users, settings) */
+.sidebar-nav-bottom {
+  flex: 0;
+  padding-top: 0;
+}
+
+/* ── عناصر القائمة ────────────────────────────────────── */
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--radius-md);
+  color: var(--sidebar-item-color);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all var(--transition);
+  position: relative;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.sidebar-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* الـ item النشط */
+.sidebar-item.active {
+  background: var(--sidebar-item-active-bg);
+  color: var(--sidebar-item-active-text);
+  font-weight: 700;
+}
+
+/* لما ينكمش: ركّز الأيقونة */
+.sidebar.collapsed .sidebar-item {
+  justify-content: center;
+  padding: 0.65rem;
+}
+
+/* ── الأيقونة ─────────────────────────────────────────── */
+.sidebar-item-icon {
+  font-size: 1.15rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  text-align: center;
+}
+
+/* ── النص ─────────────────────────────────────────────── */
+.sidebar-item-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── نقطة الـ active ──────────────────────────────────── */
+.sidebar-item-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  flex-shrink: 0;
+}
+
+/* ── الفاصل ───────────────────────────────────────────── */
+.sidebar-divider {
+  height: 1px;
+  background: var(--border-light);
+  margin: 0.5rem 0.6rem;
+  flex-shrink: 0;
+}
+
+/* ── بيانات المستخدم ──────────────────────────────────── */
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-top: 1px solid var(--border-light);
+  flex-shrink: 0;
+}
+
+.sidebar-user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-size: 0.9rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.sidebar-user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sidebar-user-info {
+  flex: 1;
+  overflow: hidden;
+}
+
+.sidebar-user-name {
+  font-size: 0.825rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-user-role {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Responsive: موبايل ────────────────────────────────── */
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+    box-shadow: var(--shadow-xl);
+  }
+
+  [dir="rtl"] .sidebar {
+    transform: translateX(100%);
+  }
+
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
+}
