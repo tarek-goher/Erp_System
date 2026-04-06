@@ -1,0 +1,47 @@
+/* ══════════════════════════════════════════════════════════
+   app/dashboard/page.css — ستايل صفحة Dashboard
+   ══════════════════════════════════════════════════════════ */
+
+/* ── الترحيب ──────────────────────────────────────────── */
+.dashboard-welcome {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+  border-radius: var(--radius-lg);
+  padding: 1.5rem 2rem;
+  margin-bottom: 1.5rem;
+  color: white;
+}
+
+.dashboard-welcome-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: white;
+}
+
+.dashboard-welcome-sub {
+  font-size: 0.875rem;
+  opacity: 0.85;
+  margin-top: 0.3rem;
+  color: white;
+}
+
+/* ── شبكة الإحصائيات ──────────────────────────────────── */
+.dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (max-width: 1024px) {
+  .dashboard-stats { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 480px) {
+  .dashboard-stats { grid-template-columns: 1fr; }
+}
+
+/* ── ألوان أيقونات الإحصائيات ─────────────────────────── */
+/* عدّل الألوان هنا براحتك */
+.stat-blue   { background: var(--color-primary-light); font-size: 1.5rem; }
+.stat-purple { background: var(--color-secondary-light); font-size: 1.5rem; }
+.stat-green  { background: var(--color-success-light); font-size: 1.5rem; }
+.stat-orange { background: var(--color-warning-light); font-size: 1.5rem; }
