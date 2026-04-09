@@ -15,39 +15,45 @@ class QuotationController extends BaseController
             ->latest()->paginate($this->perPage());
         return $this->success($quotations);
     }
-    public function store(Request $request): JsonResponse
-    {
-        $data = $request->validate([
-            'customer_id'        => 'nullable|exists:customers,id',
-            'items'              => 'required|array|min:1',
-            'items.*.product_id' => 'required|exists:products,id',
-            'items.*.qty'        => 'required|numeric|min:0.001',
-            'items.*.price'      => 'required|numeric|min:0',
-            'valid_until'        => 'nullable|date',
-            'notes'              => 'nullable|string',
+public function store(Request $request): JsonResponse
+{
+    $data = $request->validate([
+        'customer_id'        => 'nullable|exists:customers,id',
+        'items'              => 'required|array|min:1',
+        'items.*.product_id' => 'required|exists:products,id',
+        'items.*.qty'        => 'required|numeric|min:0.001',
+        'items.*.price'      => 'required|numeric|min:0',
+        'valid_until'        => 'nullable|date',
+        'notes'              => 'nullable|string',
+    ]);
+
+    return DB::transaction(function () use ($data) {
+        $total = collect($data['items'])->sum(fn($i) => $i['qty'] * $i['price']);
+
+        $sale = Sale::create([
+            'company_id'  => $this->companyId(),
+            'customer_id' => $data['customer_id'] ?? null,
+            'user_id'     => auth()->id(),
+            'status'      => 'quotation',
+            'subtotal'    => $total,
+            'tax'         => 0,
+            'discount'    => 0,
+            'total'       => $total,
+            'notes'       => $data['notes'] ?? null,
         ]);
-        return DB::transaction(function () use ($data) {
-            $total = collect($data['items'])->sum(fn($i) => $i['qty'] * $i['price']);
-            $sale = Sale::create([
-                'company_id' => $this->companyId(),
-                'customer_id'=> $data['customer_id'] ?? null,
-                'user_id'    => auth()->id(),
-                'status'     => 'quotation',
-                'subtotal'   => $total,
-                'total'      => $total,
-                'notes'      => $data['notes'] ?? null,
+
+        foreach ($data['items'] as $item) {
+            $sale->items()->create([
+                'product_id' => $item['product_id'],
+                'quantity'   => $item['qty'],        // ← quantity مش qty
+                'unit_price' => $item['price'],      // ← unit_price مش price
+                'total'      => $item['qty'] * $item['price'],
             ]);
-            foreach ($data['items'] as $item) {
-                $sale->items()->create([
-                    'product_id' => $item['product_id'],
-                    'qty'        => $item['qty'],
-                    'price'      => $item['price'],
-                    'total'      => $item['qty'] * $item['price'],
-                ]);
-            }
-            return $this->created($sale->load('items.product', 'customer'));
-        });
-    }
+        }
+
+        return $this->created($sale->load('items.product', 'customer'));
+    });
+}
     public function show(Sale $sale): JsonResponse
     {
         abort_unless($sale->status === 'quotation', 404);
@@ -66,13 +72,17 @@ class QuotationController extends BaseController
         return $this->success(null, 'Quotation deleted');
     }
     /** POST /api/quotations/{sale}/convert — تحويل لفاتورة */
-    public function convertToSale(Sale $sale): JsonResponse
-    {
-        abort_unless($sale->status === 'quotation', 422);
-        $sale->update(['status' => 'completed']);
-        foreach ($sale->items as $item) {
-            \App\Models\Product::find($item->product_id)?->decrement('qty', $item->qty);
-        }
-        return $this->success($sale, 'Quotation converted to sale');
+public function convertToSale(Sale $sale): JsonResponse
+{
+    abort_unless($sale->status === 'quotation', 422);
+    
+    $sale->update(['status' => 'completed']);
+    
+    foreach ($sale->items as $item) {
+        \App\Models\Product::find($item->product_id)
+            ?->decrement('qty', $item->quantity); // ← quantity مش qty
     }
+    
+    return $this->success($sale, 'Quotation converted to sale');
+}
 }
