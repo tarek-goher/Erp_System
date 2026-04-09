@@ -8,7 +8,7 @@
 
 import { useState, useEffect, FormEvent, useRef } from 'react'
 import ERPLayout from '../../components/layout/ERPLayout'
-import { api } from '../../lib/api'
+import { api, extractArray } from '../../lib/api'
 import { useI18n } from '../../lib/i18n'
 
 type Product = {
@@ -16,77 +16,114 @@ type Product = {
   name: string
   sku: string
   barcode?: string
-  quantity: number
-  price: number           // سعر البيع
-  purchase_price?: number // سعر الشراء
+  qty: number
+  price: number
+  cost?: number
   category?: { name: string }
   status: string
 }
 type Category = { id: number; name: string }
 
+// ── توليد SKU تلقائي لو المستخدم ما كتبش ──────────────
+const generateSku = () => 'SKU-' + Date.now().toString(36).toUpperCase()
+
 export default function InventoryPage() {
   const { t, lang } = useI18n()
-  const [items,      setItems]      = useState<Product[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
-  const [loading,    setLoading]    = useState(true)
-  const [search,     setSearch]     = useState('')
-  const [modal,      setModal]      = useState(false)
+  const [items,       setItems]       = useState<Product[]>([])
+  const [categories,  setCategories]  = useState<Category[]>([])
+  const [loading,     setLoading]     = useState(true)
+  const [search,      setSearch]      = useState('')
+  const [modal,       setModal]       = useState(false)
   const [adjustModal, setAdjustModal] = useState<Product | null>(null)
-  const [deleteId,   setDeleteId]   = useState<number | null>(null)
-  const [saving,     setSaving]     = useState(false)
-  const [formErr,    setFormErr]    = useState('')
-  const [adjustQty,  setAdjustQty]  = useState('')
-  const [adjustNote, setAdjustNote] = useState('')
+  const [deleteId,    setDeleteId]    = useState<number | null>(null)
+  const [saving,      setSaving]      = useState(false)
+  const [formErr,     setFormErr]     = useState('')
+  const [adjustQty,   setAdjustQty]   = useState('')
+  const [adjustNote,  setAdjustNote]  = useState('')
   const barcodeInputRef = useRef<HTMLInputElement>(null)
+  const newCatInputRef  = useRef<HTMLInputElement>(null)
+
+  // ── إضافة فئة جديدة inline ────────────────────────────
+  const [showNewCat, setShowNewCat] = useState(false)
+  const [newCatName, setNewCatName] = useState('')
+  const [savingCat,  setSavingCat]  = useState('')
+
+  const handleAddCategory = async () => {
+    const name = newCatName.trim()
+    if (!name) return
+    setSavingCat('saving')
+    const res = await api.post('/categories', { name })
+    if (res.error) { setSavingCat(''); alert(res.error); return }
+    const created: Category = res.data?.id ? res.data : { id: res.data?.data?.id, name }
+    setCategories(prev => [...prev, created])
+    setForm(f => ({ ...f, category_id: String(created.id) }))
+    setNewCatName('')
+    setShowNewCat(false)
+    setSavingCat('')
+  }
 
   const [form, setForm] = useState({
-    name: '',
-    sku: '',
-    barcode: '',
-    price: '',           // سعر البيع
-    purchase_price: '',  // سعر الشراء
-    quantity: '',
-    category_name: '',
-    description: '',
+    name:           '',
+    sku:            '',
+    barcode:        '',
+    price:          '',
+    purchase_price: '',
+    qty:            '',
+    category_id:    '',
+    description:    '',
   })
 
   const fetchItems = async () => {
     setLoading(true)
     const p = new URLSearchParams({ per_page: '20', ...(search && { search }) })
-    const res = await api.get<{ data: Product[] }>(`/products?${p}`)
-    if (res.data) setItems(res.data.data || [])
+    const res = await api.get<{ data: Product[] | { data: Product[] } }>(`/products?${p}`)
+    if (res.data) setItems(extractArray(res.data))
     setLoading(false)
   }
 
   useEffect(() => { fetchItems() }, [search])
+
   useEffect(() => {
     api.get<{ data: Category[] }>('/categories?per_page=100').then(r => {
-      if (r.data) setCategories(r.data.data || [])
+      if (r.data) setCategories(extractArray(r.data))
     })
   }, [])
 
   const resetForm = () => setForm({
     name: '', sku: '', barcode: '', price: '', purchase_price: '',
-    quantity: '', category_name: '', description: '',
+    qty: '', category_id: '', description: '',
   })
 
   const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault(); setFormErr('')
-    if (!form.name || !form.price) { setFormErr(t('required_field')); return }
+    e.preventDefault()
+    setFormErr('')
+
+    if (!form.name || !form.price || !form.category_id) {
+      setFormErr(
+        lang === 'ar'
+          ? 'الاسم، سعر البيع، والتصنيف مطلوبون'
+          : 'Name, selling price, and category are required'
+      )
+      return
+    }
+
     setSaving(true)
     const res = await api.post('/products', {
-      name:           form.name,
-      sku:            form.sku || undefined,
-      barcode:        form.barcode || undefined,
-      price:          Number(form.price),
-      purchase_price: form.purchase_price ? Number(form.purchase_price) : undefined,
-      quantity:       Number(form.quantity) || 0,
-      category_name:  form.category_name || undefined,
-      description:    form.description || undefined,
+      name:        form.name,
+      sku:         form.sku || generateSku(),
+      barcode:     form.barcode || undefined,
+      category_id: Number(form.category_id),
+      price:       Number(form.price),
+      cost:        form.purchase_price ? Number(form.purchase_price) : undefined,
+      qty:         Number(form.qty) || 0,
+      description: form.description || undefined,
     })
     setSaving(false)
+
     if (res.error) { setFormErr(res.error); return }
-    setModal(false); resetForm(); fetchItems()
+    setModal(false)
+    resetForm()
+    fetchItems()
   }
 
   const handleAdjust = async (e: FormEvent) => {
@@ -95,28 +132,30 @@ export default function InventoryPage() {
     setSaving(true)
     const res = await api.post(`/products/${adjustModal.id}/adjust-stock`, {
       quantity: Number(adjustQty),
-      notes: adjustNote,
+      notes:    adjustNote,
     })
     setSaving(false)
     if (res.error) { alert(res.error); return }
-    setAdjustModal(null); setAdjustQty(''); setAdjustNote(''); fetchItems()
+    setAdjustModal(null)
+    setAdjustQty('')
+    setAdjustNote('')
+    fetchItems()
   }
 
   const handleDelete = async () => {
     if (!deleteId) return
-    await api.delete(`/products/${deleteId}`)
-    setDeleteId(null); setItems(p => p.filter(i => i.id !== deleteId))
+    const res = await api.delete(`/products/${deleteId}`)
+    if (res.error) { alert(res.error); return }
+    setDeleteId(null)
+    setItems(p => p.filter(i => i.id !== deleteId))
   }
 
-  // ── مسح حقل الباركود بالسكانر (Enter بعد القراءة) ──
   const handleBarcodeKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault() // لا يحفظ الفورم
-      // يمكن إضافة بحث عن المنتج بالباركود هنا
-    }
+    if (e.key === 'Enter') e.preventDefault()
   }
 
-  const fmt = (n: number) => new Intl.NumberFormat(lang === 'ar' ? 'ar-EG' : 'en-US').format(n || 0)
+  const fmt = (n: number) =>
+    new Intl.NumberFormat(lang === 'ar' ? 'ar-EG' : 'en-US').format(n || 0)
 
   const stockBadge = (q: number) => {
     if (q <= 0)  return 'badge-danger'
@@ -124,14 +163,14 @@ export default function InventoryPage() {
     return 'badge-success'
   }
 
-  // حساب هامش الربح
   const calcMargin = (sale: number, purchase: number) => {
-    if (!purchase || !sale) return null
+    if (!purchase || purchase <= 0 || !sale || sale <= 0) return null
     return (((sale - purchase) / purchase) * 100).toFixed(1)
   }
 
   return (
     <ERPLayout pageTitle={t('inventory')}>
+
       <div className="toolbar">
         <div className="search-bar">
           <span>🔍</span>
@@ -152,7 +191,10 @@ export default function InventoryPage() {
             {Array(6).fill(0).map((_, i) => <div key={i} className="skeleton" style={{ height: 44 }} />)}
           </div>
         ) : items.length === 0 ? (
-          <div className="empty-state"><div className="empty-state-icon">📦</div><p className="empty-state-text">{t('no_data')}</p></div>
+          <div className="empty-state">
+            <div className="empty-state-icon">📦</div>
+            <p className="empty-state-text">{t('no_data')}</p>
+          </div>
         ) : (
           <div className="table-container">
             <table className="table">
@@ -170,7 +212,8 @@ export default function InventoryPage() {
               </thead>
               <tbody>
                 {items.map(item => {
-                  const margin = calcMargin(item.price, item.purchase_price ?? 0)
+                  // ✅ إصلاح: cost بدل purchase_price في الـ type
+                  const margin = calcMargin(item.price, item.cost && item.cost > 0 ? item.cost : 0)
                   return (
                     <tr key={item.id}>
                       <td className="fw-semibold">{item.name}</td>
@@ -181,22 +224,31 @@ export default function InventoryPage() {
                         {!item.sku && !item.barcode && '—'}
                       </td>
                       <td>{item.category?.name || '—'}</td>
-                      <td className="text-muted">{item.purchase_price ? fmt(item.purchase_price) : '—'}</td>
+                      {/* ✅ إصلاح: cost بدل purchase_price */}
+                      <td className="text-muted">{item.cost && item.cost > 0 ? fmt(item.cost) : '—'}</td>
                       <td className="fw-semibold">{fmt(item.price)}</td>
                       <td>
                         {margin !== null ? (
-                          <span style={{ color: Number(margin) >= 0 ? 'var(--color-success)' : 'var(--color-danger)', fontWeight: 600 }}>
+                          <span style={{
+                            color: Number(margin) >= 0 ? 'var(--color-success)' : 'var(--color-danger)',
+                            fontWeight: 600,
+                          }}>
                             {Number(margin) >= 0 ? '+' : ''}{margin}%
                           </span>
                         ) : '—'}
                       </td>
-                      <td><span className={`badge ${stockBadge(item.quantity)}`}>{fmt(item.quantity)}</span></td>
+                      <td>
+                        {/* ✅ إصلاح: item.qty بدل item.quantity */}
+                        <span className={`badge ${stockBadge(item.qty)}`}>{fmt(item.qty)}</span>
+                      </td>
                       <td>
                         <div style={{ display: 'flex', gap: 4 }}>
                           <button className="btn btn-secondary btn-sm" onClick={() => setAdjustModal(item)}>
                             {lang === 'ar' ? 'تعديل كمية' : 'Adjust'}
                           </button>
-                          <button className="btn btn-danger btn-sm" onClick={() => setDeleteId(item.id)}>{t('delete')}</button>
+                          <button className="btn btn-danger btn-sm" onClick={() => setDeleteId(item.id)}>
+                            {t('delete')}
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -208,7 +260,7 @@ export default function InventoryPage() {
         )}
       </div>
 
-      {/* ── Modal: إضافة منتج ───────────────────────── */}
+      {/* ── Modal: إضافة منتج ─────────────────────────── */}
       {modal && (
         <div className="modal-overlay" onClick={() => setModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 600 }}>
@@ -223,14 +275,29 @@ export default function InventoryPage() {
                   {/* الاسم */}
                   <div className="input-group">
                     <label className="input-label">{t('name')} *</label>
-                    <input className="input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required autoFocus />
+                    <input
+                      className="input"
+                      value={form.name}
+                      onChange={e => setForm({ ...form, name: e.target.value })}
+                      required
+                      autoFocus
+                    />
                   </div>
 
                   {/* SKU */}
                   <div className="input-group">
-                    <label className="input-label">SKU</label>
-                    <input className="input" value={form.sku} onChange={e => setForm({ ...form, sku: e.target.value })}
-                      placeholder={lang === 'ar' ? 'كود المنتج' : 'Product code'} />
+                    <label className="input-label">
+                      SKU
+                      <small style={{ color: 'var(--text-muted)', fontWeight: 400, marginInlineStart: '0.5rem' }}>
+                        {lang === 'ar' ? '(اختياري — يُولَّد تلقائياً)' : '(optional — auto-generated)'}
+                      </small>
+                    </label>
+                    <input
+                      className="input"
+                      value={form.sku}
+                      onChange={e => setForm({ ...form, sku: e.target.value })}
+                      placeholder={lang === 'ar' ? 'كود المنتج' : 'Product code'}
+                    />
                   </div>
 
                   {/* الباركود */}
@@ -250,6 +317,73 @@ export default function InventoryPage() {
                       placeholder={lang === 'ar' ? 'امسح أو اكتب الباركود...' : 'Scan or type barcode...'}
                       style={{ fontFamily: 'monospace', letterSpacing: '0.05em' }}
                     />
+                  </div>
+
+                  {/* التصنيف */}
+                  <div className="input-group" style={{ gridColumn: '1 / -1' }}>
+                    <label className="input-label">{t('category')} *</label>
+
+                    {!showNewCat ? (
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <select
+                          className="input"
+                          value={form.category_id}
+                          onChange={e => setForm({ ...form, category_id: e.target.value })}
+                          required
+                          style={{ flex: 1 }}
+                        >
+                          <option value="">
+                            {lang === 'ar' ? '— اختر التصنيف —' : '— Select Category —'}
+                          </option>
+                          {categories.map(c => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={() => { setShowNewCat(true); setTimeout(() => newCatInputRef.current?.focus(), 50) }}
+                          title={lang === 'ar' ? 'إضافة فئة جديدة' : 'Add new category'}
+                          style={{ whiteSpace: 'nowrap', padding: '0 0.75rem' }}
+                        >
+                          ➕ {lang === 'ar' ? 'إضافة فئة' : 'Add Category'}
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <input
+                          ref={newCatInputRef}
+                          className="input"
+                          value={newCatName}
+                          onChange={e => setNewCatName(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') { e.preventDefault(); handleAddCategory() }
+                            if (e.key === 'Escape') { setShowNewCat(false); setNewCatName('') }
+                          }}
+                          placeholder={lang === 'ar' ? 'اسم الفئة الجديدة...' : 'New category name...'}
+                          style={{ flex: 1 }}
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          onClick={handleAddCategory}
+                          disabled={!newCatName.trim() || savingCat === 'saving'}
+                          style={{ whiteSpace: 'nowrap', padding: '0 0.75rem' }}
+                        >
+                          {savingCat === 'saving'
+                            ? (lang === 'ar' ? 'جاري...' : 'Saving...')
+                            : (lang === 'ar' ? '✓ حفظ' : '✓ Save')}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={() => { setShowNewCat(false); setNewCatName('') }}
+                          style={{ padding: '0 0.75rem' }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* سعر الشراء */}
@@ -279,16 +413,18 @@ export default function InventoryPage() {
                       required
                       placeholder="0.00"
                     />
-                    {/* عرض هامش الربح لحظياً */}
                     {form.purchase_price && form.price && (
                       <small style={{
                         marginTop: '0.25rem',
                         display: 'block',
                         fontSize: '0.75rem',
-                        color: Number(form.price) >= Number(form.purchase_price) ? 'var(--color-success)' : 'var(--color-danger)',
+                        color: Number(form.price) >= Number(form.purchase_price)
+                          ? 'var(--color-success)'
+                          : 'var(--color-danger)',
                         fontWeight: 600,
                       }}>
-                        {lang === 'ar' ? 'هامش الربح:' : 'Margin:'} {calcMargin(Number(form.price), Number(form.purchase_price))}%
+                        {lang === 'ar' ? 'هامش الربح:' : 'Margin:'}
+                        {' '}{calcMargin(Number(form.price), Number(form.purchase_price))}%
                       </small>
                     )}
                   </div>
@@ -296,50 +432,57 @@ export default function InventoryPage() {
                   {/* الكمية */}
                   <div className="input-group">
                     <label className="input-label">{t('quantity')}</label>
-                    <input className="input" type="number" min="0" value={form.quantity}
-                      onChange={e => setForm({ ...form, quantity: e.target.value })} />
-                  </div>
-
-                  {/* الفئة */}
-                  <div className="input-group">
-                    <label className="input-label">{t('category')} {lang === 'ar' ? '(اكتبها بحرية)' : '(type freely)'}</label>
                     <input
                       className="input"
-                      value={form.category_name}
-                      onChange={e => setForm({ ...form, category_name: e.target.value })}
-                      placeholder={lang === 'ar' ? 'مثال: إلكترونيات، ملابس...' : 'e.g. Electronics, Clothing...'}
-                      list="categories-list"
+                      type="number"
+                      min="0"
+                      value={form.qty}
+                      onChange={e => setForm({ ...form, qty: e.target.value })}
                     />
-                    <datalist id="categories-list">
-                      {categories.map(c => <option key={c.id} value={c.name} />)}
-                    </datalist>
                   </div>
 
                   {/* الوصف */}
                   <div className="input-group" style={{ gridColumn: '1 / -1' }}>
                     <label className="input-label">{t('description')}</label>
-                    <textarea className="input" rows={2} value={form.description}
-                      onChange={e => setForm({ ...form, description: e.target.value })} style={{ resize: 'vertical' }} />
+                    <textarea
+                      className="input"
+                      rows={2}
+                      value={form.description}
+                      onChange={e => setForm({ ...form, description: e.target.value })}
+                      style={{ resize: 'vertical' }}
+                    />
                   </div>
+
                 </div>
-                {formErr && <div style={{ color: 'var(--color-danger)', marginTop: '0.75rem', fontSize: '0.875rem' }}>⚠️ {formErr}</div>}
+
+                {formErr && (
+                  <div style={{ color: 'var(--color-danger)', marginTop: '0.75rem', fontSize: '0.875rem' }}>
+                    ⚠️ {formErr}
+                  </div>
+                )}
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setModal(false)}>{t('cancel')}</button>
-                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? t('loading') : t('save')}</button>
+                <button type="button" className="btn btn-secondary" onClick={() => setModal(false)}>
+                  {t('cancel')}
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={saving}>
+                  {saving ? t('loading') : t('save')}
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* ── Modal: تعديل المخزون ─────────────────────── */}
+      {/* ── Modal: تعديل المخزون ──────────────────────── */}
       {adjustModal && (
         <div className="modal-overlay" onClick={() => setAdjustModal(null)}>
           <div className="modal" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">
-                {lang === 'ar' ? `تعديل مخزون: ${adjustModal.name}` : `Adjust Stock: ${adjustModal.name}`}
+                {lang === 'ar'
+                  ? `تعديل مخزون: ${adjustModal.name}`
+                  : `Adjust Stock: ${adjustModal.name}`}
               </h3>
               <button className="btn-icon" onClick={() => setAdjustModal(null)}>✕</button>
             </div>
@@ -347,28 +490,47 @@ export default function InventoryPage() {
               <div className="modal-body">
                 <div className="form-grid">
                   <div className="input-group">
-                    <label className="input-label">{lang === 'ar' ? 'الكمية الجديدة' : 'New Quantity'} *</label>
-                    <input className="input" type="number" value={adjustQty} onChange={e => setAdjustQty(e.target.value)} required />
+                    <label className="input-label">
+                      {lang === 'ar' ? 'الكمية الجديدة' : 'New Quantity'} *
+                    </label>
+                    <input
+                      className="input"
+                      type="number"
+                      value={adjustQty}
+                      onChange={e => setAdjustQty(e.target.value)}
+                      required
+                    />
+                    {/* ✅ إصلاح: adjustModal.qty بدل adjustModal.quantity */}
                     <small className="text-muted" style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}>
-                      {lang === 'ar' ? `المخزون الحالي: ${adjustModal.quantity}` : `Current stock: ${adjustModal.quantity}`}
+                      {lang === 'ar'
+                        ? `المخزون الحالي: ${adjustModal.qty}`
+                        : `Current stock: ${adjustModal.qty}`}
                     </small>
                   </div>
                   <div className="input-group">
                     <label className="input-label">{t('notes')}</label>
-                    <input className="input" value={adjustNote} onChange={e => setAdjustNote(e.target.value)} />
+                    <input
+                      className="input"
+                      value={adjustNote}
+                      onChange={e => setAdjustNote(e.target.value)}
+                    />
                   </div>
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setAdjustModal(null)}>{t('cancel')}</button>
-                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? t('loading') : t('save')}</button>
+                <button type="button" className="btn btn-secondary" onClick={() => setAdjustModal(null)}>
+                  {t('cancel')}
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={saving}>
+                  {saving ? t('loading') : t('save')}
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* ── Modal: تأكيد الحذف ───────────────────────── */}
+      {/* ── Modal: تأكيد الحذف ────────────────────────── */}
       {deleteId && (
         <div className="modal-overlay" onClick={() => setDeleteId(null)}>
           <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
@@ -383,6 +545,7 @@ export default function InventoryPage() {
           </div>
         </div>
       )}
+
     </ERPLayout>
   )
 }

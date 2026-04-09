@@ -1,20 +1,9 @@
 'use client'
 
-// ══════════════════════════════════════════════════════════
-// lib/auth.tsx — إدارة حالة المستخدم والـ token في كل التطبيق
-// ══════════════════════════════════════════════════════════
-// كيف تستخدمه:
-//   const { user, login, logout, hasPermission } = useAuth()
-//
-// الـ token والـ user محفوظين في localStorage
-// الـ AuthProvider لازم يكون في app/layout.tsx
-// ══════════════════════════════════════════════════════════
-
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from './api'
 
-// ─── نوع بيانات المستخدم الجاية من الـ API ──────────────
 export type User = {
   id: number
   name: string
@@ -33,44 +22,52 @@ export type User = {
   } | null
 }
 
-// ─── نوع الـ Context اللي بيستخدمه useAuth ──────────────
 type AuthContextType = {
-  user: User | null               // بيانات المستخدم الحالي
-  token: string | null            // الـ Bearer token
-  isLoading: boolean              // جاري التحقق من الجلسة
+  user: User | null
+  token: string | null
+  isLoading: boolean
   login: (email: string, password: string) => Promise<{ error?: string }>
   logout: () => Promise<void>
-  hasPermission: (permission: string) => boolean  // هل عنده صلاحية؟
-  hasRole: (role: string) => boolean              // هل عنده دور؟
+  hasPermission: (permission: string) => boolean
+  hasRole: (role: string) => boolean
 }
 
-// ─── مفاتيح التخزين في localStorage ────────────────────
 const TOKEN_KEY = 'erp_token'
 const USER_KEY  = 'erp_user'
 
-// ─── إنشاء الـ Context ───────────────────────────────────
 const AuthContext = createContext<AuthContextType | null>(null)
 
-// ══════════════════════════════════════════════════════════
-// AuthProvider — ضعه في app/layout.tsx يحيط كل التطبيق
-// ══════════════════════════════════════════════════════════
+// ─── تحويل الـ user الجاي من الـ API أو localStorage لـ format نظيف ────
+const normalizeUser = (u: any): User => ({
+  ...u,
+  roles: (u.roles ?? []).map((r: any) =>
+    typeof r === 'string' ? r : r.name
+  ),
+  permissions: u.permissions ?? [],
+})
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter()
-  const [user, setUser]       = useState<User | null>(null)
-  const [token, setToken]     = useState<string | null>(null)
+  const [user, setUser]         = useState<User | null>(null)
+  const [token, setToken]       = useState<string | null>(null)
   const [isLoading, setLoading] = useState(true)
 
-  // ─── عند فتح التطبيق: ارجع للـ session المحفوظة ──────
+  // ─── استرجاع الـ session عند فتح التطبيق ─────────────
   useEffect(() => {
     const savedToken = localStorage.getItem(TOKEN_KEY)
     const savedUser  = localStorage.getItem(USER_KEY)
 
     if (savedToken && savedUser) {
       try {
+        const parsed = JSON.parse(savedUser)
+        const clean  = normalizeUser(parsed) // ← ينظف الـ roles لو كانت objects قديمة
+
         setToken(savedToken)
-        setUser(JSON.parse(savedUser))
+        setUser(clean)
+
+        // يحدّث الـ localStorage بالنسخة النظيفة
+        localStorage.setItem(USER_KEY, JSON.stringify(clean))
       } catch {
-        // البيانات مش صالحة → امسحها
         localStorage.removeItem(TOKEN_KEY)
         localStorage.removeItem(USER_KEY)
       }
@@ -78,23 +75,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(false)
   }, [])
 
-  // ─── دالة Login → POST /api/auth/login ───────────────
+  // ─── Login ────────────────────────────────────────────
   const login = useCallback(async (email: string, password: string) => {
     const res = await api.post('/auth/login', { email, password })
 
     if (res.error) return { error: res.error }
 
-    // الـ API بترجع: { token, user }
-    const { token: newToken, user: newUser } = res.data
+    const { token: newToken, user: rawUser } = res.data
+    const newUser = normalizeUser(rawUser)
 
-    // احفظ في localStorage
     localStorage.setItem(TOKEN_KEY, newToken)
     localStorage.setItem(USER_KEY, JSON.stringify(newUser))
 
     setToken(newToken)
     setUser(newUser)
 
-    // وجّه حسب نوع المستخدم
     if (newUser.is_super_admin) {
       router.push('/super-admin')
     } else {
@@ -104,30 +99,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return {}
   }, [router])
 
-  // ─── دالة Logout → POST /api/auth/logout ─────────────
+  // ─── Logout ───────────────────────────────────────────
   const logout = useCallback(async () => {
-    // أرسل طلب logout للـ API (مش مهم لو فشل)
     await api.post('/auth/logout')
 
-    // امسح كل البيانات المحلية
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(USER_KEY)
 
     setToken(null)
     setUser(null)
 
-    // وجّه لصفحة Login
     router.push('/login')
   }, [router])
 
-  // ─── هل المستخدم عنده صلاحية معينة؟ ─────────────────
+  // ─── هل عنده صلاحية؟ ─────────────────────────────────
   const hasPermission = useCallback((permission: string): boolean => {
     if (!user) return false
-    if (user.is_super_admin) return true // السوبر أدمن عنده كل شيء
+    if (user.is_super_admin) return true
     return user.permissions?.includes(permission) ?? false
   }, [user])
 
-  // ─── هل المستخدم عنده دور معين؟ ──────────────────────
+  // ─── هل عنده دور؟ ────────────────────────────────────
   const hasRole = useCallback((role: string): boolean => {
     if (!user) return false
     if (user.is_super_admin) return true
@@ -141,9 +133,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 }
 
-// ══════════════════════════════════════════════════════════
-// useAuth — الـ hook اللي بتستخدمه في أي component
-// ══════════════════════════════════════════════════════════
 export function useAuth(): AuthContextType {
   const ctx = useContext(AuthContext)
   if (!ctx) throw new Error('useAuth يجب أن يُستخدم داخل AuthProvider')

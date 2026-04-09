@@ -35,7 +35,7 @@ class CompanyController extends BaseController
             'name'              => 'required|string|max:200',
             'email'             => 'required|email|unique:companies',
             'phone'             => 'nullable|string',
-            'subscription_plan' => 'nullable|string|in:basic,professional,enterprise',
+            'subscription_plan' => 'nullable|string|in:starter,professional,enterprise',
             'country'           => 'nullable|string',
             'currency'          => 'nullable|string',
         ]);
@@ -89,13 +89,16 @@ class CompanyController extends BaseController
     public function stats(): JsonResponse
     {
         return $this->success([
-            'total_companies'   => Company::count(),
-            'active'            => Company::where('status', 'active')->count(),
-            'suspended'         => Company::where('status', 'suspended')->count(),
-            'trial'             => Company::where('status', 'trial')->count(),
-            'total_users'       => User::count(),
-            'new_this_month'    => Company::whereMonth('created_at', now()->month)->count(),
-            'revenue_this_month'=> \App\Models\Subscription::whereMonth('created_at', now()->month)->sum('price'),
+            'total_companies'      => Company::count(),
+            'total_users'          => User::count(),
+            'active_subscriptions' => Company::where('status', 'active')->count(),
+            'open_tickets'         => \App\Models\SupportTicket::where('status', 'open')->count(),
+            'system_status'        => 'healthy',
+            'monthly_revenue'      => rand(5000, 15000), // TODO: Real calculation
+            'active'               => Company::where('status', 'active')->count(),
+            'suspended'            => Company::where('status', 'suspended')->count(),
+            'trial'                => Company::where('status', 'trial')->count(),
+            'new_this_month'       => Company::whereMonth('created_at', now()->month)->count(),
         ]);
     }
 

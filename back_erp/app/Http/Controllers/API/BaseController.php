@@ -2,18 +2,18 @@
 
 namespace App\Http\Controllers\API;
 
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 
-/**
- * BaseController — نقطة أساسية لكل controllers
- * بيوفر helper methods لتوحيد شكل الـ API responses
- */
 abstract class BaseController extends Controller
 {
+    use AuthorizesRequests; // ✅ هنا — جوه الـ class مباشرة
+
     /** رد ناجح */
     protected function success($data = null, string $message = 'Success', int $code = 200): JsonResponse
     {
+        // ❌ مش هنا جوه الـ function
         return response()->json([
             'success' => true,
             'message' => $message,

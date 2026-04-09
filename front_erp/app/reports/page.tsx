@@ -12,6 +12,7 @@
 import { useState, useEffect } from 'react'
 import ERPLayout from '../../components/layout/ERPLayout'
 import { api } from '../../lib/api'
+import { useAuth } from '../../lib/auth'   // ✅ Fix #1: import useAuth
 import { useI18n } from '../../lib/i18n'
 
 const REPORT_TYPES = [
@@ -23,9 +24,11 @@ const REPORT_TYPES = [
 
 export default function ReportsPage() {
   const { lang } = useI18n()
+  const { token } = useAuth()             // ✅ Fix #1: استخدام useAuth للتحقق من الـ token
   const [activeReport, setActiveReport] = useState(REPORT_TYPES[0])
   const [data,     setData]     = useState<any>(null)
   const [loading,  setLoading]  = useState(false)
+  const [exporting, setExporting] = useState<'excel' | 'pdf' | null>(null)  // ✅ Fix #2: حالة الـ export
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo,   setDateTo]   = useState('')
 
@@ -41,7 +44,41 @@ export default function ReportsPage() {
     setLoading(false)
   }
 
-  useEffect(() => { fetchReport() }, [activeReport])
+  // ✅ Fix #1: لا تجيب البيانات إلا لو في token
+  useEffect(() => {
+    if (!token) return
+    fetchReport()
+  }, [activeReport, token])
+
+  // ✅ Fix #2: Export عن طريق api.get مع الـ Authorization header بدل window.open مباشرة
+  const handleExport = async (format: 'excel' | 'pdf') => {
+    setExporting(format)
+    const p = new URLSearchParams({
+      format,
+      ...(dateFrom && { from: dateFrom }),
+      ...(dateTo   && { to:   dateTo   }),
+    })
+    const res = await api.get(`${activeReport.exportEndpoint}?${p}`)
+
+    if (res.data) {
+      // لو الـ backend رجّع URL → افتحه في tab جديد
+      if (res.data.url) {
+        window.open(res.data.url, '_blank')
+      }
+      // لو رجّع base64 أو blob link
+      else if (res.data.file) {
+        window.open(res.data.file, '_blank')
+      }
+      // لو رجّع download_url
+      else if (res.data.download_url) {
+        window.open(res.data.download_url, '_blank')
+      }
+    } else if (res.error) {
+      alert(res.error)
+    }
+
+    setExporting(null)
+  }
 
   const fmt = (n: number) => new Intl.NumberFormat(lang === 'ar' ? 'ar-EG' : 'en-US').format(n || 0)
 
@@ -138,24 +175,21 @@ export default function ReportsPage() {
       <div className="card">
         <div className="flex-between" style={{ marginBottom: '1rem' }}>
           <h3 className="fw-bold">{lang === 'ar' ? activeReport.ar : activeReport.en}</h3>
+          {/* ✅ Fix #2: export عن طريق handleExport بدل window.open المباشر */}
           <div style={{ display: 'flex', gap: 8 }}>
             <button
               className="btn btn-secondary btn-sm"
-              onClick={() => {
-                const url = `${process.env.NEXT_PUBLIC_API_URL}${activeReport.exportEndpoint}?format=excel&from=${dateFrom}&to=${dateTo}`
-                window.open(url, '_blank')
-              }}
+              onClick={() => handleExport('excel')}
+              disabled={exporting === 'excel'}
             >
-              📊 {lang === 'ar' ? 'Excel' : 'Excel'}
+              📊 {exporting === 'excel' ? '...' : (lang === 'ar' ? 'Excel' : 'Excel')}
             </button>
             <button
               className="btn btn-secondary btn-sm"
-              onClick={() => {
-                const url = `${process.env.NEXT_PUBLIC_API_URL}${activeReport.exportEndpoint}?format=pdf&from=${dateFrom}&to=${dateTo}`
-                window.open(url, '_blank')
-              }}
+              onClick={() => handleExport('pdf')}
+              disabled={exporting === 'pdf'}
             >
-              📥 {lang === 'ar' ? 'PDF' : 'PDF'}
+              📥 {exporting === 'pdf' ? '...' : (lang === 'ar' ? 'PDF' : 'PDF')}
             </button>
           </div>
         </div>

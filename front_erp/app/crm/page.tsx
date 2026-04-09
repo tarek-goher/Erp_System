@@ -10,7 +10,7 @@
 
 import { useState, useEffect, FormEvent, DragEvent } from 'react'
 import ERPLayout from '../../components/layout/ERPLayout'
-import { api } from '../../lib/api'
+import { api, extractArray } from '../../lib/api'
 import { useI18n } from '../../lib/i18n'
 
 type Lead = {
@@ -58,7 +58,7 @@ export default function CRMPage() {
       api.get<KanbanCol[]>('/crm/kanban'),
       api.get<Stats>('/crm/stats'),
     ])
-    if (kRes.data) setKanban(Array.isArray(kRes.data) ? kRes.data : [])
+    if (kRes.data) setKanban(extractArray(kRes.data))
     if (sRes.data) setStats(sRes.data)
     setLoading(false)
   }

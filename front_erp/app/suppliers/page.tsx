@@ -56,8 +56,9 @@ export default function SuppliersPage() {
     const p = new URLSearchParams({ page: String(page), ...(search && { search }) })
     const res = await api.get(`/suppliers?${p}`)
     if (res.data) {
-      setSuppliers(res.data.data ?? res.data)
-      setTotal(res.data.total ?? 0)
+      const data = res.data
+      setSuppliers(data.data ?? data ?? [])
+      setTotal(data.total ?? (Array.isArray(data) ? data.length : 0))
     }
     setLoading(false)
   }

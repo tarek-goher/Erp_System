@@ -43,8 +43,13 @@ export default function UsersPage() {
   const fetchUsers = async () => {
     setLoading(true)
     const p = new URLSearchParams({ per_page: '20', ...(search && { search }) })
-    const res = await api.get<{ data: User[] }>(`/users?${p}`)
-    if (res.data) setUsers(res.data.data || [])
+    const res = await api.get<{ data: User[] | { data: User[] } }>(`/users?${p}`)
+    if (res.data) {
+      // 💡 Handle both paginated and simple list responses
+      const rawData = res.data?.data ?? res.data
+      const usersList = Array.isArray(rawData) ? rawData : (rawData?.data ?? [])
+      setUsers(usersList)
+    }
     setLoading(false)
   }
 

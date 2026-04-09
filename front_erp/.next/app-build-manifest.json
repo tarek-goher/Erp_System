@@ -1,27 +1,16 @@
 {
   "pages": {
-    "/page": [
+    "/login/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/page.js"
+      "static/css/css-app_login_login_css.css",
+      "static/chunks/app/login/page.js"
     ],
     "/layout": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/css/css-styles_globals_css.css",
       "static/chunks/app/layout.js"
-    ],
-    "/dashboard/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/css/css-app_dashboard_page_css-app_sales_page_css-components_layout_ERPLayout_css-components_layo-de72fe.css",
-      "static/chunks/app/dashboard/page.js"
-    ],
-    "/login/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/css/css-app_login_login_css.css",
-      "static/chunks/app/login/page.js"
     ],
     "/super-admin/page": [
       "static/chunks/webpack.js",
@@ -33,50 +22,50 @@
       "static/chunks/main-app.js",
       "static/chunks/app/super-admin/layout.js"
     ],
-    "/super-admin/companies/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/super-admin/companies/page.js"
-    ],
     "/super-admin/users/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/super-admin/users/page.js"
     ],
-    "/super-admin/subscriptions/page": [
+    "/dashboard/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/super-admin/subscriptions/page.js"
+      "static/css/css-app_dashboard_page_css-components_layout_ERPLayout_css-components_layout_Navbar_css-compo-d9050e.css",
+      "static/chunks/app/dashboard/page.js"
     ],
-    "/ai-assistant/page": [
+    "/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/css-app_dashboard_page_css-app_sales_page_css-components_layout_ERPLayout_css-components_layo-de72fe.css",
-      "static/chunks/app/ai-assistant/page.js"
+      "static/chunks/app/page.js"
     ],
-    "/quotations/page": [
+    "/offline/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/css-app_dashboard_page_css-app_sales_page_css-components_layout_ERPLayout_css-components_layo-de72fe.css",
-      "static/chunks/app/quotations/page.js"
+      "static/chunks/app/offline/page.js"
     ],
-    "/notifications/page": [
+    "/email-inbox/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/css-app_dashboard_page_css-app_sales_page_css-components_layout_ERPLayout_css-components_layo-de72fe.css",
-      "static/chunks/app/notifications/page.js"
-    ],
-    "/purchases/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/css/css-app_dashboard_page_css-app_sales_page_css-components_layout_ERPLayout_css-components_layo-de72fe.css",
-      "static/chunks/app/purchases/page.js"
+      "static/css/css-app_dashboard_page_css-components_layout_ERPLayout_css-components_layout_Navbar_css-compo-d9050e.css",
+      "static/chunks/app/email-inbox/page.js"
     ],
     "/sales/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/css-app_dashboard_page_css-app_sales_page_css-components_layout_ERPLayout_css-components_layo-de72fe.css",
+      "static/css/css-app_dashboard_page_css-components_layout_ERPLayout_css-components_layout_Navbar_css-compo-d9050e.css",
       "static/chunks/app/sales/page.js"
+    ],
+    "/sales/[id]/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/css-app_dashboard_page_css-components_layout_ERPLayout_css-components_layout_Navbar_css-compo-d9050e.css",
+      "static/chunks/app/sales/[id]/page.js"
+    ],
+    "/purchases/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/css-app_dashboard_page_css-components_layout_ERPLayout_css-components_layout_Navbar_css-compo-d9050e.css",
+      "static/chunks/app/purchases/page.js"
     ]
   }
 }

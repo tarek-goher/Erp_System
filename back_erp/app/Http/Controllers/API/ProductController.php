@@ -14,6 +14,16 @@ use Illuminate\Http\Request;
  */
 class ProductController extends BaseController
 {
+    /**
+     * التحقق إن المنتج تابع لشركة المستخدم الحالي
+     */
+    private function authorizeProduct(Product $product): void
+    {
+        if ($product->company_id !== $this->companyId()) {
+            abort(403, 'غير مصرح.');
+        }
+    }
+
     public function index(Request $request): JsonResponse
     {
         $products = Product::with('category', 'warehouse')
@@ -31,29 +41,76 @@ class ProductController extends BaseController
 
     public function store(StoreProductRequest $request): JsonResponse
     {
-        $data    = $request->validated();
+        $data = $request->validated();
+
+        // ✅ لو SKU مش موجود → ولّده تلقائياً بشكل مضمون unique
+        if (empty($data['sku'])) {
+            do {
+                $data['sku'] = 'SKU-' . strtoupper(uniqid());
+            } while (Product::where('sku', $data['sku'])->exists());
+        }
+
         $product = Product::create(array_merge($data, ['company_id' => $this->companyId()]));
         return $this->created(new ProductResource($product->load('category', 'warehouse')));
     }
 
     public function show(Product $product): JsonResponse
     {
-        $this->authorize('view', $product);
+        $this->authorizeProduct($product);
         return $this->success(new ProductResource($product->load('category', 'warehouse', 'stockMovements')));
     }
 
     public function update(UpdateProductRequest $request, Product $product): JsonResponse
     {
-        $this->authorize('update', $product);
+        $this->authorizeProduct($product);
         $product->update($request->validated());
         return $this->success(new ProductResource($product->fresh('category')), 'تم تحديث المنتج.');
     }
 
     public function destroy(Product $product): JsonResponse
     {
-        $this->authorize('delete', $product);
+        $this->authorizeProduct($product);
         $product->delete();
         return $this->success(null, 'تم الحذف.');
+    }
+
+    /** POST /api/products/{product}/adjust-stock */
+    public function adjustStock(Request $request, Product $product): JsonResponse
+    {
+        $this->authorizeProduct($product);
+
+        $request->validate([
+            'quantity' => 'required|numeric|min:0',
+            'notes'    => 'nullable|string|max:500',
+        ]);
+
+        $newQty = (int) $request->quantity;
+        $oldQty = (int) $product->qty;
+        $diff   = $newQty - $oldQty;
+
+        // سجّل حركة المخزون لو فيه فرق
+        if ($diff !== 0) {
+            try {
+                $product->stockMovements()->create([
+                    'company_id' => $this->companyId(),
+                    'type'       => $diff > 0 ? 'in' : 'out',
+                    'quantity'   => abs($diff),
+                    'notes'      => $request->notes ?? 'تعديل يدوي',
+                    'before_qty' => $oldQty,
+                    'after_qty'  => $newQty,
+                ]);
+            } catch (\Exception $e) {
+                // لو جدول stock_movements فيه مشكلة → كمّل بدونه
+                \Log::warning('adjustStock: ' . $e->getMessage());
+            }
+        }
+
+        $product->update(['qty' => $newQty]);
+
+        return $this->success(
+            new ProductResource($product->fresh('category')),
+            'تم تعديل المخزون بنجاح.'
+        );
     }
 
     /** GET /api/products/low-stock */
@@ -68,10 +125,10 @@ class ProductController extends BaseController
     {
         $companyId = $this->companyId();
         return $this->success([
-            'total'      => Product::where('company_id', $companyId)->count(),
-            'active'     => Product::where('company_id', $companyId)->active()->count(),
-            'low_stock'  => Product::where('company_id', $companyId)->lowStock()->count(),
-            'out_stock'  => Product::where('company_id', $companyId)->where('qty', 0)->count(),
+            'total'     => Product::where('company_id', $companyId)->count(),
+            'active'    => Product::where('company_id', $companyId)->active()->count(),
+            'low_stock' => Product::where('company_id', $companyId)->lowStock()->count(),
+            'out_stock' => Product::where('company_id', $companyId)->where('qty', 0)->count(),
         ]);
     }
 }

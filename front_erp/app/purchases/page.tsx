@@ -1,20 +1,37 @@
 'use client'
 
 // ══════════════════════════════════════════════════════════
-// app/purchases/page.tsx — صفحة المشتريات (FIXED)
-// API: GET/POST /api/purchases | GET /api/suppliers | GET /api/tax-rates
+// app/purchases/page.tsx
 // ══════════════════════════════════════════════════════════
 
 import { useState, useEffect, FormEvent } from 'react'
 import ERPLayout from '../../components/layout/ERPLayout'
-import { api } from '../../lib/api'
+import { api, extractArray } from '../../lib/api'
 import { useI18n } from '../../lib/i18n'
 
-type Purchase = {
-  id: number; order_number: string
-  supplier?: { name: string }
-  total: number; tax_amount?: number; status: string; created_at: string
+type PurchaseItem = {
+  id: number
+  product_id?: number
+  product?: { id: number; name: string }
+  qty: number
+  cost: number
+  total: number
 }
+
+type Purchase = {
+  id: number
+  order_number: string
+  supplier?: { id: number; name: string }
+  subtotal?: number
+  tax_amount?: number
+  total: number
+  status: string
+  created_at: string
+  notes?: string
+  expected_date?: string
+  items?: PurchaseItem[]
+}
+
 type Supplier = { id: number; name: string }
 type TaxRate  = { id: number; name: string; rate: number }
 type Product  = { id: number; name: string; cost?: number; purchase_price?: number }
@@ -25,17 +42,25 @@ type OrderItem = { product_id: string; name: string; qty: number; cost: number }
 
 export default function PurchasesPage() {
   const { t, lang } = useI18n()
-  const [items,     setItems]     = useState<Purchase[]>([])
-  const [suppliers, setSuppliers] = useState<Supplier[]>([])
-  const [taxRates,  setTaxRates]  = useState<TaxRate[]>([])
-  const [products,  setProducts]  = useState<Product[]>([])
-  const [loading,   setLoading]   = useState(true)
-  const [search,    setSearch]    = useState('')
+  const [items,        setItems]        = useState<Purchase[]>([])
+  const [suppliers,    setSuppliers]    = useState<Supplier[]>([])
+  const [taxRates,     setTaxRates]     = useState<TaxRate[]>([])
+  const [products,     setProducts]     = useState<Product[]>([])
+  const [loading,      setLoading]      = useState(true)
+  const [search,       setSearch]       = useState('')
   const [statusFilter, setStatusFilter] = useState('')
-  const [modal,     setModal]     = useState(false)
-  const [deleteId,  setDeleteId]  = useState<number | null>(null)
-  const [saving,    setSaving]    = useState(false)
-  const [formErr,   setFormErr]   = useState('')
+  const [modal,        setModal]        = useState(false)
+  const [deleteId,     setDeleteId]     = useState<number | null>(null)
+  const [saving,       setSaving]       = useState(false)
+  const [formErr,      setFormErr]      = useState('')
+
+  // مودال العرض
+  const [viewPurchase, setViewPurchase] = useState<Purchase | null>(null)
+  const [viewLoading,  setViewLoading]  = useState(false)
+
+  // مودال التعديل
+  const [editId,      setEditId]      = useState<number | null>(null)
+  const [editLoading, setEditLoading] = useState(false)
 
   // إضافة مورد inline
   const [showAddSupplier,  setShowAddSupplier]  = useState(false)
@@ -49,10 +74,18 @@ export default function PurchasesPage() {
     supplier_id: '', status: 'draft', notes: '', tax_rate_id: '', expected_date: '',
   })
 
-  // أصناف الطلب
   const [orderItems, setOrderItems] = useState<OrderItem[]>([
     { product_id: '', name: '', qty: 1, cost: 0 }
   ])
+
+  // ── helpers ──
+  const resetForm = () => {
+    setForm({ supplier_id: '', status: 'draft', notes: '', tax_rate_id: '', expected_date: '' })
+    setOrderItems([{ product_id: '', name: '', qty: 1, cost: 0 }])
+    setShowAddSupplier(false)
+    setFormErr('')
+    setEditId(null)
+  }
 
   const fetchItems = async () => {
     setLoading(true)
@@ -62,7 +95,7 @@ export default function PurchasesPage() {
       ...(statusFilter && { status: statusFilter }),
     })
     const res = await api.get<{ data: Purchase[] }>(`/purchases?${p}`)
-    if (res.data) setItems(res.data.data || [])
+    if (res.data) setItems(extractArray(res.data))
     setLoading(false)
   }
 
@@ -70,22 +103,65 @@ export default function PurchasesPage() {
 
   useEffect(() => {
     api.get<{ data: Supplier[] }>('/suppliers?per_page=200').then(r => {
-      if (r.data) setSuppliers(r.data.data || [])
+      if (r.data) setSuppliers(extractArray(r.data))
     })
     api.get<any>('/tax-rates').then(r => {
-      if (r.data) setTaxRates(r.data.data || r.data || [])
+      if (r.data) setTaxRates(extractArray(r.data))
     })
     api.get<{ data: Product[] }>('/products?per_page=200').then(r => {
-      if (r.data) setProducts(r.data.data || [])
+      if (r.data) setProducts(extractArray(r.data))
     })
   }, [])
 
+  // ── عرض التفاصيل ──
+const handleView = async (id: number) => {
+  setViewLoading(true)
+  setViewPurchase({ id, order_number: '', total: 0, status: '', created_at: '' })
+  const res = await api.get<any>(`/purchases/${id}`)
+  if (res.data) setViewPurchase(res.data)
+  else setViewPurchase(null)
+  setViewLoading(false)
+}
+
+  // ── فتح مودال التعديل ──
+  const handleEdit = async (id: number) => {
+    setEditLoading(true)
+    setEditId(id)
+    setModal(true)
+    const res = await api.get<any>(`/purchases/${id}`)
+    if (res.data) {
+      const p = res.data
+      setForm({
+        supplier_id:   String(p.supplier?.id || ''),
+        status:        p.status || 'draft',
+        notes:         p.notes || '',
+        tax_rate_id:   '',
+        expected_date: p.expected_date || '',
+      })
+      setOrderItems(
+        p.items && p.items.length > 0
+          ? p.items.map((i: PurchaseItem) => ({
+              product_id: String(i.product?.id || i.product_id || ''),
+              name:       i.product?.name || '',
+              qty:        i.qty,
+              cost:       i.cost,
+            }))
+          : [{ product_id: '', name: '', qty: 1, cost: 0 }]
+      )
+    }
+    setEditLoading(false)
+  }
+
+  // ── إضافة مورد ──
   const handleAddSupplier = async (e: FormEvent) => {
     e.preventDefault(); setAddSupplierErr('')
-    if (!newSupplierName.trim()) { setAddSupplierErr(lang === 'ar' ? 'الاسم مطلوب' : 'Name is required'); return }
+    if (!newSupplierName.trim()) {
+      setAddSupplierErr(lang === 'ar' ? 'الاسم مطلوب' : 'Name is required')
+      return
+    }
     setAddingSupplier(true)
     const res = await api.post('/suppliers', {
-      name: newSupplierName.trim(),
+      name:  newSupplierName.trim(),
       email: newSupplierEmail.trim() || undefined,
       phone: newSupplierPhone.trim() || undefined,
     })
@@ -98,19 +174,18 @@ export default function PurchasesPage() {
     setNewSupplierName(''); setNewSupplierEmail(''); setNewSupplierPhone('')
   }
 
-  // حساب الإجمالي
-  const subtotal = orderItems.reduce((s, i) => s + (i.qty * i.cost), 0)
+  // ── حساب الإجمالي ──
+  const subtotal    = orderItems.reduce((s, i) => s + (i.qty * i.cost), 0)
   const selectedTax = taxRates.find(tx => String(tx.id) === form.tax_rate_id)
-  const taxAmount = selectedTax ? Math.round(subtotal * selectedTax.rate) / 100 : 0
-  const grandTotal = subtotal + taxAmount
+  const taxAmount   = selectedTax ? Math.round(subtotal * selectedTax.rate) / 100 : 0
+  const grandTotal  = subtotal + taxAmount
 
-  const addItem = () => setOrderItems(prev => [...prev, { product_id: '', name: '', qty: 1, cost: 0 }])
+  const addItem    = () => setOrderItems(prev => [...prev, { product_id: '', name: '', qty: 1, cost: 0 }])
   const removeItem = (idx: number) => setOrderItems(prev => prev.filter((_, i) => i !== idx))
   const updateItem = (idx: number, field: keyof OrderItem, val: any) => {
     setOrderItems(prev => {
       const arr = [...prev]
       arr[idx] = { ...arr[idx], [field]: val }
-      // لو اختار منتج، اجيب سعره تلقائي
       if (field === 'product_id') {
         const p = products.find(p => String(p.id) === val)
         if (p) { arr[idx].name = p.name; arr[idx].cost = p.purchase_price || p.cost || 0 }
@@ -119,37 +194,49 @@ export default function PurchasesPage() {
     })
   }
 
+  // ── حفظ (إنشاء أو تعديل) ──
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault(); setFormErr('')
-    if (!form.supplier_id) { setFormErr(lang === 'ar' ? 'يجب اختيار المورد' : 'Supplier is required'); return }
+    if (!form.supplier_id) {
+      setFormErr(lang === 'ar' ? 'يجب اختيار المورد' : 'Supplier is required')
+      return
+    }
     const validItems = orderItems.filter(i => i.product_id && i.qty > 0 && i.cost >= 0)
+    if (validItems.length === 0) {
+      setFormErr(lang === 'ar' ? 'يجب إضافة صنف واحد على الأقل' : 'Add at least one item')
+      return
+    }
     setSaving(true)
-    const res = await api.post('/purchases', {
+    const payload = {
       supplier_id:   Number(form.supplier_id),
       status:        form.status,
       notes:         form.notes,
       expected_date: form.expected_date || undefined,
-      items: validItems.map(i => ({ product_id: Number(i.product_id), qty: i.qty, cost: i.cost })),
+      items:         validItems.map(i => ({ product_id: Number(i.product_id), qty: i.qty, cost: i.cost })),
       ...(form.tax_rate_id && { tax_rate_id: Number(form.tax_rate_id) }),
-    })
+    }
+
+    const res = editId
+      ? await api.put(`/purchases/${editId}`, payload)
+      : await api.post('/purchases', payload)
+
     setSaving(false)
     if (res.error) { setFormErr(res.error); return }
     setModal(false)
-    setForm({ supplier_id: '', status: 'draft', notes: '', tax_rate_id: '', expected_date: '' })
-    setOrderItems([{ product_id: '', name: '', qty: 1, cost: 0 }])
-    setShowAddSupplier(false)
+    resetForm()
     fetchItems()
   }
 
   const handleDelete = async () => {
     if (!deleteId) return
     await api.delete(`/purchases/${deleteId}`)
-    setDeleteId(null); setItems(p => p.filter(i => i.id !== deleteId))
+    setDeleteId(null)
+    setItems(p => p.filter(i => i.id !== deleteId))
   }
 
-  const fmt = (n: number) => new Intl.NumberFormat(lang === 'ar' ? 'ar-EG' : 'en-US').format(n || 0)
-  const fmtDate = (d: string) => new Date(d).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US')
-  const badge = (s: string) => ({
+  const fmt     = (n: number) => new Intl.NumberFormat(lang === 'ar' ? 'ar-EG' : 'en-US').format(n || 0)
+  const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US') : '—'
+  const badge   = (s: string) => ({
     approved: 'badge-success', received: 'badge-success',
     pending: 'badge-warning', draft: 'badge-muted', cancelled: 'badge-danger',
   }[s] || 'badge-muted')
@@ -170,7 +257,7 @@ export default function PurchasesPage() {
             {STATUSES.map(s => <option key={s} value={s}>{t(s)}</option>)}
           </select>
         </div>
-        <button className="btn btn-primary" onClick={() => setModal(true)}>
+        <button className="btn btn-primary" onClick={() => { resetForm(); setModal(true) }}>
           + {lang === 'ar' ? 'طلب شراء' : 'New Order'}
         </button>
       </div>
@@ -181,7 +268,10 @@ export default function PurchasesPage() {
             {Array(6).fill(0).map((_, i) => <div key={i} className="skeleton" style={{ height: 44 }} />)}
           </div>
         ) : items.length === 0 ? (
-          <div className="empty-state"><div className="empty-state-icon">🛒</div><p className="empty-state-text">{t('no_data')}</p></div>
+          <div className="empty-state">
+            <div className="empty-state-icon">🛒</div>
+            <p className="empty-state-text">{t('no_data')}</p>
+          </div>
         ) : (
           <div className="table-container">
             <table className="table">
@@ -189,8 +279,9 @@ export default function PurchasesPage() {
                 <tr>
                   <th>{t('number')}</th>
                   <th>{t('supplier')}</th>
-                  <th>{t('total')}</th>
+                  <th>{lang === 'ar' ? 'المجموع الفرعي' : 'Subtotal'}</th>
                   <th>{lang === 'ar' ? 'الضريبة' : 'Tax'}</th>
+                  <th>{t('total')}</th>
                   <th>{t('status')}</th>
                   <th>{t('date')}</th>
                   <th>{t('actions')}</th>
@@ -201,12 +292,23 @@ export default function PurchasesPage() {
                   <tr key={item.id}>
                     <td className="fw-semibold">{item.order_number}</td>
                     <td>{item.supplier?.name || '—'}</td>
-                    <td className="fw-semibold">{fmt(item.total)}</td>
+                    <td className="text-muted">{item.subtotal ? fmt(item.subtotal) : '—'}</td>
                     <td className="text-muted">{item.tax_amount ? fmt(item.tax_amount) : '—'}</td>
+                    <td className="fw-semibold">{fmt(item.total)}</td>
                     <td><span className={`badge ${badge(item.status)}`}>{t(item.status) || item.status}</span></td>
                     <td className="text-muted">{fmtDate(item.created_at)}</td>
                     <td>
-                      <button className="btn btn-danger btn-sm" onClick={() => setDeleteId(item.id)}>{t('delete')}</button>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button className="btn btn-secondary btn-sm" onClick={() => handleView(item.id)}>
+                          {lang === 'ar' ? '👁 عرض' : '👁 View'}
+                        </button>
+                        <button className="btn btn-secondary btn-sm" onClick={() => handleEdit(item.id)}>
+                          {lang === 'ar' ? '✏️ تعديل' : '✏️ Edit'}
+                        </button>
+                        <button className="btn btn-danger btn-sm" onClick={() => setDeleteId(item.id)}>
+                          {t('delete')}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -216,115 +318,262 @@ export default function PurchasesPage() {
         )}
       </div>
 
-      {/* ══ Modal: طلب شراء جديد ══ */}
+      {/* ══ Modal: عرض التفاصيل ══ */}
+      {viewPurchase && (
+        <div className="modal-overlay" onClick={() => setViewPurchase(null)}>
+          <div className="modal" style={{ maxWidth: 700 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">
+                {lang === 'ar' ? 'تفاصيل طلب الشراء' : 'Purchase Order Details'}
+                {viewPurchase.order_number && (
+                  <span style={{ marginRight: 8, marginLeft: 8, color: 'var(--color-primary)' }}>
+                    #{viewPurchase.order_number}
+                  </span>
+                )}
+              </h3>
+              <button className="btn-icon" onClick={() => setViewPurchase(null)}>✕</button>
+            </div>
+            <div className="modal-body">
+              {viewLoading ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {Array(4).fill(0).map((_, i) => <div key={i} className="skeleton" style={{ height: 36 }} />)}
+                </div>
+              ) : (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
+                    <div style={{ padding: '0.75rem', background: 'var(--bg-hover)', borderRadius: 'var(--radius-md)' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 4 }}>{t('supplier')}</div>
+                      <div className="fw-semibold">{viewPurchase.supplier?.name || '—'}</div>
+                    </div>
+                    <div style={{ padding: '0.75rem', background: 'var(--bg-hover)', borderRadius: 'var(--radius-md)' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 4 }}>{t('status')}</div>
+                      <span className={`badge ${badge(viewPurchase.status)}`}>{t(viewPurchase.status) || viewPurchase.status}</span>
+                    </div>
+                    <div style={{ padding: '0.75rem', background: 'var(--bg-hover)', borderRadius: 'var(--radius-md)' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 4 }}>{t('date')}</div>
+                      <div>{fmtDate(viewPurchase.created_at)}</div>
+                    </div>
+                    <div style={{ padding: '0.75rem', background: 'var(--bg-hover)', borderRadius: 'var(--radius-md)' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 4 }}>{lang === 'ar' ? 'تاريخ التوريد' : 'Expected Date'}</div>
+                      <div>{viewPurchase.expected_date ? fmtDate(viewPurchase.expected_date) : '—'}</div>
+                    </div>
+                  </div>
+
+                  {viewPurchase.items && viewPurchase.items.length > 0 && (
+                    <div style={{ marginBottom: '1rem' }}>
+                      <div className="fw-semibold" style={{ marginBottom: '0.5rem' }}>
+                        {lang === 'ar' ? 'الأصناف' : 'Items'}
+                      </div>
+                      <table className="table" style={{ fontSize: '0.875rem' }}>
+                        <thead>
+                          <tr>
+                            <th>{lang === 'ar' ? 'المنتج' : 'Product'}</th>
+                            <th>{lang === 'ar' ? 'الكمية' : 'Qty'}</th>
+                            <th>{lang === 'ar' ? 'سعر التكلفة' : 'Cost'}</th>
+                            <th>{lang === 'ar' ? 'الإجمالي' : 'Total'}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {viewPurchase.items.map((item, idx) => (
+                            <tr key={idx}>
+                              <td>{item.product?.name || '—'}</td>
+                              <td>{item.qty}</td>
+                              <td>{fmt(item.cost)}</td>
+                              <td className="fw-semibold">{fmt(item.total)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  <div style={{ padding: '0.75rem', background: 'var(--bg-hover)', borderRadius: 'var(--radius-md)', display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+                    {viewPurchase.subtotal !== undefined && (
+                      <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                        {lang === 'ar' ? 'المجموع الفرعي:' : 'Subtotal:'} <strong>{fmt(viewPurchase.subtotal)}</strong>
+                      </div>
+                    )}
+                    {viewPurchase.tax_amount !== undefined && viewPurchase.tax_amount > 0 && (
+                      <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                        {lang === 'ar' ? 'الضريبة:' : 'Tax:'} <strong>{fmt(viewPurchase.tax_amount)}</strong>
+                      </div>
+                    )}
+                    <div style={{ fontSize: '1rem', fontWeight: 700, borderTop: '1px solid var(--border-color)', paddingTop: 6, marginTop: 2 }}>
+                      {lang === 'ar' ? 'الإجمالي الكلي:' : 'Grand Total:'} {fmt(viewPurchase.total)}
+                    </div>
+                  </div>
+
+                  {viewPurchase.notes && (
+                    <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: 'var(--bg-hover)', borderRadius: 'var(--radius-md)' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 4 }}>{t('notes')}</div>
+                      <div style={{ fontSize: '0.875rem' }}>{viewPurchase.notes}</div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setViewPurchase(null)}>
+                {t('close') || (lang === 'ar' ? 'إغلاق' : 'Close')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ Modal: إنشاء / تعديل طلب شراء ══ */}
       {modal && (
-        <div className="modal-overlay" onClick={() => { setModal(false); setShowAddSupplier(false) }}>
+        <div className="modal-overlay" onClick={() => { setModal(false); resetForm() }}>
           <div className="modal" style={{ maxWidth: 760 }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">{lang === 'ar' ? 'طلب شراء جديد' : 'New Purchase Order'}</h3>
-              <button className="btn-icon" onClick={() => { setModal(false); setShowAddSupplier(false) }}>✕</button>
+              <h3 className="modal-title">
+                {editId
+                  ? (lang === 'ar' ? 'تعديل طلب الشراء' : 'Edit Purchase Order')
+                  : (lang === 'ar' ? 'طلب شراء جديد'    : 'New Purchase Order')}
+              </h3>
+              <button className="btn-icon" onClick={() => { setModal(false); resetForm() }}>✕</button>
             </div>
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-              <div className="modal-body">
-                <div className="form-grid form-grid-2">
 
-                  {/* المورد */}
-                  <div className="input-group">
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                      <label className="input-label" style={{ marginBottom: 0 }}>{t('supplier')} *</label>
-                      <button type="button" onClick={() => { setShowAddSupplier(!showAddSupplier); setAddSupplierErr('') }}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-primary)', fontSize: '0.8rem', fontWeight: 600 }}>
-                        {showAddSupplier ? (lang === 'ar' ? '← رجوع للقائمة' : '← Back') : (lang === 'ar' ? '+ مورد جديد' : '+ New Supplier')}
+            {editLoading ? (
+              <div className="modal-body">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {Array(4).fill(0).map((_, i) => <div key={i} className="skeleton" style={{ height: 44 }} />)}
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+                <div className="modal-body">
+                  <div className="form-grid form-grid-2">
+
+                    {/* المورد */}
+                    <div className="input-group">
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                        <label className="input-label" style={{ marginBottom: 0 }}>{t('supplier')} *</label>
+                        <button type="button"
+                          onClick={() => { setShowAddSupplier(!showAddSupplier); setAddSupplierErr('') }}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-primary)', fontSize: '0.8rem', fontWeight: 600 }}>
+                          {showAddSupplier
+                            ? (lang === 'ar' ? '← رجوع للقائمة' : '← Back')
+                            : (lang === 'ar' ? '+ مورد جديد'     : '+ New Supplier')}
+                        </button>
+                      </div>
+                      {showAddSupplier ? (
+                        <div style={{ border: '1px dashed var(--color-primary)', borderRadius: 'var(--radius-md)', padding: '0.75rem', background: 'var(--color-primary-light)' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            <input className="input" placeholder={lang === 'ar' ? 'الاسم *' : 'Name *'} value={newSupplierName} onChange={e => setNewSupplierName(e.target.value)} autoFocus />
+                            <input className="input" placeholder={lang === 'ar' ? 'البريد (اختياري)' : 'Email (optional)'} type="email" value={newSupplierEmail} onChange={e => setNewSupplierEmail(e.target.value)} />
+                            <input className="input" placeholder={lang === 'ar' ? 'الهاتف (اختياري)' : 'Phone (optional)'} value={newSupplierPhone} onChange={e => setNewSupplierPhone(e.target.value)} />
+                            {addSupplierErr && <div style={{ color: 'var(--color-danger)', fontSize: '0.8rem' }}>⚠️ {addSupplierErr}</div>}
+                            <button type="button" className="btn btn-primary btn-sm" onClick={handleAddSupplier} disabled={addingSupplier} style={{ alignSelf: 'flex-start' }}>
+                              {addingSupplier ? '⏳...' : (lang === 'ar' ? '✓ حفظ المورد' : '✓ Save Supplier')}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <select className="input" value={form.supplier_id} onChange={e => setForm({ ...form, supplier_id: e.target.value })} required>
+                          <option value="">{suppliers.length === 0 ? (lang === 'ar' ? '← اضغط "+ مورد جديد"' : '← Click "+ New Supplier"') : (lang === 'ar' ? 'اختر المورد' : 'Select Supplier')}</option>
+                          {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        </select>
+                      )}
+                    </div>
+
+                    {/* الحالة */}
+                    <div className="input-group">
+                      <label className="input-label">{t('status')}</label>
+                      <select className="input" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
+                        {STATUSES.map(s => <option key={s} value={s}>{t(s)}</option>)}
+                      </select>
+                    </div>
+
+                    {/* الضريبة */}
+                    <div className="input-group">
+                      <label className="input-label">{lang === 'ar' ? 'الضريبة' : 'Tax Rate'}</label>
+                      <select className="input" value={form.tax_rate_id} onChange={e => setForm({ ...form, tax_rate_id: e.target.value })}>
+                        <option value="">{lang === 'ar' ? 'بدون ضريبة' : 'No Tax'}</option>
+                        {taxRates.length === 0
+                          ? <option disabled>{lang === 'ar' ? 'لا توجد ضرائب معرّفة' : 'No tax rates defined'}</option>
+                          : taxRates.map(tx => <option key={tx.id} value={tx.id}>{tx.name} ({tx.rate}%)</option>)
+                        }
+                      </select>
+                      {taxRates.length === 0 && (
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4 }}>
+                          {lang === 'ar' ? '💡 أضف ضرائب من صفحة الإعدادات ← الضرائب' : '💡 Add taxes from Settings → Taxes'}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* تاريخ التوريد */}
+                    <div className="input-group">
+                      <label className="input-label">{lang === 'ar' ? 'تاريخ التوريد المتوقع' : 'Expected Date'}</label>
+                      <input className="input" type="date" value={form.expected_date} onChange={e => setForm({ ...form, expected_date: e.target.value })} />
+                    </div>
+
+                    {/* ملاحظات */}
+                    <div className="input-group" style={{ gridColumn: '1 / -1' }}>
+                      <label className="input-label">{t('notes')}</label>
+                      <textarea className="input" rows={2} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} style={{ resize: 'vertical' }} />
+                    </div>
+                  </div>
+
+                  {/* أصناف الطلب */}
+                  <div style={{ marginTop: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                      <label className="fw-semibold">{lang === 'ar' ? 'أصناف الطلب' : 'Order Items'}</label>
+                      <button type="button" className="btn btn-secondary btn-sm" onClick={addItem}>
+                        + {lang === 'ar' ? 'إضافة صنف' : 'Add Item'}
                       </button>
                     </div>
-                    {showAddSupplier ? (
-                      <div style={{ border: '1px dashed var(--color-primary)', borderRadius: 'var(--radius-md)', padding: '0.75rem', background: 'var(--color-primary-light)' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                          <input className="input" placeholder={lang === 'ar' ? 'الاسم *' : 'Name *'} value={newSupplierName} onChange={e => setNewSupplierName(e.target.value)} autoFocus />
-                          <input className="input" placeholder={lang === 'ar' ? 'البريد (اختياري)' : 'Email (optional)'} type="email" value={newSupplierEmail} onChange={e => setNewSupplierEmail(e.target.value)} />
-                          <input className="input" placeholder={lang === 'ar' ? 'الهاتف (اختياري)' : 'Phone (optional)'} value={newSupplierPhone} onChange={e => setNewSupplierPhone(e.target.value)} />
-                          {addSupplierErr && <div style={{ color: 'var(--color-danger)', fontSize: '0.8rem' }}>⚠️ {addSupplierErr}</div>}
-                          <button type="button" className="btn btn-primary btn-sm" onClick={handleAddSupplier} disabled={addingSupplier} style={{ alignSelf: 'flex-start' }}>
-                            {addingSupplier ? '⏳...' : (lang === 'ar' ? '✓ حفظ المورد' : '✓ Save Supplier')}
-                          </button>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {orderItems.map((item, idx) => (
+                        <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 8, alignItems: 'center' }}>
+                          <select className="input" value={item.product_id} onChange={e => updateItem(idx, 'product_id', e.target.value)}>
+                            <option value="">{lang === 'ar' ? 'اختر منتج' : 'Select Product'}</option>
+                            {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          </select>
+                          <input className="input" type="number" min="0.001" step="0.001"
+                            placeholder={lang === 'ar' ? 'الكمية' : 'Qty'}
+                            value={item.qty} onChange={e => updateItem(idx, 'qty', Number(e.target.value))} />
+                          <input className="input" type="number" min="0" step="0.01"
+                            placeholder={lang === 'ar' ? 'سعر التكلفة' : 'Cost'}
+                            value={item.cost} onChange={e => updateItem(idx, 'cost', Number(e.target.value))} />
+                          <button type="button" className="btn-icon" onClick={() => removeItem(idx)} style={{ color: 'var(--color-danger)' }}>✕</button>
                         </div>
+                      ))}
+                    </div>
+
+                    {/* ملخص الإجمالي */}
+                    <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: 'var(--bg-hover)', borderRadius: 'var(--radius-md)', display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                        {lang === 'ar' ? 'المجموع الفرعي:' : 'Subtotal:'} <strong>{fmt(subtotal)}</strong>
                       </div>
-                    ) : (
-                      <select className="input" value={form.supplier_id} onChange={e => setForm({ ...form, supplier_id: e.target.value })} required>
-                        <option value="">{suppliers.length === 0 ? (lang === 'ar' ? '← اضغط "+ مورد جديد"' : '← Click "+ New Supplier"') : (lang === 'ar' ? 'اختر المورد' : 'Select Supplier')}</option>
-                        {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                      </select>
-                    )}
+                      {selectedTax && (
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                          {lang === 'ar' ? `ضريبة ${selectedTax.rate}%:` : `Tax ${selectedTax.rate}%:`} <strong>{fmt(taxAmount)}</strong>
+                        </div>
+                      )}
+                      <div style={{ fontSize: '1rem', fontWeight: 700 }}>
+                        {lang === 'ar' ? 'الإجمالي:' : 'Total:'} {fmt(grandTotal)}
+                      </div>
+                    </div>
                   </div>
 
-                  {/* الحالة */}
-                  <div className="input-group">
-                    <label className="input-label">{t('status')}</label>
-                    <select className="input" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
-                      {STATUSES.map(s => <option key={s} value={s}>{t(s)}</option>)}
-                    </select>
-                  </div>
-
-                  {/* الضريبة */}
-                  <div className="input-group">
-                    <label className="input-label">{lang === 'ar' ? 'الضريبة' : 'Tax Rate'}</label>
-                    <select className="input" value={form.tax_rate_id} onChange={e => setForm({ ...form, tax_rate_id: e.target.value })}>
-                      <option value="">{lang === 'ar' ? 'بدون ضريبة' : 'No Tax'}</option>
-                      {taxRates.map(tx => <option key={tx.id} value={tx.id}>{tx.name} ({tx.rate}%)</option>)}
-                    </select>
-                  </div>
-
-                  {/* تاريخ التوريد */}
-                  <div className="input-group">
-                    <label className="input-label">{lang === 'ar' ? 'تاريخ التوريد المتوقع' : 'Expected Date'}</label>
-                    <input className="input" type="date" value={form.expected_date} onChange={e => setForm({ ...form, expected_date: e.target.value })} />
-                  </div>
-
-                  {/* ملاحظات */}
-                  <div className="input-group" style={{ gridColumn: '1 / -1' }}>
-                    <label className="input-label">{t('notes')}</label>
-                    <textarea className="input" rows={2} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} style={{ resize: 'vertical' }} />
-                  </div>
+                  {formErr && (
+                    <div className="login-error" style={{ marginTop: '1rem' }}>
+                      <span>⚠️</span> {formErr}
+                    </div>
+                  )}
                 </div>
 
-                {/* ── أصناف الطلب ── */}
-                <div style={{ marginTop: '1rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <label className="fw-semibold">{lang === 'ar' ? 'أصناف الطلب' : 'Order Items'}</label>
-                    <button type="button" className="btn btn-secondary btn-sm" onClick={addItem}>+ {lang === 'ar' ? 'إضافة صنف' : 'Add Item'}</button>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {orderItems.map((item, idx) => (
-                      <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 8, alignItems: 'center' }}>
-                        <select className="input" value={item.product_id} onChange={e => updateItem(idx, 'product_id', e.target.value)}>
-                          <option value="">{lang === 'ar' ? 'اختر منتج' : 'Select Product'}</option>
-                          {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                        </select>
-                        <input className="input" type="number" min="0.001" step="0.001" placeholder={lang === 'ar' ? 'الكمية' : 'Qty'} value={item.qty} onChange={e => updateItem(idx, 'qty', Number(e.target.value))} />
-                        <input className="input" type="number" min="0" step="0.01" placeholder={lang === 'ar' ? 'سعر التكلفة' : 'Cost'} value={item.cost} onChange={e => updateItem(idx, 'cost', Number(e.target.value))} />
-                        <button type="button" className="btn-icon" onClick={() => removeItem(idx)} style={{ color: 'var(--color-danger)' }}>✕</button>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* ملخص الإجمالي */}
-                  <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: 'var(--bg-hover)', borderRadius: 'var(--radius-md)', display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{lang === 'ar' ? 'المجموع الفرعي:' : 'Subtotal:'} <strong>{fmt(subtotal)}</strong></div>
-                    {selectedTax && <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{lang === 'ar' ? `ضريبة ${selectedTax.rate}%:` : `Tax ${selectedTax.rate}%:`} <strong>{fmt(taxAmount)}</strong></div>}
-                    <div style={{ fontSize: '1rem', fontWeight: 700 }}>{lang === 'ar' ? 'الإجمالي:' : 'Total:'} {fmt(grandTotal)}</div>
-                  </div>
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-secondary" onClick={() => { setModal(false); resetForm() }}>{t('cancel')}</button>
+                  <button type="submit" className="btn btn-primary" disabled={saving || showAddSupplier}>
+                    {saving
+                      ? <><span className="spinner" style={{ width: 14, height: 14 }} /> {t('loading')}</>
+                      : t('save')}
+                  </button>
                 </div>
-
-                {formErr && <div className="login-error" style={{ marginTop: '1rem' }}><span>⚠️</span> {formErr}</div>}
-              </div>
-
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => { setModal(false); setShowAddSupplier(false) }}>{t('cancel')}</button>
-                <button type="submit" className="btn btn-primary" disabled={saving || showAddSupplier}>
-                  {saving ? <><span className="spinner" style={{ width: 14, height: 14 }} /> {t('loading')}</> : t('save')}
-                </button>
-              </div>
-            </form>
+              </form>
+            )}
           </div>
         </div>
       )}

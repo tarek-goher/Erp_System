@@ -192,7 +192,7 @@
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	!function() {
-/******/ 		__webpack_require__.h = function() { return "5eeedd5eaecfcd8b"; }
+/******/ 		__webpack_require__.h = function() { return "f2a9b0c892127682"; }
 /******/ 	}();
 /******/ 	
 /******/ 	/* webpack/runtime/global */
@@ -830,9 +830,9 @@
 /******/ 		// [resolve, reject, Promise] = chunk loading, 0 = chunk loaded
 /******/ 		var installedChunks = __webpack_require__.hmrS_jsonp = __webpack_require__.hmrS_jsonp || {
 /******/ 			"webpack": 0,
+/******/ 			"css-app_login_login_css": 0,
 /******/ 			"css-styles_globals_css": 0,
-/******/ 			"css-app_dashboard_page_css-app_sales_page_css-components_layout_ERPLayout_css-components_layo-de72fe": 0,
-/******/ 			"css-app_login_login_css": 0
+/******/ 			"css-app_dashboard_page_css-components_layout_ERPLayout_css-components_layout_Navbar_css-compo-d9050e": 0
 /******/ 		};
 /******/ 		
 /******/ 		__webpack_require__.f.j = function(chunkId, promises) {
@@ -844,7 +844,7 @@
 /******/ 					if(installedChunkData) {
 /******/ 						promises.push(installedChunkData[2]);
 /******/ 					} else {
-/******/ 						if(!/^(css\-(app_(dashboard_page_css\-app_sales_page_css\-components_layout_ERPLayout_css\-components_layo\-de72fe|login_login_css)|styles_globals_css)|webpack)$/.test(chunkId)) {
+/******/ 						if(!/^(css\-(app_(dashboard_page_css\-components_layout_ERPLayout_css\-components_layout_Navbar_css\-compo\-d9050e|login_login_css)|styles_globals_css)|webpack)$/.test(chunkId)) {
 /******/ 							// setup Promise in chunk cache
 /******/ 							var promise = new Promise(function(resolve, reject) { installedChunkData = installedChunks[chunkId] = [resolve, reject]; });
 /******/ 							promises.push(installedChunkData[2] = promise);

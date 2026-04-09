@@ -222,8 +222,8 @@ class ETAController extends BaseController
         ];
     }
 
-    private function error(string $message, int $status = 400): JsonResponse
-    {
-        return response()->json(['success' => false, 'message' => $message], $status);
-    }
+    // protected function error(string $message, int $status = 400): JsonResponse
+    // {
+    //     return response()->json(['success' => false, 'message' => $message], $status);
+    // }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API;
 
+use App\Http\Requests\Purchase\UpdatePurchaseRequest;
 use App\Http\Requests\Purchase\StorePurchaseRequest;
 use App\Http\Resources\PurchaseResource;
 use App\Models\Purchase;
@@ -37,6 +38,12 @@ class PurchaseController extends BaseController
     public function show(Purchase $purchase): JsonResponse
     {
         return $this->success(new PurchaseResource($purchase->load('items.product', 'supplier', 'user')));
+    }
+
+    public function update(UpdatePurchaseRequest $request, Purchase $purchase): JsonResponse
+    {
+        $purchase = $this->purchaseService->updatePurchase($purchase, $request->validated());
+        return $this->success(new PurchaseResource($purchase));
     }
 
     public function destroy(Purchase $purchase): JsonResponse

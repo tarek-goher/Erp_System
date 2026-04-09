@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import ERPLayout from '../../components/layout/ERPLayout'
-import { api } from '../../lib/api'
+import { api, extractArray } from '../../lib/api'
 import { useToast } from '../../hooks/useToast'
 import { StatCard, Badge, EmptyState, SearchInput, Modal, ToastContainer } from '../../components/ui'
 import Link from 'next/link'
@@ -51,10 +51,8 @@ export default function HelpdeskPage() {
       api.get('/helpdesk/tickets?per_page=100'),
       api.get('/helpdesk/canned-responses?per_page=100'),
     ])
-    const tRaw = tRes.data
-    setTickets(Array.isArray(tRaw)?tRaw:(Array.isArray(tRaw?.data?.data)?tRaw.data.data:(Array.isArray(tRaw?.data)?tRaw.data:[])))
-    const cRaw = cRes.data
-    setCanned(Array.isArray(cRaw)?cRaw:(Array.isArray(cRaw?.data?.data)?cRaw.data.data:(Array.isArray(cRaw?.data)?cRaw.data:[])))
+    if (tRes.data) setTickets(extractArray(tRes.data))
+    if (cRes.data) setCanned(extractArray(cRes.data))
     setLoading(false)
   }
   useEffect(() => { loadAll() }, [])

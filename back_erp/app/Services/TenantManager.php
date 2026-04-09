@@ -56,28 +56,36 @@ class TenantManager
     // ══════════════════════════════════════════════════════════
 
     /**
-     * تفعيل شركة (is_active = true)
-     * يُستدعى من SuperAdmin/CompanyController عند الموافقة على شركة جديدة
+     * تفعيل شركة → status = 'active'
+     * يُستدعى من SuperAdmin/CompanyController عند الموافقة على شركة جديدة.
+     *
+     * Fix #2: كان يستخدم is_active (غير موجود في Company::$fillable)
+     * الحقل الصحيح هو status بقيمة 'active' | 'suspended'.
+     * Company::isActive() تتحقق من status === 'active'
+     * وEnsureCompanyActive Middleware يتحقق من status === 'suspended'.
      *
      * @param  Company $company
      * @return void
      */
     public static function activateCompany(Company $company): void
     {
-        $company->update(['is_active' => true]);
+        $company->update(['status' => 'active']);
     }
 
     /**
-     * تعطيل/إيقاف شركة (is_active = false)
+     * تعليق/إيقاف شركة → status = 'suspended'
      * المستخدمون المنتمون لهذه الشركة لن يستطيعوا تسجيل الدخول
-     * (التحقق في AuthController::login)
+     * (التحقق في AuthController::login وEnsureCompanyActive Middleware).
+     *
+     * Fix #2: كان يستخدم is_active = false (غير موجود في Company::$fillable)
+     * الحقل الصحيح هو status = 'suspended'.
      *
      * @param  Company $company
      * @return void
      */
     public static function suspendCompany(Company $company): void
     {
-        $company->update(['is_active' => false]);
+        $company->update(['status' => 'suspended']);
     }
 
     // ══════════════════════════════════════════════════════════

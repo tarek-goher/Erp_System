@@ -3,57 +3,85 @@
 namespace App\Http\Controllers\API;
 
 use App\Models\User;
+use App\Models\Company;
 use App\Services\AccountService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
+use Spatie\Permission\Models\Role;
 
 /**
  * AuthController
  * المسارات: /api/auth/*
- *
- * Fix #4:
- *  - register(): كان بيعمل User بدون is_active=true، فالمستخدم الجديد
- *    كان بيتحجب فوراً عند login بـ "Your account is deactivated".
- *  - register(): المستخدم بيتسجل بدون company_id.
- *  - login(): مكانش بيحدّث last_login_at بعد الـ login الناجح.
  */
 class AuthController extends BaseController
 {
-    // AppServiceProvider بيحقن AccountService
     public function __construct(private AccountService $accountService) {}
 
     /** POST /api/auth/register */
     public function register(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'name'       => 'required|string|max:100',
-            'email'      => 'required|email|unique:users',
-            'password'   => 'required|min:8|confirmed',
-            'phone'      => 'nullable|string|max:20',
-            'company_id' => 'nullable|integer|exists:companies,id',
+            'name'         => 'required|string|max:100',
+            'email'        => 'required|email|unique:users',
+            'password'     => 'required|min:8|confirmed',
+            'phone'        => 'nullable|string|max:20',
+            'company_name' => 'nullable|string|max:200',
+            'plan'         => 'nullable|string|in:starter,professional,enterprise',
+            'country'      => 'nullable|string',
+            'company_id'   => 'nullable|integer|exists:companies,id',
         ]);
 
-        // Fix #4a: إضافة is_active=true صراحةً عشان المستخدم الجديد
-        //          ميتحجبش فوراً عند أول login.
-        $user = User::create([
-            'name'       => $data['name'],
-            'email'      => $data['email'],
-            'password'   => Hash::make($data['password']),
-            'phone'      => $data['phone'] ?? null,
-            // Fix #4b: تسجيل company_id لو موجود في الـ request
-            'company_id' => $data['company_id'] ?? null,
-            // Fix #4a: تأكيد تفعيل الحساب
-            'is_active'  => true,
-        ]);
+        try {
+            return DB::transaction(function () use ($data) {
+                $companyId = $data['company_id'] ?? null;
 
-        $token = $user->createToken('api-token')->plainTextToken;
+                if (!empty($data['company_name'])) {
+                    $company = Company::create([
+                        'name'              => $data['company_name'],
+                        'email'             => $data['email'],
+                        'phone'             => $data['phone'] ?? null,
+                        'subscription_plan' => $data['plan'] ?? 'starter',
+                        'country'           => $data['country'] ?? 'Egypt',
+                        'status'            => 'active',
+                    ]);
+                    $companyId = $company->id;
 
-        return $this->created([
-            'user'  => $user,
-            'token' => $token,
-        ], 'Registration successful');
+                    $this->accountService->seedDefaultsForCompany($companyId);
+                }
+
+                $user = User::create([
+                    'name'       => $data['name'],
+                    'email'      => $data['email'],
+                    'password'   => Hash::make($data['password']),
+                    'phone'      => $data['phone'] ?? null,
+                    'company_id' => $companyId,
+                    'is_active'  => true,
+                ]);
+
+                if (!empty($data['company_name'])) {
+                    $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+                    $user->assignRole($adminRole);
+                }
+
+                $token = $user->createToken('api-token')->plainTextToken;
+
+                return $this->created([
+                    'user'    => $user->load('roles:id,name'),
+                    'company' => $user->company,
+                    'token'   => $token,
+                ], 'Registration successful');
+            });
+        } catch (\Exception $e) {
+            Log::error('Registration Error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'data'  => $request->all(),
+            ]);
+            return $this->error('حدث خطأ أثناء التسجيل: ' . $e->getMessage(), 500);
+        }
     }
 
     /** POST /api/auth/login */
@@ -82,7 +110,6 @@ class AuthController extends BaseController
             return $this->error('Your company account is suspended.', 403);
         }
 
-        // Fix #4c: تحديث last_login_at عند كل login ناجح
         $user->update(['last_login_at' => now()]);
 
         $token = $user->createToken('api-token')->plainTextToken;

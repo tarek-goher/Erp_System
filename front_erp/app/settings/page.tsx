@@ -10,7 +10,7 @@
 
 import { useState, useEffect, FormEvent } from 'react'
 import ERPLayout from '../../components/layout/ERPLayout'
-import { api } from '../../lib/api'
+import { api, extractArray } from '../../lib/api'
 import { useI18n } from '../../lib/i18n'
 
 const TABS = ['company', 'users', 'roles', 'taxes', 'currencies', 'audit', 'security']
@@ -134,7 +134,7 @@ function UsersSettings({ lang, t }: any) {
 
   useEffect(() => {
     api.get('/users?per_page=50').then(res => {
-      if (res.data) setUsers(res.data.data || [])
+      if (res.data) setUsers(extractArray(res.data))
       setLoading(false)
     })
   }, [])
@@ -175,7 +175,7 @@ function RolesSettings({ lang, t }: any) {
 
   useEffect(() => {
     api.get('/roles').then(res => {
-      if (res.data) setRoles(res.data.data || res.data || [])
+      if (res.data) setRoles(extractArray(res.data))
       setLoading(false)
     })
   }, [])
@@ -218,7 +218,7 @@ function TaxSettings({ lang, t }: any) {
 
   const loadTaxes = () => {
     api.get('/tax-rates').then(res => {
-      if (res.data) setTaxes(res.data.data || res.data || [])
+      if (res.data) setTaxes(extractArray(res.data))
       setLoading(false)
     })
   }
@@ -320,7 +320,7 @@ function CurrenciesSettings({ lang, t }: any) {
 
   useEffect(() => {
     api.get('/currencies').then(res => {
-      if (res.data) setCurrencies(res.data.data || res.data || [])
+      if (res.data) setCurrencies(extractArray(res.data))
       setLoading(false)
     })
   }, [])
@@ -361,7 +361,7 @@ function AuditLog({ lang, t }: any) {
 
   useEffect(() => {
     api.get('/audit-logs?per_page=30').then(res => {
-      if (res.data) setLogs(res.data.data || [])
+      if (res.data) setLogs(extractArray(res.data))
       setLoading(false)
     })
   }, [])

@@ -11,13 +11,18 @@
 // ══════════════════════════════════════════════════════════
 
 import { useState, useEffect, FormEvent } from 'react'
-import { api } from '../../../lib/api'
+import { api, extractArray } from '../../../lib/api'
+import { StatCard, Modal, Badge, ToastContainer, ConfirmDialog } from '../../../components/ui'
+import { useToast } from '../../../hooks/useToast'
+
+type PlanType = 'starter' | 'professional' | 'enterprise'
+type CycleType = 'monthly' | 'quarterly' | 'yearly'
 
 type Sub = {
   id: number
   company?: { id: number; name: string }
-  plan: 'starter' | 'professional' | 'enterprise'
-  billing_cycle: 'monthly' | 'quarterly' | 'yearly'
+  plan: PlanType
+  billing_cycle: CycleType
   status: 'active' | 'expired' | 'cancelled' | 'suspended'
   amount: number
   starts_at: string
@@ -48,15 +53,16 @@ const STATUS_COLOR: Record<string, string> = {
   cancelled: '#dc2626',
   suspended: '#94a3b8',
 }
-const PLAN_PRICE: Record<string, Record<string, number>> = {
+const PLAN_PRICE: Record<PlanType, Record<string, number>> = {
   starter:      { monthly: 299,  quarterly: 799,  yearly: 2999  },
   professional: { monthly: 799,  quarterly: 2199, yearly: 7999  },
   enterprise:   { monthly: 1999, quarterly: 5499, yearly: 19999 },
 }
 
 export default function SubscriptionsPage() {
+  const { toasts, show, remove } = useToast()
   const [subs,      setSubs]      = useState<Sub[]>([])
-  const [stats,     setStats]     = useState<Stats | null>(null)
+  const [stats,     setStats]     = useState<any>(null)
   const [companies, setCompanies] = useState<Company[]>([])
   const [loading,   setLoading]   = useState(true)
   const [search,    setSearch]    = useState('')
@@ -69,8 +75,8 @@ export default function SubscriptionsPage() {
 
   const [form, setForm] = useState({
     company_id:    '',
-    plan:          'professional',
-    billing_cycle: 'monthly',
+    plan:          'professional' as PlanType,
+    billing_cycle: 'monthly' as CycleType,
     starts_at:     new Date().toISOString().split('T')[0],
     auto_renew:    true,
     notes:         '',
@@ -82,11 +88,12 @@ export default function SubscriptionsPage() {
     const [sRes, stRes, cRes] = await Promise.all([
       api.get<{ data: Sub[] }>(`/super-admin/subscriptions?${params}`),
       api.get<Stats>('/super-admin/subscriptions/stats'),
-      companies.length === 0 ? api.get<{ data: Company[] }>('/super-admin/companies?per_page=500') : Promise.resolve(null),
+      api.get<{ data: Company[] }>('/super-admin/companies?per_page=500'),
     ])
-    if (sRes.data)  setSubs((sRes.data as any).data ?? sRes.data ?? [])
-    if (stRes.data) setStats(stRes.data)
-    if (cRes?.data) setCompanies((cRes.data as any).data ?? [])
+    // دايمًا سيّب subs مصفوفة حتى لو فيه خطأ
+    setSubs(Array.isArray(extractArray(sRes.data)) ? extractArray(sRes.data) : [])
+    if (stRes.data && !stRes.error) setStats(stRes.data)
+    if (cRes?.data)  setCompanies(prev => prev.length > 0 ? prev : extractArray(cRes.data))
     setLoading(false)
   }
 
@@ -94,7 +101,7 @@ export default function SubscriptionsPage() {
 
   const openAdd = () => {
     setEditSub(null)
-    setForm({ company_id: '', plan: 'professional', billing_cycle: 'monthly', starts_at: new Date().toISOString().split('T')[0], auto_renew: true, notes: '' })
+    setForm({ company_id: '', plan: 'professional' as PlanType, billing_cycle: 'monthly' as CycleType, starts_at: new Date().toISOString().split('T')[0], auto_renew: true, notes: '' })
     setModal(true)
   }
 
@@ -104,7 +111,7 @@ export default function SubscriptionsPage() {
     setModal(true)
   }
 
-  const handleSave = async (e: FormEvent) => {
+  const handleSave = async (e: FormEvent | React.MouseEvent) => {
     e.preventDefault()
     setSaving(true)
     const body = { ...form, company_id: Number(form.company_id), amount: PLAN_PRICE[form.plan][form.billing_cycle] }
@@ -139,6 +146,7 @@ export default function SubscriptionsPage() {
 
   return (
     <div style={{ padding: '1.5rem', fontFamily: 'Cairo, sans-serif' }}>
+      <ToastContainer toasts={toasts} remove={remove} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <h1 style={{ fontWeight: 800, fontSize: '1.4rem' }}>إدارة الاشتراكات</h1>
         <button className="btn btn-primary" onClick={openAdd}>+ اشتراك جديد</button>
@@ -240,98 +248,69 @@ export default function SubscriptionsPage() {
       </div>
 
       {/* Modal: Add/Edit */}
-      {modal && (
-        <div className="modal-overlay" onClick={() => setModal(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>{editSub ? 'تعديل اشتراك' : 'اشتراك جديد'}</h2>
-              <button className="modal-close" onClick={() => setModal(false)}>×</button>
+      <Modal open={modal} onClose={() => setModal(false)} title={editSub ? 'تعديل اشتراك' : 'اشتراك جديد'} size="md"
+        footer={<><button className="btn btn-secondary" onClick={() => setModal(false)}>إلغاء</button>
+          <button className="btn btn-primary" onClick={handleSave} disabled={saving}>{saving ? 'جاري...' : 'حفظ'}</button></>}>
+        <div className="form-grid">
+          {!editSub && (
+            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+              <label className="form-label">الشركة *</label>
+              <select className="form-select" value={form.company_id} onChange={e => setForm(f => ({ ...f, company_id: e.target.value }))} required>
+                <option value="">— اختر شركة —</option>
+                {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
             </div>
-            <form onSubmit={handleSave}>
-              <div className="modal-body">
-                <div className="form-grid">
-                  {!editSub && (
-                    <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                      <label className="form-label">الشركة *</label>
-                      <select className="form-select" value={form.company_id} onChange={e => setForm(f => ({ ...f, company_id: e.target.value }))} required>
-                        <option value="">— اختر شركة —</option>
-                        {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                      </select>
-                    </div>
-                  )}
-                  <div className="form-group">
-                    <label className="form-label">الخطة *</label>
-                    <select className="form-select" value={form.plan} onChange={e => setForm(f => ({ ...f, plan: e.target.value }))}>
-                      <option value="starter">Starter — {fmt(PLAN_PRICE.starter[form.billing_cycle])} ج</option>
-                      <option value="professional">Professional — {fmt(PLAN_PRICE.professional[form.billing_cycle])} ج</option>
-                      <option value="enterprise">Enterprise — {fmt(PLAN_PRICE.enterprise[form.billing_cycle])} ج</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">دورة الفوترة *</label>
-                    <select className="form-select" value={form.billing_cycle} onChange={e => setForm(f => ({ ...f, billing_cycle: e.target.value }))}>
-                      <option value="monthly">شهري</option>
-                      <option value="quarterly">ربع سنوي</option>
-                      <option value="yearly">سنوي</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">تاريخ البداية *</label>
-                    <input className="form-input" type="date" value={form.starts_at} onChange={e => setForm(f => ({ ...f, starts_at: e.target.value }))} required />
-                  </div>
-                </div>
-
-                <div style={{ background: 'var(--color-primary-light)', borderRadius: 10, padding: '0.875rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ fontWeight: 600 }}>المبلغ المحسوب:</span>
-                  <span style={{ fontWeight: 800, color: 'var(--color-primary)', fontSize: '1.1rem' }}>
-                    {fmt(PLAN_PRICE[form.plan]?.[form.billing_cycle] ?? 0)} ج
-                  </span>
-                </div>
-
-                <div className="form-group">
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 600 }}>
-                    <input type="checkbox" checked={form.auto_renew} onChange={e => setForm(f => ({ ...f, auto_renew: e.target.checked }))} />
-                    تجديد تلقائي عند الانتهاء
-                  </label>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">ملاحظات</label>
-                  <textarea className="form-textarea" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setModal(false)}>إلغاء</button>
-                <button type="submit" className="btn btn-primary" disabled={saving}>
-                  {saving ? 'جاري...' : 'حفظ'}
-                </button>
-              </div>
-            </form>
+          )}
+          <div className="form-group">
+            <label className="form-label">الخطة *</label>
+            <select className="form-select" value={form.plan} onChange={e => setForm(f => ({ ...f, plan: e.target.value as PlanType }))}>
+              <option value="starter">Starter — {fmt(PLAN_PRICE.starter[form.billing_cycle])} ج</option>
+              <option value="professional">Professional — {fmt(PLAN_PRICE.professional[form.billing_cycle])} ج</option>
+              <option value="enterprise">Enterprise — {fmt(PLAN_PRICE.enterprise[form.billing_cycle])} ج</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">دورة الفوترة *</label>
+            <select className="form-select" value={form.billing_cycle} onChange={e => setForm(f => ({ ...f, billing_cycle: e.target.value as CycleType }))}>
+              <option value="monthly">شهري</option>
+              <option value="quarterly">ربع سنوي</option>
+              <option value="yearly">سنوي</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">تاريخ البداية *</label>
+            <input className="form-input" type="date" value={form.starts_at} onChange={e => setForm(f => ({ ...f, starts_at: e.target.value }))} required />
           </div>
         </div>
-      )}
+
+        <div style={{ background: 'var(--color-primary-light)', borderRadius: 10, padding: '0.875rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between' }}>
+          <span style={{ fontWeight: 600 }}>المبلغ المحسوب:</span>
+          <span style={{ fontWeight: 800, color: 'var(--color-primary)', fontSize: '1.1rem' }}>
+            {fmt(PLAN_PRICE[form.plan]?.[form.billing_cycle] ?? 0)} ج
+          </span>
+        </div>
+
+        <div className="form-group">
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 600 }}>
+            <input type="checkbox" checked={form.auto_renew} onChange={e => setForm(f => ({ ...f, auto_renew: e.target.checked }))} />
+            تجديد تلقائي عند الانتهاء
+          </label>
+        </div>
+        <div className="form-group">
+          <label className="form-label">ملاحظات</label>
+          <textarea className="form-textarea" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} />
+        </div>
+      </Modal>
 
       {/* Confirm Action */}
-      {confirm && (
-        <div className="modal-overlay" onClick={() => setConfirm(null)}>
-          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 380 }}>
-            <div className="modal-body" style={{ textAlign: 'center', padding: '2rem' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>{confirm.action === 'cancel' ? '⚠️' : '🔄'}</div>
-              <h3>{confirm.action === 'cancel' ? 'تأكيد إلغاء الاشتراك' : 'تأكيد تجديد الاشتراك'}</h3>
-              <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: '0.5rem' }}>
-                {confirm.action === 'cancel'
-                  ? 'سيتم إيقاف الشركة فوراً. هل أنت متأكد؟'
-                  : 'سيتم إنشاء اشتراك جديد من اليوم. هل تريد المتابعة؟'}
-              </p>
-            </div>
-            <div className="modal-footer" style={{ justifyContent: 'center', gap: '1rem' }}>
-              <button className="btn btn-secondary" onClick={() => setConfirm(null)}>لا</button>
-              <button className={`btn ${confirm.action === 'cancel' ? 'btn-danger' : 'btn-success'}`} onClick={doAction} disabled={saving}>
-                {saving ? 'جاري...' : confirm.action === 'cancel' ? 'نعم، إلغاء' : 'نعم، تجديد'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={!!confirm}
+        onClose={() => setConfirm(null)}
+        onConfirm={doAction}
+        title={confirm?.action === 'cancel' ? 'تأكيد إلغاء الاشتراك' : 'تأكيد تجديد الاشتراك'}
+        message={confirm?.action === 'cancel' ? 'سيتم إيقاف الشركة فوراً. هل أنت متأكد؟' : 'سيتم إنشاء اشتراك جديد من اليوم. هل تريد المتابعة؟'}
+        danger={confirm?.action === 'cancel'}
+      />
     </div>
   )
 }

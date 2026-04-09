@@ -1,4 +1,4 @@
-// File: D:\app.react\all_projects_code_sphere\codesphere-erp\front_erb\app\dashboard\page.tsx
+// File: D:\app.react\all_projects_code_sphere\codesphere-erp\front_erp\app\dashboard\page.tsx
 import * as entry from '../../../../app/dashboard/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

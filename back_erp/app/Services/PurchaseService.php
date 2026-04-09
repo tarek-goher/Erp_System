@@ -33,10 +33,6 @@ class PurchaseService
             $tax   = $data['tax']   ?? 0;
             $total = $subtotal + $tax;
 
-            // Fix #3: توليد PO number آمن بدون race condition
-            // - withoutGlobalScopes() لتجنب تدخل BelongsToCompany scope
-            // - where('company_id') لعزل كل شركة بتسلسلها الخاص
-            // - lockForUpdate() لمنع قراءة نفس الـ count في concurrent requests
             if (!isset($data['po_number'])) {
                 $count = Purchase::withoutGlobalScopes()
                     ->withTrashed()
@@ -86,7 +82,97 @@ class PurchaseService
                             'type'           => 'in',
                             'qty'            => $item['quantity'],
                             'qty_before'     => $qtyBefore,
-                            // Fix: بدل fresh() نحسب مباشرة من القيم المعروفة
+                            'qty_after'      => $qtyBefore + $item['quantity'],
+                            'reference_type' => Purchase::class,
+                            'reference_id'   => $purchase->id,
+                        ]);
+                    }
+                }
+            }
+
+            return $purchase->load('items.product', 'supplier', 'user');
+        });
+    }
+
+    /**
+     * تعديل أمر شراء مع تحديث المخزون
+     */
+    public function updatePurchase(Purchase $purchase, array $data): Purchase
+    {
+        return DB::transaction(function () use ($purchase, $data) {
+
+            // ── إرجاع المخزون القديم إذا كان مستلماً ──
+            if ($purchase->status === 'received') {
+                foreach ($purchase->items as $item) {
+                    $product = Product::withoutGlobalScopes()->find($item->product_id);
+                    if ($product) {
+                        $qtyBefore = $product->qty;
+                        $product->decrement('qty', $item->quantity);
+                        StockMovement::create([
+                            'company_id'     => $purchase->company_id,
+                            'product_id'     => $item->product_id,
+                            'user_id'        => auth()->id(),
+                            'type'           => 'out',
+                            'qty'            => $item->quantity,
+                            'qty_before'     => $qtyBefore,
+                            'qty_after'      => $qtyBefore - $item->quantity,
+                            'reference_type' => Purchase::class,
+                            'reference_id'   => $purchase->id,
+                            'notes'          => "تعديل أمر شراء {$purchase->po_number}",
+                        ]);
+                    }
+                }
+            }
+
+            // ── حذف الأصناف القديمة ──
+            $purchase->items()->delete();
+
+            // ── حساب الإجمالي الجديد ──
+            $subtotal = 0;
+            foreach ($data['items'] as $item) {
+                $subtotal += $item['quantity'] * $item['unit_price'];
+            }
+            $tax   = $data['tax'] ?? 0;
+            $total = $subtotal + $tax;
+
+            // ── تحديث بيانات الأمر ──
+            $purchase->update([
+                'supplier_id' => $data['supplier_id'],
+                'subtotal'    => $subtotal,
+                'tax'         => $tax,
+                'total'       => $total,
+                'status'      => $data['status'] ?? $purchase->status,
+                'notes'       => $data['notes'] ?? null,
+                'expected_at' => $data['expected_at'] ?? null,
+            ]);
+
+            // ── إنشاء الأصناف الجديدة وتحديث المخزون ──
+            foreach ($data['items'] as $item) {
+                PurchaseItem::create([
+                    'purchase_id' => $purchase->id,
+                    'product_id'  => $item['product_id'],
+                    'quantity'    => $item['quantity'],
+                    'unit_price'  => $item['unit_price'],
+                    'total'       => $item['quantity'] * $item['unit_price'],
+                ]);
+
+                if (($data['status'] ?? '') === 'received') {
+                    $product = Product::withoutGlobalScopes()->find($item['product_id']);
+                    if ($product) {
+                        $qtyBefore = $product->qty;
+                        $product->increment('qty', $item['quantity']);
+
+                        $newCost = ($product->cost * $qtyBefore + $item['unit_price'] * $item['quantity'])
+                                 / ($qtyBefore + $item['quantity']);
+                        $product->update(['cost' => $newCost]);
+
+                        StockMovement::create([
+                            'company_id'     => $purchase->company_id,
+                            'product_id'     => $item['product_id'],
+                            'user_id'        => auth()->id(),
+                            'type'           => 'in',
+                            'qty'            => $item['quantity'],
+                            'qty_before'     => $qtyBefore,
                             'qty_after'      => $qtyBefore + $item['quantity'],
                             'reference_type' => Purchase::class,
                             'reference_id'   => $purchase->id,

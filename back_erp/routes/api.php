@@ -100,7 +100,6 @@ Route::middleware(['auth:sanctum', 'company.active', 'throttle:120,1'])->group(f
         Route::get('cash-flow',         'cashFlow');
         Route::get('journal-entries',   'journalEntries');
         Route::get('sales-summary',     'salesSummary');
-        // ── Export endpoints (PDF / Excel) ───────────────────
         Route::get('export/sales',      'exportSales');
         Route::get('export/purchases',  'exportPurchases');
         Route::get('export/profits',    'exportProfits');
@@ -108,13 +107,12 @@ Route::middleware(['auth:sanctum', 'company.active', 'throttle:120,1'])->group(f
 
     // ── Sales ────────────────────────────────────────────────
     Route::prefix('sales')->controller(SaleController::class)->group(function () {
-        Route::get('stats', 'stats');
-        Route::get('/',     'index');
-        Route::post('/',    'store');
-        Route::get('{sale}',    'show');
-        Route::put('{sale}',    'update');
-        Route::delete('{sale}', 'destroy');
-        // PDF with QR (ETA-compatible)
+        Route::get('stats',      'stats');
+        Route::get('/',          'index');
+        Route::post('/',         'store');
+        Route::get('{sale}',     'show');
+        Route::put('{sale}',     'update');
+        Route::delete('{sale}',  'destroy');
         Route::get('{sale}/pdf', 'downloadPdf');
     });
 
@@ -140,6 +138,7 @@ Route::middleware(['auth:sanctum', 'company.active', 'throttle:120,1'])->group(f
     Route::apiResource('purchase-invoices', PurchaseInvoiceController::class);
 
     // ── Taxes ────────────────────────────────────────────────
+    Route::get('tax-rates', [TaxController::class, 'active']);
     Route::prefix('taxes')->controller(TaxController::class)->group(function () {
         Route::get('/',          'index');
         Route::get('active',     'active');
@@ -152,27 +151,28 @@ Route::middleware(['auth:sanctum', 'company.active', 'throttle:120,1'])->group(f
 
     // ── Products ─────────────────────────────────────────────
     Route::prefix('products')->controller(ProductController::class)->group(function () {
-        Route::get('/',             'index');
-        Route::post('/',            'store');
-        Route::get('{product}',     'show');
-        Route::put('{product}',     'update');
-        Route::delete('{product}',  'destroy');
+        Route::get('/',                        'index');
+        Route::post('/',                       'store');
+        Route::get('{product}',               'show');
+        Route::put('{product}',               'update');
+        Route::delete('{product}',            'destroy');
+        Route::post('{product}/adjust-stock', 'adjustStock'); // ✅ تعديل المخزون
     });
 
     // ── Customers ────────────────────────────────────────────
-    Route::apiResource('customers', CustomerController::class);
-    Route::get('categories', [CategoryController::class, 'index']);
+    Route::apiResource('customers',  CustomerController::class);
+    Route::apiResource('categories', CategoryController::class);
 
-    // ── Suppliers — الموردين ─────────────────────────────────
+    // ── Suppliers ────────────────────────────────────────────
     Route::apiResource('suppliers', SupplierController::class);
 
     // ── Inventory & Warehouses ───────────────────────────────
     Route::apiResource('stock-movements', StockMovementController::class);
-    Route::apiResource('warehouses', WarehouseController::class);
-    Route::post('warehouses/transfer', [WarehouseController::class, 'transfer']);
+    Route::apiResource('warehouses',      WarehouseController::class);
+    Route::post('warehouses/transfer',    [WarehouseController::class, 'transfer']);
 
     // ── HR ───────────────────────────────────────────────────
-    Route::apiResource('employees', EmployeeController::class);
+    Route::apiResource('employees',     EmployeeController::class);
     Route::apiResource('leave-requests', LeaveRequestController::class);
     Route::post('leave-requests/{leaveRequest}/approve', [LeaveRequestController::class, 'approve']);
     Route::post('leave-requests/{leaveRequest}/reject',  [LeaveRequestController::class, 'reject']);
@@ -225,20 +225,20 @@ Route::middleware(['auth:sanctum', 'company.active', 'throttle:120,1'])->group(f
 
     // ── CRM ──────────────────────────────────────────────────
     Route::prefix('crm')->controller(CrmController::class)->group(function () {
-        Route::get('stats',        'stats');
-        Route::get('pipeline',     'pipeline');
-        Route::get('kanban',       'kanban');
-        Route::get('leads',        'leads');
-        Route::post('leads',       'storeLead');
-        Route::get('leads/{lead}',           'showLead');
-        Route::put('leads/{lead}',           'updateLead');
-        Route::delete('leads/{lead}',        'destroyLead');
-        Route::put('leads/{lead}/stage',     'moveStage');
-        Route::get('activities',             'activities');
-        Route::post('activities',            'storeActivity');
-        Route::get('opportunities',          'opportunities');
-        Route::post('opportunities',         'storeOpportunity');
-        Route::put('opportunities/{opportunity}', 'updateOpportunity');
+        Route::get('stats',    'stats');
+        Route::get('pipeline', 'pipeline');
+        Route::get('kanban',   'kanban');
+        Route::get('leads',              'leads');
+        Route::post('leads',             'storeLead');
+        Route::get('leads/{lead}',       'showLead');
+        Route::put('leads/{lead}',       'updateLead');
+        Route::delete('leads/{lead}',    'destroyLead');
+        Route::put('leads/{lead}/stage', 'moveStage');
+        Route::get('activities',         'activities');
+        Route::post('activities',        'storeActivity');
+        Route::get('opportunities',                      'opportunities');
+        Route::post('opportunities',                     'storeOpportunity');
+        Route::put('opportunities/{opportunity}',        'updateOpportunity');
     });
 
     // ── Subscription (company-level) ─────────────────────────
@@ -284,12 +284,12 @@ Route::middleware(['auth:sanctum', 'company.active', 'throttle:120,1'])->group(f
 
     // ── Notifications ────────────────────────────────────────
     Route::prefix('notifications')->controller(NotificationController::class)->group(function () {
-        Route::get('unread-count',          'unreadCount');
-        Route::get('/',                     'index');
-        Route::post('{notification}/read',  'markRead');
-        Route::post('read-all',             'markAllRead');
-        Route::delete('{notification}',     'destroy');
-        Route::post('broadcast',            'broadcast');
+        Route::get('unread-count',         'unreadCount');
+        Route::get('/',                    'index');
+        Route::post('{notification}/read', 'markRead');
+        Route::post('read-all',            'markAllRead');
+        Route::delete('{notification}',    'destroy');
+        Route::post('broadcast',           'broadcast');
     });
 
     // ── Users & Roles ────────────────────────────────────────
@@ -314,7 +314,7 @@ Route::middleware(['auth:sanctum', 'company.active', 'throttle:120,1'])->group(f
     Route::apiResource('currencies', CurrencyController::class);
     Route::get('audit-logs',         [AuditLogController::class, 'index']);
 
-    // ── 2FA — Two-Factor Authentication ──────────────────────
+    // ── 2FA ──────────────────────────────────────────────────
     Route::prefix('2fa')->controller(TwoFactorController::class)->group(function () {
         Route::get('setup',    'setup');
         Route::post('enable',  'enable');
@@ -323,8 +323,8 @@ Route::middleware(['auth:sanctum', 'company.active', 'throttle:120,1'])->group(f
     });
 
     // ── Security ─────────────────────────────────────────────
-    Route::get('security/sessions', [SecurityController::class, 'sessions']);
-    Route::delete('security/sessions/{id}', [SecurityController::class, 'revokeSession']);
+    Route::get('security/sessions',          [SecurityController::class, 'sessions']);
+    Route::delete('security/sessions/{id}',  [SecurityController::class, 'revokeSession']);
 
     // ── AI ───────────────────────────────────────────────────
     Route::prefix('ai')->controller(AIController::class)->group(function () {
@@ -350,7 +350,7 @@ Route::middleware(['auth:sanctum', 'company.active', 'throttle:120,1'])->group(f
         Route::get('documents',      'documents');
     });
 
-    // ── Loyalty Points & Vouchers ─────────────────────────────
+    // ── Loyalty ──────────────────────────────────────────────
     Route::prefix('loyalty')->controller(LoyaltyController::class)->group(function () {
         Route::get('customers',        'customers');
         Route::post('award',           'award');
@@ -364,38 +364,33 @@ Route::middleware(['auth:sanctum', 'company.active', 'throttle:120,1'])->group(f
 
 // ─────────────────────────────────────────────────────────────
 // 3. Super Admin Routes — /api/super-admin/*
-//    صلاحيات: super admin فقط، لا توجد company isolation
 // ─────────────────────────────────────────────────────────────
 Route::middleware(['auth:sanctum', 'super.admin', 'throttle:60,1'])
     ->prefix('super-admin')
     ->group(function () {
 
-    // ── Stats & Monitoring ───────────────────────────────────
     Route::get('stats',      [SuperAdminCompanyController::class, 'stats']);
     Route::get('monitoring', [SuperAdminCompanyController::class, 'monitoring']);
     Route::post('broadcast', [SuperAdminCompanyController::class, 'broadcast']);
 
-    // ── Companies Management ─────────────────────────────────
     Route::prefix('companies')->controller(SuperAdminCompanyController::class)->group(function () {
-        Route::get('/',               'index');
-        Route::post('/',              'store');
-        Route::get('{company}',       'show');
-        Route::put('{company}',       'update');
-        Route::delete('{company}',    'destroy');
+        Route::get('/',                   'index');
+        Route::post('/',                  'store');
+        Route::get('{company}',           'show');
+        Route::put('{company}',           'update');
+        Route::delete('{company}',        'destroy');
         Route::post('{company}/activate', 'activate');
         Route::post('{company}/suspend',  'suspend');
     });
 
-    // ── System Users Management ──────────────────────────────
     Route::prefix('users')->controller(SuperAdminUserController::class)->group(function () {
-        Route::get('/',                            'index');
-        Route::patch('{user}',                     'update');
-        Route::delete('{user}',                    'destroy');
-        Route::post('{user}/toggle-active',        'toggleActive');
-        Route::post('{user}/reset-password',       'resetPassword');
+        Route::get('/',                       'index');
+        Route::patch('{user}',                'update');
+        Route::delete('{user}',               'destroy');
+        Route::post('{user}/toggle-active',   'toggleActive');
+        Route::post('{user}/reset-password',  'resetPassword');
     });
 
-    // ── Subscriptions Management ─────────────────────────────
     Route::prefix('subscriptions')->controller(SuperAdminSubscriptionController::class)->group(function () {
         Route::get('stats',                  'stats');
         Route::get('/',                      'index');
@@ -405,11 +400,12 @@ Route::middleware(['auth:sanctum', 'super.admin', 'throttle:60,1'])
         Route::post('{subscription}/cancel', 'cancel');
     });
 
-    // ── Support Tickets (all companies) ──────────────────────
     Route::prefix('tickets')->controller(SuperAdminTicketController::class)->group(function () {
-        Route::get('/',             'index');
-        Route::get('{ticket}',      'show');
-        Route::put('{ticket}',      'update');
-        Route::delete('{ticket}',   'destroy');
+        Route::get('/',                 'index');
+        Route::get('{ticket}',          'show');
+        Route::put('{ticket}',          'update');
+        Route::patch('{ticket}/status', 'updateStatus');
+        Route::post('{ticket}/reply',   'reply');
+        Route::delete('{ticket}',       'destroy');
     });
 });

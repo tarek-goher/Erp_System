@@ -7,6 +7,8 @@ use App\Events\SaleCreated;
 use App\Events\StockLowAlert;
 use App\Events\TicketAssigned;
 use App\Events\TicketCreated;
+use App\Listeners\NotifyAdminTicketCreated;
+use App\Listeners\NotifyPayrollGenerated;
 use App\Listeners\NotifyTicketAssignee;
 use App\Listeners\SendLowStockAlert;
 use App\Listeners\SendSaleNotification;
@@ -17,6 +19,10 @@ use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvi
  *
  * كل Listener بيشتغل في الـ background queue (ShouldQueue)
  * يعني العمليات الثقيلة (إرسال إشعارات، emails) مش بتبطئ الـ request
+ *
+ * Fix #3: إضافة Listeners لـ PayrollGenerated وTicketCreated
+ * كانوا بدون Listeners — لا يُنتجون أي أثر.
+ * الآن كل Event مربوط بـ Listener مناسب.
  */
 class EventServiceProvider extends ServiceProvider
 {
@@ -41,14 +47,14 @@ class EventServiceProvider extends ServiceProvider
             NotifyTicketAssignee::class,
         ],
 
-        // عند إنشاء تذكرة جديدة → إشعار المدير
+        // Fix #3a: عند إنشاء تذكرة جديدة → إشعار المديرين في الشركة
         TicketCreated::class => [
-            // يمكن إضافة Listener هنا لإشعار المدير
+            NotifyAdminTicketCreated::class,
         ],
 
-        // عند توليد رواتب → يمكن إضافة Listener للـ email
+        // Fix #3b: عند اكتمال توليد رواتب شهرية → إشعار مستخدمي الشركة
         PayrollGenerated::class => [
-            // يمكن إضافة Listener هنا
+            NotifyPayrollGenerated::class,
         ],
     ];
 

@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { api } from '../../../lib/api'
+import { api, extractArray } from '../../../lib/api'
 import { useToast } from '../../../hooks/useToast'
 import { StatCard, Badge, EmptyState, SearchInput, ToastContainer } from '../../../components/ui'
 
@@ -40,7 +40,7 @@ export default function SuperAdminTicketsPage() {
   const load = async () => {
     setLoading(true)
     const res = await api.get('/super-admin/tickets?per_page=100')
-    const raw = res.data?.data ?? res.data ?? []
+    const raw = extractArray(res.data)
     setTickets(raw.map((t: any) => ({
       ...t,
       // الـ backend بيبعت subject وmessage — نعملهم alias لـ title وdescription
@@ -53,7 +53,7 @@ export default function SuperAdminTicketsPage() {
 
   const loadCompanies = async () => {
     const res = await api.get('/super-admin/companies?per_page=200&status=active')
-    const raw = res.data?.data ?? res.data ?? []
+    const raw = extractArray(res.data)
     setCompanies(raw.map((c: any) => ({ id: c.id, name: c.name })))
   }
 

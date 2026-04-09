@@ -10,7 +10,9 @@
 
 import { useState, useEffect, FormEvent } from 'react'
 import ERPLayout from '../../components/layout/ERPLayout'
-import { api } from '../../lib/api'
+import { api, extractArray } from '../../lib/api'
+import { useToast } from '../../hooks/useToast'
+import { StatCard, Badge, EmptyState, SearchInput, Modal, ToastContainer } from '../../components/ui'
 import { useI18n } from '../../lib/i18n'
 
 type Employee    = { id: number; name: string; email: string; department?: string; position?: string; status: string; hire_date: string; salary?: number }
@@ -21,6 +23,7 @@ type Payroll     = { id: number; employee?: { name: string }; month: string; bas
 const TABS = ['employees', 'attendance', 'leaves', 'payroll']
 
 export default function HRPage() {
+  const { show, toasts, remove } = useToast()
   const { t, lang } = useI18n()
   const [activeTab, setActiveTab] = useState('employees')
 
@@ -60,7 +63,7 @@ export default function HRPage() {
     setEmpLoading(true)
     const p = new URLSearchParams({ per_page: '20', ...(empSearch && { search: empSearch }) })
     const res = await api.get<{ data: Employee[] }>(`/employees?${p}`)
-    if (res.data) setEmployees(res.data.data || [])
+    if (res.data) setEmployees(extractArray(res.data))
     setEmpLoading(false)
   }
 
@@ -69,7 +72,7 @@ export default function HRPage() {
     setAttLoading(true)
     const p = new URLSearchParams({ per_page: '30', ...(attDate && { date: attDate }) })
     const res = await api.get<{ data: Attendance[] }>(`/attendance?${p}`)
-    if (res.data) setAttendance(res.data.data || [])
+    if (res.data) setAttendance(extractArray(res.data))
     setAttLoading(false)
   }
 
@@ -77,7 +80,7 @@ export default function HRPage() {
   const fetchLeaves = async () => {
     setLeaveLoading(true)
     const res = await api.get<{ data: LeaveRequest[] }>('/leave-requests?per_page=20')
-    if (res.data) setLeaves(res.data.data || [])
+    if (res.data) setLeaves(extractArray(res.data))
     setLeaveLoading(false)
   }
 
@@ -85,7 +88,7 @@ export default function HRPage() {
   const fetchPayroll = async () => {
     setPayLoading(true)
     const res = await api.get<{ data: Payroll[] }>('/payrolls?per_page=20')
-    if (res.data) setPayroll(res.data.data || [])
+    if (res.data) setPayroll(extractArray(res.data))
     setPayLoading(false)
   }
 
@@ -133,7 +136,8 @@ export default function HRPage() {
       hire_date: empForm.hire_date, salary: Number(empForm.salary) || 0,
     })
     setEmpSaving(false)
-    if (res.error) { setEmpErr(res.error); return }
+    if (res.error) { show(res.error, 'error'); return }
+    show(lang === 'ar' ? 'تم إضافة الموظف ✅' : 'Employee added ✅')
     setEmpModal(false)
     setEmpForm({ name: '', email: '', phone: '', department: '', role: '', position: '', hire_date: '', salary: '' })
     fetchEmployees()
@@ -158,7 +162,8 @@ export default function HRPage() {
       start_date: leaveForm.start_date, end_date: leaveForm.end_date, reason: leaveForm.reason,
     })
     setLeaveSaving(false)
-    if (res.error) { setLeaveErr(res.error); return }
+    if (res.error) { show(res.error, 'error'); return }
+    show(lang === 'ar' ? 'تم تقديم طلب الإجازة ✅' : 'Leave request submitted ✅')
     setLeaveModal(false)
     setLeaveForm({ employee_id: '', type: 'annual', start_date: '', end_date: '', reason: '' })
     fetchLeaves()
@@ -192,6 +197,7 @@ export default function HRPage() {
 
   return (
     <ERPLayout pageTitle={t('hr')}>
+      <ToastContainer toasts={toasts} remove={remove} />
 
       {/* Tabs */}
       <div className="tabs">
