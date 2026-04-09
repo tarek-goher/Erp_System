@@ -2,45 +2,43 @@
 
 namespace App\Http\Resources;
 
-use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class PurchaseResource extends JsonResource
 {
-    public function toArray(Request $request): array
+    public function toArray($request): array
     {
         return [
-            'id'            => $this->id,
-            'order_number'  => $this->po_number,
-            'status'        => $this->status,
-            'subtotal'      => (float) $this->subtotal,
-            'tax_amount'    => (float) $this->tax,
-            'discount'      => (float) ($this->discount ?? 0),
-            'total'         => (float) $this->total,
-            'notes'         => $this->notes,
-            'expected_date' => $this->expected_at?->toDateString(),
-            'created_at'    => $this->created_at?->toDateTimeString(),
-
-            'supplier' => $this->whenLoaded('supplier', fn() => [
+            'id'           => $this->id,
+            'order_number' => $this->po_number,        // ← Frontend بيدور على order_number
+            'supplier'     => $this->whenLoaded('supplier', fn() => [
                 'id'   => $this->supplier->id,
                 'name' => $this->supplier->name,
             ]),
-
-            'user' => $this->whenLoaded('user', fn() => [
+            'user'         => $this->whenLoaded('user', fn() => [
                 'id'   => $this->user->id,
                 'name' => $this->user->name,
             ]),
-
-            'items' => $this->whenLoaded('items', fn() => $this->items->map(fn($i) => [
-                'id'         => $i->id,
-                'product_id' => $i->product_id,
-                'qty'        => (float) $i->quantity,
-                'cost'       => (float) $i->unit_price,
-                'total'      => (float) $i->total,
-                'product'    => $i->relationLoaded('product')
-                    ? ['id' => $i->product?->id, 'name' => $i->product?->name]
-                    : null,
-            ])),
+            'subtotal'     => (float) $this->subtotal,
+            'tax_amount'   => (float) $this->tax,      // ← Frontend بيدور على tax_amount
+            'total'        => (float) $this->total,
+            'status'       => $this->status,
+            'notes'        => $this->notes,
+            'expected_date'=> $this->expected_at?->format('Y-m-d'), // ← Frontend بيدور على expected_date
+            'created_at'   => $this->created_at,
+            'items'        => $this->whenLoaded('items', function () {
+                return $this->items->map(fn($item) => [
+                    'id'         => $item->id,
+                    'product_id' => $item->product_id,
+                    'product'    => $item->product ? [
+                        'id'   => $item->product->id,
+                        'name' => $item->product->name,
+                    ] : null,
+                    'qty'        => $item->quantity,        // ← Frontend بيدور على qty
+                    'cost'       => (float) $item->unit_price, // ← Frontend بيدور على cost
+                    'total'      => (float) $item->total,
+                ]);
+            }),
         ];
     }
 }

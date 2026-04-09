@@ -6,22 +6,22 @@ use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\PurchaseItem;
 use App\Models\StockMovement;
+use App\Models\TaxRate;
 use Illuminate\Support\Facades\DB;
 
-/**
- * PurchaseService — business logic للمشتريات وتحديث المخزون
- *
- * Fix #3: Race Condition في رقم PO
- *  - كان Purchase::count() + 1 بيجيب عدد كل الـ purchases في كل الشركات
- *    بدون فلترة على company_id أو lockForUpdate.
- *  - الحل: فلترة على company_id + lockForUpdate() داخل transaction
- *    عشان كل شركة عندها تسلسل خاص ومفيش تضارب في الـ concurrent requests.
- */
 class PurchaseService
 {
-    /**
-     * إنشاء أمر شراء مع إضافة المخزون تلقائياً
-     */
+    private function calcTax(float $subtotal, array $data): float
+    {
+        if (!empty($data['tax_rate_id'])) {
+            $taxRate = TaxRate::find($data['tax_rate_id']);
+            if ($taxRate) {
+                return round($subtotal * $taxRate->rate / 100, 2);
+            }
+        }
+        return (float) ($data['tax'] ?? 0);
+    }
+
     public function createPurchase(array $data, ?int $companyId): Purchase
     {
         return DB::transaction(function () use ($data, $companyId) {
@@ -30,7 +30,7 @@ class PurchaseService
                 $subtotal += $item['quantity'] * $item['unit_price'];
             }
 
-            $tax   = $data['tax']   ?? 0;
+            $tax   = $this->calcTax($subtotal, $data);
             $total = $subtotal + $tax;
 
             if (!isset($data['po_number'])) {
@@ -71,9 +71,11 @@ class PurchaseService
                         $qtyBefore = $product->qty;
                         $product->increment('qty', $item['quantity']);
 
-                        $newCost = ($product->cost * $qtyBefore + $item['unit_price'] * $item['quantity'])
-                                 / ($qtyBefore + $item['quantity']);
-                        $product->update(['cost' => $newCost]);
+                        if ($qtyBefore + $item['quantity'] > 0) {
+                            $newCost = ($product->cost * $qtyBefore + $item['unit_price'] * $item['quantity'])
+                                     / ($qtyBefore + $item['quantity']);
+                            $product->update(['cost' => $newCost]);
+                        }
 
                         StockMovement::create([
                             'company_id'     => $companyId,
@@ -94,14 +96,10 @@ class PurchaseService
         });
     }
 
-    /**
-     * تعديل أمر شراء مع تحديث المخزون
-     */
     public function updatePurchase(Purchase $purchase, array $data): Purchase
     {
         return DB::transaction(function () use ($purchase, $data) {
 
-            // ── إرجاع المخزون القديم إذا كان مستلماً ──
             if ($purchase->status === 'received') {
                 foreach ($purchase->items as $item) {
                     $product = Product::withoutGlobalScopes()->find($item->product_id);
@@ -124,29 +122,38 @@ class PurchaseService
                 }
             }
 
-            // ── حذف الأصناف القديمة ──
             $purchase->items()->delete();
 
-            // ── حساب الإجمالي الجديد ──
             $subtotal = 0;
             foreach ($data['items'] as $item) {
                 $subtotal += $item['quantity'] * $item['unit_price'];
             }
-            $tax   = $data['tax'] ?? 0;
+
+            $tax   = $this->calcTax($subtotal, $data);
             $total = $subtotal + $tax;
 
-            // ── تحديث بيانات الأمر ──
-            $purchase->update([
-                'supplier_id' => $data['supplier_id'],
-                'subtotal'    => $subtotal,
-                'tax'         => $tax,
-                'total'       => $total,
-                'status'      => $data['status'] ?? $purchase->status,
-                'notes'       => $data['notes'] ?? null,
-                'expected_at' => $data['expected_at'] ?? null,
-            ]);
-$purchase = $purchase->fresh();
-            // ── إنشاء الأصناف الجديدة وتحديث المخزون ──
+       $purchase->update([
+    'supplier_id' => $data['supplier_id'],
+    'subtotal'    => $subtotal,
+    'tax'         => $tax,
+    'total'       => $total,
+    'status'      => $data['status'] ?? $purchase->status,
+    'notes'       => $data['notes'] ?? null,
+    'expected_at' => $data['expected_at'] ?? null,
+]);
+
+// ← أضف السطرين دول
+\Log::info('DEBUG', [
+    'purchase_id' => $purchase->id,
+    'in_db'       => \DB::table('purchases')->where('id', $purchase->id)->first(),
+]);
+
+$purchase = Purchase::withoutGlobalScopes()->find($purchase->id);
+
+if (!$purchase) {
+    throw new \Exception('Purchase not found after update');
+}
+
             foreach ($data['items'] as $item) {
                 PurchaseItem::create([
                     'purchase_id' => $purchase->id,
@@ -162,9 +169,11 @@ $purchase = $purchase->fresh();
                         $qtyBefore = $product->qty;
                         $product->increment('qty', $item['quantity']);
 
-                        $newCost = ($product->cost * $qtyBefore + $item['unit_price'] * $item['quantity'])
-                                 / ($qtyBefore + $item['quantity']);
-                        $product->update(['cost' => $newCost]);
+                        if ($qtyBefore + $item['quantity'] > 0) {
+                            $newCost = ($product->cost * $qtyBefore + $item['unit_price'] * $item['quantity'])
+                                     / ($qtyBefore + $item['quantity']);
+                            $product->update(['cost' => $newCost]);
+                        }
 
                         StockMovement::create([
                             'company_id'     => $purchase->company_id,
@@ -185,9 +194,6 @@ $purchase = $purchase->fresh();
         });
     }
 
-    /**
-     * حذف أمر شراء مع إرجاع المخزون إذا كان مستلماً
-     */
     public function deletePurchase(Purchase $purchase): void
     {
         DB::transaction(function () use ($purchase) {
