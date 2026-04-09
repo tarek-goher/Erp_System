@@ -118,7 +118,7 @@ const handleView = async (id: number) => {
   setViewLoading(true)
   setViewPurchase({ id, order_number: '', total: 0, status: '', created_at: '' })
   const res = await api.get<any>(`/purchases/${id}`)
-  if (res.data) setViewPurchase(res.data)
+  if (res.data) setViewPurchase(res.data.data ?? res.data)
   else setViewPurchase(null)
   setViewLoading(false)
 }
@@ -130,7 +130,7 @@ const handleView = async (id: number) => {
     setModal(true)
     const res = await api.get<any>(`/purchases/${id}`)
     if (res.data) {
-      const p = res.data
+      const p = res.data?.data ?? res.data
       setForm({
         supplier_id:   String(p.supplier?.id || ''),
         status:        p.status || 'draft',
@@ -227,12 +227,14 @@ const handleView = async (id: number) => {
     fetchItems()
   }
 
-  const handleDelete = async () => {
-    if (!deleteId) return
-    await api.delete(`/purchases/${deleteId}`)
-    setDeleteId(null)
+const handleDelete = async () => {
+  if (!deleteId) return
+  const res = await api.delete(`/purchases/${deleteId}`)
+  if (!res.error) {
     setItems(p => p.filter(i => i.id !== deleteId))
   }
+  setDeleteId(null)
+}
 
   const fmt     = (n: number) => new Intl.NumberFormat(lang === 'ar' ? 'ar-EG' : 'en-US').format(n || 0)
   const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US') : '—'
