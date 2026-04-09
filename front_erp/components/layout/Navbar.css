@@ -1,212 +1,197 @@
-/* ══════════════════════════════════════════════════════════
-   components/layout/Navbar.css — ستايل الـ Top Navbar
-   ══════════════════════════════════════════════════════════ */
-
-/* ── الـ navbar الأساسي ────────────────────────────────── */
 .navbar {
-  position: fixed;
-  top: 0;
-  /* يبدأ بعد الـ sidebar */
-  inset-inline-start: var(--sidebar-width);
-  inset-inline-end: 0;
-  height: var(--navbar-height);
-  background: var(--bg-navbar);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 1.25rem;
-  z-index: 100;
-  gap: 1rem;
-  transition: inset-inline-start var(--transition-slow);
+    position: fixed;
+    top: 0;
+    inset-inline-start: var(--sidebar-width);
+    inset-inline-end: 0;
+    height: var(--navbar-height);
+    background: var(--bg-navbar);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1.25rem;
+    z-index: 100;
+    gap: 1rem;
+    transition: inset-inline-start var(--transition-slow)
 }
 
-/* لما الـ sidebar ينكمش */
 .navbar.sidebar-collapsed {
-  inset-inline-start: var(--sidebar-collapsed);
+    inset-inline-start: var(--sidebar-collapsed)
 }
 
-/* ── يسار الـ navbar ─────────────────────────────────── */
 .navbar-start {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex: 1;
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    flex: 1
 }
 
-/* ── اسم الصفحة ─────────────────────────────────────── */
 .navbar-title {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  white-space: nowrap;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap
 }
 
-/* ── زرار الموبايل — يظهر بس على الشاشات الصغيرة ────── */
 .navbar-menu-btn {
-  display: none;
-  font-size: 1.1rem;
+    display: none;
+    font-size: 1.1rem
 }
 
-/* ── يمين الـ navbar ─────────────────────────────────── */
 .navbar-end {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: .35rem;
+    flex-shrink: 0
 }
 
-/* ── زرار اللغة ──────────────────────────────────────── */
 .navbar-lang-btn {
-  font-size: 0.75rem;
-  font-weight: 700;
-  min-width: 36px;
-  height: 36px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all var(--transition);
+    font-size: .75rem;
+    font-weight: 700;
+    min-width: 36px;
+    height: 36px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: 0 0;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition)
 }
 
 .navbar-lang-btn:hover {
-  background: var(--bg-hover);
-  color: var(--color-primary);
-  border-color: var(--color-primary);
+    background: var(--bg-hover);
+    color: var(--color-primary);
+    border-color: var(--color-primary)
 }
 
-/* ── الإشعارات ───────────────────────────────────────── */
 .navbar-notif {
-  position: relative;
-  display: inline-flex;
-  text-decoration: none;
+    position: relative;
+    display: inline-flex;
+    text-decoration: none
 }
 
 .navbar-notif-badge {
-  position: absolute;
-  top: -4px;
-  background: var(--color-danger);
-  color: white;
-  font-size: 0.65rem;
-  font-weight: 700;
-  min-width: 18px;
-  height: 18px;
-  border-radius: var(--radius-full);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 4px;
-  border: 2px solid var(--bg-navbar);
+    position: absolute;
+    top: -4px;
+    background: var(--color-danger);
+    color: #fff;
+    font-size: .65rem;
+    font-weight: 700;
+    min-width: 18px;
+    height: 18px;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    border: 2px solid var(--bg-navbar)
 }
 
-/* تحديد اتجاه الشارة حسب اللغة */
-[dir="rtl"] .navbar-notif-badge { left: -4px; }
-[dir="ltr"] .navbar-notif-badge { right: -4px; }
+[dir=rtl] .navbar-notif-badge {
+    left: -4px
+}
 
-/* ── زرار المستخدم ───────────────────────────────────── */
+[dir=ltr] .navbar-notif-badge {
+    right: -4px
+}
+
 .navbar-user-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.35rem 0.6rem;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-  background: transparent;
-  cursor: pointer;
-  transition: all var(--transition);
-  color: var(--text-primary);
-  font-family: inherit;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .35rem .6rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background: 0 0;
+    cursor: pointer;
+    transition: all var(--transition);
+    color: var(--text-primary);
+    font-family: inherit
 }
 
 .navbar-user-btn:hover {
-  background: var(--bg-hover);
+    background: var(--bg-hover)
 }
 
-/* الأفاتار */
 .navbar-avatar {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: var(--color-primary-light);
-  color: var(--color-primary);
-  font-size: 0.8rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+    font-size: .8rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0
 }
 
 .navbar-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+    width: 100%;
+    height: 100%;
+    object-fit: cover
 }
 
 .navbar-user-name {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  max-width: 120px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+    font-size: .85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap
 }
 
 .navbar-chevron {
-  font-size: 0.6rem;
-  color: var(--text-muted);
+    font-size: .6rem;
+    color: var(--text-muted)
 }
 
-/* ── قائمة المستخدم المنسدلة ─────────────────────────── */
 .navbar-user-menu {
-  min-width: 220px;
+    min-width: 220px
 }
 
-/* معلومات المستخدم في أول القائمة */
 .navbar-user-info {
-  padding: 0.75rem 1rem;
+    padding: .75rem 1rem
 }
 
 .navbar-user-info-name {
-  font-size: 0.875rem;
-  font-weight: 700;
-  color: var(--text-primary);
+    font-size: .875rem;
+    font-weight: 700;
+    color: var(--text-primary)
 }
 
 .navbar-user-info-email {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  margin-top: 0.2rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+    font-size: .75rem;
+    color: var(--text-muted);
+    margin-top: .2rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap
 }
 
-/* الفاصل في القائمة */
 .dropdown-divider {
-  height: 1px;
-  background: var(--border);
-  margin: 0.25rem 0;
+    height: 1px;
+    background: var(--border);
+    margin: .25rem 0
 }
 
-/* ── Responsive ──────────────────────────────────────── */
-@media (max-width: 768px) {
-  .navbar {
-    inset-inline-start: 0;
-  }
+@media (max-width:768px) {
+    .navbar {
+        inset-inline-start: 0
+    }
 
-  .navbar-menu-btn {
-    display: flex;
-  }
+    .navbar-menu-btn {
+        display: flex
+    }
 
-  .navbar-user-name {
-    display: none;
-  }
+    .navbar-user-name {
+        display: none
+    }
 
-  .navbar-title {
-    font-size: 0.95rem;
-  }
+    .navbar-title {
+        font-size: .95rem
+    }
 }
