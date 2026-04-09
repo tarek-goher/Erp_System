@@ -10,7 +10,21 @@ const nextConfig = {
 
   // ── Security & PWA Headers ───────────────────────────────
   async headers() {
+    const isDev = process.env.NODE_ENV === 'development'
+    
     return [
+      // HTML pages — no cache in dev, short cache in prod
+      {
+        source: '/:path((?!_next).*\\.html)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: isDev
+              ? 'no-cache, no-store, must-revalidate'
+              : 'public, max-age=3600, must-revalidate',
+          },
+        ],
+      },
       {
         source: '/(.*)',
         headers: [
@@ -21,6 +35,8 @@ const nextConfig = {
           { key: 'Referrer-Policy',           value: 'strict-origin-when-cross-origin' },
           // PWA theme color
           { key: 'X-DNS-Prefetch-Control',    value: 'on' },
+          // Force revalidation in development
+          ...(isDev ? [{ key: 'Cache-Control', value: 'no-cache' }] : []),
         ],
       },
       // Service Worker — يجب أن يُقدَّم بـ Content-Type صح
@@ -40,11 +56,16 @@ const nextConfig = {
           { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },
         ],
       },
-      // Static assets — cache طويل
+      // Static assets — adjust based on environment
       {
         source: '/_next/static/(.*)',
         headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          {
+            key: 'Cache-Control',
+            value: isDev
+              ? 'no-cache, no-store, must-revalidate'
+              : 'public, max-age=31536000, immutable',
+          },
         ],
       },
     ]

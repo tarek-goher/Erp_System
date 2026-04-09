@@ -42,9 +42,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem;
+  padding: 1.25rem;
   height: var(--navbar-height);
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: 2px solid var(--border-light);
   flex-shrink: 0;
 }
 
@@ -69,7 +69,7 @@
 .sidebar-logo-text {
   font-size: 1rem;
   font-weight: 800;
-  color: var(--text-primary);
+  color: var(--text-inverse);
   white-space: nowrap;
 }
 
@@ -100,8 +100,8 @@
 .sidebar-nav {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 0.75rem 0.6rem;
+  gap: 0.65rem;
+  padding: 1.25rem 0.75rem;
   overflow-y: auto;
   overflow-x: hidden;
   flex: 1;
@@ -133,8 +133,8 @@
 .sidebar-item {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.6rem 0.85rem;
+  gap: 0.85rem;
+  padding: 0.75rem 1rem;
   border-radius: var(--radius-md);
   color: var(--sidebar-item-color);
   text-decoration: none;
@@ -148,7 +148,16 @@
 
 .sidebar-item:hover {
   background: var(--bg-hover);
+  color: var(--text-inverse);
+  transform: translateX(4px);
+}
+
+.sidebar-item-text:hover {
   color: var(--text-primary);
+}
+
+.sidebar-item:hover .sidebar-item-icon {
+    color: silver;
 }
 
 /* الـ item النشط */
@@ -156,29 +165,33 @@
   background: var(--sidebar-item-active-bg);
   color: var(--sidebar-item-active-text);
   font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 /* لما ينكمش: ركّز الأيقونة */
 .sidebar.collapsed .sidebar-item {
   justify-content: center;
-  padding: 0.65rem;
+  padding: 0.75rem;
 }
 
 /* ── الأيقونة ─────────────────────────────────────────── */
 .sidebar-item-icon {
-  font-size: 1.15rem;
+  font-size: 1.2rem;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
+  width: 26px;
+  color: var(--sidebar-item-icon-color);
   text-align: center;
+  transition: .3s;
 }
 
 /* ── النص ─────────────────────────────────────────────── */
 .sidebar-item-text {
   flex: 1;
   overflow: hidden;
+  transition: .3s;
   text-overflow: ellipsis;
 }
 
@@ -195,7 +208,7 @@
 .sidebar-divider {
   height: 1px;
   background: var(--border-light);
-  margin: 0.5rem 0.6rem;
+  margin: 1rem 0.75rem;
   flex-shrink: 0;
 }
 
@@ -238,7 +251,7 @@
 .sidebar-user-name {
   font-size: 0.825rem;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--text-inverse);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

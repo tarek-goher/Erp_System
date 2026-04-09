@@ -5,6 +5,20 @@
 // ══════════════════════════════════════════════════════════
 
 import { useState, useEffect, FormEvent } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import {
+  faBoxOpen,
+  faChevronLeft,
+  faCircleExclamation,
+  faEye,
+  faMagnifyingGlass,
+  faPenToSquare,
+  faPlus,
+  faSave,
+  faTrash,
+  faXmark,
+  faLightbulb,
+} from '@fortawesome/free-solid-svg-icons'
 import ERPLayout from '../../components/layout/ERPLayout'
 import { api, extractArray } from '../../lib/api'
 import { useI18n } from '../../lib/i18n'
@@ -259,7 +273,7 @@ const handleDelete = async () => {
       <div className="toolbar">
         <div className="toolbar-actions">
           <div className="search-bar">
-            <span>🔍</span>
+            <span aria-hidden="true"><FontAwesomeIcon icon={faMagnifyingGlass} /></span>
             <input
               placeholder={lang === 'ar' ? 'بحث...' : 'Search...'}
               value={search} onChange={e => setSearch(e.target.value)}
@@ -271,7 +285,8 @@ const handleDelete = async () => {
           </select>
         </div>
         <button className="btn btn-primary" onClick={() => { resetForm(); setModal(true) }}>
-          + {lang === 'ar' ? 'طلب شراء' : 'New Order'}
+          <FontAwesomeIcon icon={faPlus} style={{ marginInlineEnd: 8 }} />
+          {lang === 'ar' ? 'طلب شراء' : 'New Order'}
         </button>
       </div>
 
@@ -282,7 +297,7 @@ const handleDelete = async () => {
           </div>
         ) : items.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-icon">🛒</div>
+            <div className="empty-state-icon"><FontAwesomeIcon icon={faBoxOpen} /></div>
             <p className="empty-state-text">{t('no_data')}</p>
           </div>
         ) : (
@@ -313,12 +328,15 @@ const handleDelete = async () => {
                     <td>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button className="btn btn-secondary btn-sm" onClick={() => handleView(item.id)}>
-                          {lang === 'ar' ? '👁 عرض' : '👁 View'}
+                          <FontAwesomeIcon icon={faEye} style={{ marginInlineEnd: 6 }} />
+                          {lang === 'ar' ? 'عرض' : 'View'}
                         </button>
                         <button className="btn btn-secondary btn-sm" onClick={() => handleEdit(item.id)}>
-                          {lang === 'ar' ? '✏️ تعديل' : '✏️ Edit'}
+                          <FontAwesomeIcon icon={faPenToSquare} style={{ marginInlineEnd: 6 }} />
+                          {lang === 'ar' ? 'تعديل' : 'Edit'}
                         </button>
                         <button className="btn btn-danger btn-sm" onClick={() => setDeleteId(item.id)}>
+                          <FontAwesomeIcon icon={faTrash} style={{ marginInlineEnd: 6 }} />
                           {t('delete')}
                         </button>
                       </div>
@@ -344,7 +362,9 @@ const handleDelete = async () => {
                   </span>
                 )}
               </h3>
-              <button className="btn-icon" onClick={() => setViewPurchase(null)}>✕</button>
+              <button className="btn-icon" onClick={() => setViewPurchase(null)} aria-label={t('close') || 'Close'}>
+                <FontAwesomeIcon icon={faXmark} />
+              </button>
             </div>
             <div className="modal-body">
               {viewLoading ? (
@@ -444,7 +464,9 @@ const handleDelete = async () => {
                   ? (lang === 'ar' ? 'تعديل طلب الشراء' : 'Edit Purchase Order')
                   : (lang === 'ar' ? 'طلب شراء جديد'    : 'New Purchase Order')}
               </h3>
-              <button className="btn-icon" onClick={() => { setModal(false); resetForm() }}>✕</button>
+              <button className="btn-icon" onClick={() => { setModal(false); resetForm() }} aria-label={t('close') || 'Close'}>
+                <FontAwesomeIcon icon={faXmark} />
+              </button>
             </div>
 
             {editLoading ? (
@@ -466,8 +488,18 @@ const handleDelete = async () => {
                           onClick={() => { setShowAddSupplier(!showAddSupplier); setAddSupplierErr('') }}
                           style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-primary)', fontSize: '0.8rem', fontWeight: 600 }}>
                           {showAddSupplier
-                            ? (lang === 'ar' ? '← رجوع للقائمة' : '← Back')
-                            : (lang === 'ar' ? '+ مورد جديد'     : '+ New Supplier')}
+                            ? (
+                              <>
+                                <FontAwesomeIcon icon={faChevronLeft} style={{ marginInlineEnd: 6 }} />
+                                {lang === 'ar' ? 'رجوع للقائمة' : 'Back'}
+                              </>
+                            )
+                            : (
+                              <>
+                                <FontAwesomeIcon icon={faPlus} style={{ marginInlineEnd: 6 }} />
+                                {lang === 'ar' ? 'مورد جديد' : 'New Supplier'}
+                              </>
+                            )}
                         </button>
                       </div>
                       {showAddSupplier ? (
@@ -476,15 +508,20 @@ const handleDelete = async () => {
                             <input className="input" placeholder={lang === 'ar' ? 'الاسم *' : 'Name *'} value={newSupplierName} onChange={e => setNewSupplierName(e.target.value)} autoFocus />
                             <input className="input" placeholder={lang === 'ar' ? 'البريد (اختياري)' : 'Email (optional)'} type="email" value={newSupplierEmail} onChange={e => setNewSupplierEmail(e.target.value)} />
                             <input className="input" placeholder={lang === 'ar' ? 'الهاتف (اختياري)' : 'Phone (optional)'} value={newSupplierPhone} onChange={e => setNewSupplierPhone(e.target.value)} />
-                            {addSupplierErr && <div style={{ color: 'var(--color-danger)', fontSize: '0.8rem' }}>⚠️ {addSupplierErr}</div>}
+                            {addSupplierErr && <div style={{ color: 'var(--color-danger)', fontSize: '0.8rem' }}><FontAwesomeIcon icon={faCircleExclamation} style={{ marginInlineEnd: 6 }} />{addSupplierErr}</div>}
                             <button type="button" className="btn btn-primary btn-sm" onClick={handleAddSupplier} disabled={addingSupplier} style={{ alignSelf: 'flex-start' }}>
-                              {addingSupplier ? '⏳...' : (lang === 'ar' ? '✓ حفظ المورد' : '✓ Save Supplier')}
+                              {addingSupplier ? '...' : (
+                                <>
+                                  <FontAwesomeIcon icon={faSave} style={{ marginInlineEnd: 6 }} />
+                                  {lang === 'ar' ? 'حفظ المورد' : 'Save Supplier'}
+                                </>
+                              )}
                             </button>
                           </div>
                         </div>
                       ) : (
                         <select className="input" value={form.supplier_id} onChange={e => setForm({ ...form, supplier_id: e.target.value })} required>
-                          <option value="">{suppliers.length === 0 ? (lang === 'ar' ? '← اضغط "+ مورد جديد"' : '← Click "+ New Supplier"') : (lang === 'ar' ? 'اختر المورد' : 'Select Supplier')}</option>
+                          <option value="">{suppliers.length === 0 ? (lang === 'ar' ? 'اضغط "مورد جديد"' : 'Click "New Supplier"') : (lang === 'ar' ? 'اختر المورد' : 'Select Supplier')}</option>
                           {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
                       )}
@@ -510,7 +547,8 @@ const handleDelete = async () => {
                       </select>
                       {taxRates.length === 0 && (
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4 }}>
-                          {lang === 'ar' ? '💡 أضف ضرائب من صفحة الإعدادات ← الضرائب' : '💡 Add taxes from Settings → Taxes'}
+                          <FontAwesomeIcon icon={faLightbulb} style={{ marginInlineEnd: 6 }} />
+                          {lang === 'ar' ? 'أضف ضرائب من صفحة الإعدادات ← الضرائب' : 'Add taxes from Settings → Taxes'}
                         </div>
                       )}
                     </div>
@@ -533,7 +571,8 @@ const handleDelete = async () => {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                       <label className="fw-semibold">{lang === 'ar' ? 'أصناف الطلب' : 'Order Items'}</label>
                       <button type="button" className="btn btn-secondary btn-sm" onClick={addItem}>
-                        + {lang === 'ar' ? 'إضافة صنف' : 'Add Item'}
+                        <FontAwesomeIcon icon={faPlus} style={{ marginInlineEnd: 6 }} />
+                        {lang === 'ar' ? 'إضافة صنف' : 'Add Item'}
                       </button>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -549,7 +588,9 @@ const handleDelete = async () => {
                           <input className="input" type="number" min="0" step="0.01"
                             placeholder={lang === 'ar' ? 'سعر التكلفة' : 'Cost'}
                             value={item.cost} onChange={e => updateItem(idx, 'cost', Number(e.target.value))} />
-                          <button type="button" className="btn-icon" onClick={() => removeItem(idx)} style={{ color: 'var(--color-danger)' }}>✕</button>
+                          <button type="button" className="btn-icon" onClick={() => removeItem(idx)} style={{ color: 'var(--color-danger)' }} aria-label={t('delete')}>
+                            <FontAwesomeIcon icon={faXmark} />
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -572,7 +613,7 @@ const handleDelete = async () => {
 
                   {formErr && (
                     <div className="login-error" style={{ marginTop: '1rem' }}>
-                      <span>⚠️</span> {formErr}
+                      <span aria-hidden="true"><FontAwesomeIcon icon={faCircleExclamation} /></span> {formErr}
                     </div>
                   )}
                 </div>
@@ -596,7 +637,7 @@ const handleDelete = async () => {
         <div className="modal-overlay" onClick={() => setDeleteId(null)}>
           <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
             <div className="modal-body" style={{ textAlign: 'center', padding: '2rem' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🗑️</div>
+              <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}><FontAwesomeIcon icon={faTrash} /></div>
               <h3>{t('confirm_delete')}</h3>
               <p className="text-muted" style={{ fontSize: '0.875rem' }}>{lang === 'ar' ? 'لا يمكن التراجع' : 'Cannot be undone'}</p>
             </div>

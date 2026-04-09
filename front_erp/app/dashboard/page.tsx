@@ -48,15 +48,40 @@ export default function DashboardPage() {
   useEffect(() => {
     async function fetchData() {
       setLoading(true)
-      const [dashRes, salesRes] = await Promise.all([
-        api.get<any>('/reports/dashboard'),
-        api.get<{ data: Sale[] }>('/sales?per_page=5'),
-      ])
+      try {
+        const [dashRes, salesRes] = await Promise.all([
+          api.get<any>('/reports/dashboard'),
+          api.get<any>('/sales?per_page=5'),
+        ])
 
-      if (dashRes.data) setData(dashRes.data)
-      if (salesRes.data) setSales(salesRes.data.data || [])
-      setLoading(false)
+        if (dashRes.data) setData(dashRes.data)
+        
+        // Handle multiple possible API response formats
+        let salesData: Sale[] = []
+        
+        if (salesRes && salesRes.data) {
+          const responseData = salesRes.data
+          
+          if (Array.isArray(responseData)) {
+            salesData = responseData
+          } else if (responseData.data && Array.isArray(responseData.data)) {
+            salesData = responseData.data
+          } else if (responseData.sales && Array.isArray(responseData.sales)) {
+            salesData = responseData.sales
+          } else if (responseData.items && Array.isArray(responseData.items)) {
+            salesData = responseData.items
+          }
+        }
+        
+        setSales(Array.isArray(salesData) ? salesData : [])
+      } catch (err) {
+        console.error('Dashboard fetch error:', err)
+        setSales([])
+      } finally {
+        setLoading(false)
+      }
     }
+    
     fetchData()
   }, [])
 
@@ -167,12 +192,7 @@ export default function DashboardPage() {
               <div key={i} className="skeleton" style={{ height: 44, borderRadius: 'var(--radius-md)' }} />
             ))}
           </div>
-        ) : sales.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-state-icon">📋</div>
-            <p className="empty-state-text">{t('no_data')}</p>
-          </div>
-        ) : (
+        ) : Array.isArray(sales) && sales.length > 0 ? (
           <div className="table-container">
             <table className="table">
               <thead>
@@ -204,6 +224,11 @@ export default function DashboardPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        ) : (
+          <div className="empty-state">
+            <div className="empty-state-icon">📋</div>
+            <p className="empty-state-text">{t('no_data')}</p>
           </div>
         )}
       </div>

@@ -3,12 +3,16 @@
 // ══════════════════════════════════════════════════════════
 
 import type { Metadata, Viewport } from 'next'
+import { config } from '@fortawesome/fontawesome-svg-core'
 import { AuthProvider }    from '../lib/auth'
 import { ThemeProvider }   from '../lib/theme'
 import { I18nProvider }    from '../lib/i18n'
 import { ToastProvider }   from '../context/ToastContext'
 import { ConfirmProvider } from '../components/ui/ConfirmDialog'
+import '@fortawesome/fontawesome-svg-core/styles.css'
 import '../styles/globals.css'
+
+config.autoAddCss = false
 
 // ── PWA + SEO Metadata ────────────────────────────────────
 export const metadata: Metadata = {

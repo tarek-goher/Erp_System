@@ -1,53 +1,85 @@
 'use client'
 
-// ══════════════════════════════════════════════════════════
-// components/layout/Sidebar.tsx — القائمة الجانبية
-// ══════════════════════════════════════════════════════════
-
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
+import {
+  faBolt,
+  faBoxArchive,
+  faBoxesStacked,
+  faBullhorn,
+  faBuilding,
+  faCalculator,
+  faCartShopping,
+  faChartColumn,
+  faChartLine,
+  faClipboardCheck,
+  faClipboardList,
+  faComments,
+  faDesktop,
+  faFileCircleCheck,
+  faGear,
+  faHandshake,
+  faHeadset,
+  faInbox,
+  faMoneyBillWave,
+  faRobot,
+  faRoute,
+  faSackDollar,
+  faScaleBalanced,
+  faShoppingBag,
+  faStar,
+  faTruck,
+  faUserGroup,
+  faUserTie,
+  faUsers,
+  faWarehouse,
+} from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useI18n } from '../../lib/i18n'
 import { useAuth } from '../../lib/auth'
+import { useI18n } from '../../lib/i18n'
 import './Sidebar.css'
 
-// ─── Type للـ Role ────────────────────────────────────────
 type Role = string | { id: number; name: string; pivot?: any }
 
-// ─── تعريف عناصر القائمة ─────────────────────────────────
-const NAV_ITEMS = [
-  { path: '/dashboard',      icon: '📊', key: 'dashboard',      permission: null },
-  { path: '/sales',          icon: '💰', key: 'sales',          permission: 'manage-sales' },
-  { path: '/quotations',     icon: '📝', key: 'quotations',     permission: 'manage-sales' },
-  { path: '/purchases',      icon: '🛒', key: 'purchases',      permission: 'manage-purchases' },
-  { path: '/suppliers',      icon: '🤝', key: 'suppliers',      permission: 'manage-purchases' },
-  { path: '/inventory',      icon: '📦', key: 'inventory',      permission: 'manage-products' },
-  { path: '/warehouses',     icon: '🏬', key: 'warehouses',     permission: 'manage-products' },
-  { path: '/accounting',     icon: '🧾', key: 'accounting',     permission: 'manage-accounting' },
-  { path: '/budgets',        icon: '📊', key: 'budgets',        permission: 'manage-accounting' },
-  { path: '/fixed-assets',   icon: '🏢', key: 'fixed_assets',   permission: 'manage-accounting' },
-  { path: '/hr',             icon: '👥', key: 'hr',             permission: 'manage-hr' },
-  { path: '/payroll',        icon: '💳', key: 'payroll',        permission: 'manage-hr' },
-  { path: '/recruitment',    icon: '👔', key: 'recruitment',    permission: 'manage-hr' },
-  { path: '/appraisals',     icon: '⭐', key: 'appraisals',     permission: 'manage-hr' },
-  { path: '/taxes',          icon: '🧮', key: 'taxes',          permission: 'manage-accounting' },
-  { path: '/loyalty',        icon: '🎁', key: 'loyalty',        permission: 'manage-sales' },
-  { path: '/branches',       icon: '🏬', key: 'branches',       permission: 'manage-settings' },
-  { path: '/crm',            icon: '🤝', key: 'crm',            permission: 'manage-crm' },
-  { path: '/projects',       icon: '📋', key: 'projects',       permission: 'manage-projects' },
-  { path: '/helpdesk',       icon: '🎧', key: 'helpdesk',       permission: 'manage-projects' },
-  { path: '/manufacturing',  icon: '🏭', key: 'manufacturing',  permission: 'manage-warehouses' },
-  { path: '/fleet',          icon: '🚗', key: 'fleet',          permission: 'manage-warehouses' },
-  { path: '/marketing',      icon: '📣', key: 'marketing',      permission: 'manage-warehouses' },
-  { path: '/pos',            icon: '🖥️', key: 'pos',            permission: 'manage-pos' },
-  { path: '/email-inbox',    icon: '📥', key: 'email_inbox',    permission: null },
-  { path: '/reports',        icon: '📈', key: 'reports',        permission: 'view-reports' },
-  { path: '/ai-assistant',   icon: '🤖', key: 'ai_assistant',   permission: null },
-  { path: '/users',          icon: '👤', key: 'users',          permission: 'manage-users' },
-  { path: '/audit-log',      icon: '📋', key: 'audit_log',      permission: 'manage-users' },
-  { path: '/settings',       icon: '⚙️', key: 'settings',       permission: null },
+const NAV_ITEMS: Array<{
+  path: string
+  icon: IconDefinition
+  key: string
+  permission: string | null
+}> = [
+  { path: '/dashboard', icon: faChartColumn, key: 'dashboard', permission: null },
+  { path: '/sales', icon: faSackDollar, key: 'sales', permission: 'manage-sales' },
+  { path: '/quotations', icon: faFileCircleCheck, key: 'quotations', permission: 'manage-sales' },
+  { path: '/purchases', icon: faCartShopping, key: 'purchases', permission: 'manage-purchases' },
+  { path: '/suppliers', icon: faHandshake, key: 'suppliers', permission: 'manage-purchases' },
+  { path: '/inventory', icon: faBoxesStacked, key: 'inventory', permission: 'manage-products' },
+  { path: '/warehouses', icon: faWarehouse, key: 'warehouses', permission: 'manage-products' },
+  { path: '/accounting', icon: faCalculator, key: 'accounting', permission: 'manage-accounting' },
+  { path: '/budgets', icon: faChartLine, key: 'budgets', permission: 'manage-accounting' },
+  { path: '/fixed-assets', icon: faBuilding, key: 'fixed_assets', permission: 'manage-accounting' },
+  { path: '/hr', icon: faUsers, key: 'hr', permission: 'manage-hr' },
+  { path: '/payroll', icon: faMoneyBillWave, key: 'payroll', permission: 'manage-hr' },
+  { path: '/recruitment', icon: faUserTie, key: 'recruitment', permission: 'manage-hr' },
+  { path: '/appraisals', icon: faStar, key: 'appraisals', permission: 'manage-hr' },
+  { path: '/taxes', icon: faScaleBalanced, key: 'taxes', permission: 'manage-accounting' },
+  { path: '/loyalty', icon: faShoppingBag, key: 'loyalty', permission: 'manage-sales' },
+  { path: '/branches', icon: faRoute, key: 'branches', permission: 'manage-settings' },
+  { path: '/crm', icon: faComments, key: 'crm', permission: 'manage-crm' },
+  { path: '/projects', icon: faClipboardList, key: 'projects', permission: 'manage-projects' },
+  { path: '/helpdesk', icon: faHeadset, key: 'helpdesk', permission: 'manage-projects' },
+  { path: '/manufacturing', icon: faBoxArchive, key: 'manufacturing', permission: 'manage-warehouses' },
+  { path: '/fleet', icon: faTruck, key: 'fleet', permission: 'manage-warehouses' },
+  { path: '/marketing', icon: faBullhorn, key: 'marketing', permission: 'manage-warehouses' },
+  { path: '/pos', icon: faDesktop, key: 'pos', permission: 'manage-pos' },
+  { path: '/email-inbox', icon: faInbox, key: 'email_inbox', permission: null },
+  { path: '/reports', icon: faChartLine, key: 'reports', permission: 'view-reports' },
+  { path: '/ai-assistant', icon: faRobot, key: 'ai_assistant', permission: null },
+  { path: '/users', icon: faUserGroup, key: 'users', permission: 'manage-users' },
+  { path: '/audit-log', icon: faClipboardCheck, key: 'audit_log', permission: 'manage-users' },
+  { path: '/settings', icon: faGear, key: 'settings', permission: null },
 ]
 
-// ══════════════════════════════════════════════════════════
 export default function Sidebar({
   collapsed,
   onToggle,
@@ -55,24 +87,21 @@ export default function Sidebar({
   collapsed: boolean
   onToggle: () => void
 }) {
-  const pathname             = usePathname()
-  const { t, dir }           = useI18n()
+  const pathname = usePathname()
+  const { t, dir } = useI18n()
   const { user, hasPermission } = useAuth()
 
-  // ─── استخراج اسم الـ role بأمان ──────────────────────
   const getRoleName = (roles: Role[] | undefined): string => {
     if (!roles || roles.length === 0) return 'User'
     const first = roles[0]
     return typeof first === 'string' ? first : (first.name ?? 'User')
   }
 
-  // ─── هل المستخدم admin في الشركة؟ ────────────────────
-  const isCompanyAdmin = user?.roles?.some((r: Role) => {
-    const name = typeof r === 'string' ? r : r.name
+  const isCompanyAdmin = user?.roles?.some((role: Role) => {
+    const name = typeof role === 'string' ? role : role.name
     return name === 'admin'
   }) ?? false
 
-  // ─── اسم الـ role للعرض ───────────────────────────────
   const userRoleName: string = user?.is_super_admin
     ? 'Super Admin'
     : getRoleName(user?.roles as Role[] | undefined)
@@ -82,11 +111,12 @@ export default function Sidebar({
       className={`sidebar ${collapsed ? 'collapsed' : ''}`}
       data-dir={dir}
     >
-      {/* ── اللوغو وزرار الـ collapse ─────────────────── */}
       <div className="sidebar-header">
         {!collapsed && (
           <div className="sidebar-logo">
-            <span className="sidebar-logo-icon">⚡</span>
+            <span className="sidebar-logo-icon">
+              <FontAwesomeIcon icon={faBolt} />
+            </span>
             <span className="sidebar-logo-text">ERP System</span>
           </div>
         )}
@@ -99,7 +129,6 @@ export default function Sidebar({
         </button>
       </div>
 
-      {/* ── القائمة الرئيسية ─────────────────────────── */}
       <nav className="sidebar-nav">
         {NAV_ITEMS.map((item) => {
           if (item.permission && !isCompanyAdmin && !hasPermission(item.permission)) return null
@@ -113,24 +142,22 @@ export default function Sidebar({
               className={`sidebar-item ${isActive ? 'active' : ''}`}
               title={collapsed ? t(item.key) : undefined}
             >
-              <span className="sidebar-item-icon">{item.icon}</span>
-              {!collapsed && (
-                <span className="sidebar-item-text">{t(item.key)}</span>
-              )}
+              <span className="sidebar-item-icon">
+                <FontAwesomeIcon icon={item.icon} />
+              </span>
+              {!collapsed && <span className="sidebar-item-text">{t(item.key)}</span>}
               {isActive && <span className="sidebar-item-dot" />}
             </Link>
           )
         })}
       </nav>
 
-      {/* ── بيانات المستخدم في الأسفل ─────────────────── */}
       {!collapsed && user && (
         <div className="sidebar-user">
           <div className="sidebar-user-avatar">
             {user.avatar
               ? <img src={user.avatar} alt={user.name} />
-              : user.name?.charAt(0)?.toUpperCase()
-            }
+              : user.name?.charAt(0)?.toUpperCase()}
           </div>
           <div className="sidebar-user-info">
             <p className="sidebar-user-name">{user.name}</p>
