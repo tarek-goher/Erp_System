@@ -1,10 +1,9 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, ChangeEvent } from 'react'
 import { useAuth } from '../../../lib/auth'
-import { api } from '../../../lib/api'
+import { api, extractArray } from '../../../lib/api'
 import { useToast } from '../../../hooks/useToast'
 import { StatCard, Modal, SearchInput, Badge, EmptyState, ToastContainer, ConfirmDialog } from '../../../components/ui'
-import * as XLSX from 'xlsx'
 
 const PLAN_COLORS: Record<string, string> = {
   starter: '#06B6D4', professional: '#7c3aed', enterprise: '#F59E0B',
@@ -12,13 +11,13 @@ const PLAN_COLORS: Record<string, string> = {
 const STATUS_META: Record<string, { label: string; color: string }> = {
   active:       { label: 'نشط',           color: '#22C55E' },
   suspended:    { label: 'موقوف',         color: '#EF4444' },
-  under_review: { label: 'تحت المراجعة', color: '#8B5CF6' },
+  trial:        { label: 'تجريبي',        color: '#8B5CF6' },
   inactive:     { label: 'منتهي',         color: '#9CA3AF' },
 }
 
 type Company = {
-  id: number; name: string; email: string; phone: string; plan: string
-  status: 'active' | 'suspended' | 'under_review' | 'inactive'
+  id: number; name: string; email: string; phone: string; subscription_plan: string
+  status: 'active' | 'suspended' | 'trial' | 'inactive'
   is_active: boolean; country: string; created_at: string; users_count?: number
 }
 
@@ -48,22 +47,24 @@ export default function CompaniesPage() {
     if (search) params.set('search', search)
     if (filterStatus !== 'all') params.set('status', filterStatus)
     const res = await api.get(`/super-admin/companies?${params}`)
-    setCompanies(res.data?.data ?? res.data ?? [])
+    if (res.data) setCompanies(extractArray(res.data))
     setLoading(false)
   }
   useEffect(() => { fetchCompanies() }, [search, filterStatus])
 
   const handleAdd = async () => {
-    if (!form.company_name || !form.email) { show('اسم الشركة والإيميل مطلوبان', 'error'); return }
+    if (!form.company_name || !form.email || !form.name) {
+      show('اسم الشركة، المسؤول، والإيميل مطلوبان', 'error'); return
+    }
     setSaving(true)
-    const res = await api.post('/register', {
+    const res = await api.post('/auth/register', {
       ...form,
       password: form.password || 'password123',
       password_confirmation: form.password || 'password123',
     })
     setSaving(false)
     if (res.error) { show(res.error, 'error'); return }
-    show(`تم إضافة ${form.name} ✅`)
+    show(`تم إضافة الشركة ${form.company_name} والمدير ${form.name} ✅`)
     setForm(EMPTY_FORM); setShowAdd(false); fetchCompanies()
   }
 
@@ -85,29 +86,11 @@ export default function CompaniesPage() {
   }
 
   const handleExport = () => {
-    const rows = companies.map(c => ({
-      'الاسم': c.name, 'الإيميل': c.email, 'الهاتف': c.phone,
-      'الخطة': c.plan, 'الحالة': STATUS_META[c.status]?.label ?? c.status,
-      'البلد': c.country, 'تاريخ التسجيل': new Date(c.created_at).toLocaleDateString('ar-EG'),
-    }))
-    const ws = XLSX.utils.json_to_sheet(rows)
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'الشركات')
-    XLSX.writeFile(wb, `companies-${new Date().toISOString().split('T')[0]}.xlsx`)
-    show('تم تصدير الملف ✅')
+    show('خاصية التصدير غير مفعلة حالياً (تطلب مكتبة xlsx)', 'info')
   }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; if (!file) return
-    const reader = new FileReader()
-    reader.onload = (ev) => {
-      try {
-        const wb   = XLSX.read(ev.target?.result, { type: 'binary' })
-        const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]) as any[]
-        setImportRows(data); setShowImport(true)
-      } catch { show('ملف غير صالح', 'error') }
-    }
-    reader.readAsBinaryString(file); e.target.value = ''
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    show('خاصية الاستيراد غير مفعلة حالياً (تطلب مكتبة xlsx)', 'info')
   }
 
   const handleImport = async () => {
@@ -123,7 +106,7 @@ export default function CompaniesPage() {
         password: 'password123', password_confirmation: 'password123',
       }
       if (!body.name || !body.email) { failed++; continue }
-      const res = await api.post('/register', body)
+      const res = await api.post('/auth/register', body)
       if (!res.error) success++; else failed++
     }
     show(`تم استيراد ${success} شركة${failed > 0 ? ` — فشل ${failed}` : ''} ✅`)
@@ -156,7 +139,7 @@ export default function CompaniesPage() {
       <div className="grid-4" style={{ marginBottom: '1.25rem' }}>
         <StatCard icon="🏢" label="إجمالي الشركات"  value={companies.length} />
         <StatCard icon="✅" label="نشطة"             value={companies.filter(c => c.status === 'active').length}       accent="var(--color-success)" />
-        <StatCard icon="🔍" label="تحت المراجعة"     value={companies.filter(c => c.status === 'under_review').length} accent="#8B5CF6" />
+        <StatCard icon="🔍" label="تجريبية"          value={companies.filter(c => c.status === 'trial').length}        accent="#8B5CF6" />
         <StatCard icon="⛔" label="موقوفة"           value={companies.filter(c => c.status === 'suspended').length}    accent="var(--color-danger)" />
       </div>
       <div style={{ display: 'flex', gap: 10, marginBottom: '1rem', flexWrap: 'wrap' }}>
@@ -164,7 +147,7 @@ export default function CompaniesPage() {
         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="input" style={{ width: 'auto', minWidth: 140 }}>
           <option value="all">كل الحالات</option>
           <option value="active">نشط</option>
-          <option value="under_review">تحت المراجعة</option>
+          <option value="trial">تجريبي</option>
           <option value="suspended">موقوف</option>
           <option value="inactive">منتهي</option>
         </select>
@@ -197,7 +180,7 @@ export default function CompaniesPage() {
                     </td>
                     <td style={{ fontSize: '0.8rem', direction: 'ltr' }}>{c.phone || '—'}</td>
                     <td>
-                      <span style={{ background: (PLAN_COLORS[c.plan] ?? '#888') + '22', color: PLAN_COLORS[c.plan] ?? '#888', padding: '2px 8px', borderRadius: 'var(--radius-full)', fontSize: '0.75rem', fontWeight: 800 }}>{c.plan?.toUpperCase()}</span>
+                      <span style={{ background: (PLAN_COLORS[c.subscription_plan] ?? '#888') + '22', color: PLAN_COLORS[c.subscription_plan] ?? '#888', padding: '2px 8px', borderRadius: 'var(--radius-full)', fontSize: '0.75rem', fontWeight: 800 }}>{c.subscription_plan?.toUpperCase()}</span>
                     </td>
                     <td>
                       <span style={{ background: st.color + '22', color: st.color, padding: '2px 8px', borderRadius: 'var(--radius-full)', fontSize: '0.75rem', fontWeight: 700 }}>{st.label}</span>
@@ -252,7 +235,7 @@ export default function CompaniesPage() {
               { label: 'اسم الشركة', val: viewCompany.name },
               { label: 'البريد الإلكتروني', val: viewCompany.email },
               { label: 'الهاتف', val: viewCompany.phone || '—' },
-              { label: 'الخطة', val: viewCompany.plan?.toUpperCase() },
+              { label: 'الخطة', val: viewCompany.subscription_plan?.toUpperCase() },
               { label: 'البلد', val: viewCompany.country || '—' },
               { label: 'الحالة', val: STATUS_META[viewCompany.status]?.label ?? viewCompany.status },
               { label: 'عدد المستخدمين', val: String(viewCompany.users_count ?? '—') },

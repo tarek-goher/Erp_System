@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { api } from '../../../lib/api'
+import { api, extractArray } from '../../../lib/api'
 import { useToast } from '../../../hooks/useToast'
 import { StatCard, Badge, EmptyState, SearchInput, ToastContainer, Modal } from '../../../components/ui'
 
@@ -35,15 +35,19 @@ export default function SuperAdminUsersPage() {
   const load = async () => {
     setLoading(true)
     const res = await api.get('/super-admin/users')
-    const list = res.data?.data ?? res.data ?? []
-    setUsers(list.map((u: any) => ({
-      id: String(u.id), name: u.name ?? '', email: u.email ?? '', phone: u.phone ?? '',
-      company: u.company?.name ?? u.company_name ?? '—',
-      role: (typeof u.roles?.[0] === 'object' ? (u.roles?.[0] as any)?.name : u.roles?.[0]) ?? u.role ?? '—',
-      is_active: u.is_active ?? u.status === 'active' ?? true,
-      last_login: (u.last_login ?? u.last_login_at ?? '').slice(0, 10),
-      created_at: (u.created_at ?? '').slice(0, 10),
-    })))
+    if (res.error) {
+      show(res.error, 'error')
+    } else if (res.data) {
+      const list = extractArray(res.data)
+      setUsers(list.map((u: any) => ({
+        id: String(u.id), name: u.name ?? '', email: u.email ?? '', phone: u.phone ?? '',
+        company: u.company?.name ?? u.company_name ?? '—',
+        role: (typeof u.roles?.[0] === 'object' ? (u.roles?.[0] as any)?.name : u.roles?.[0]) ?? u.role ?? '—',
+        is_active: u.is_active ?? u.status === 'active' ?? true,
+        last_login: (u.last_login ?? u.last_login_at ?? '').slice(0, 10),
+        created_at: (u.created_at ?? '').slice(0, 10),
+      })))
+    }
     setLoading(false)
   }
   useEffect(() => { load() }, [])

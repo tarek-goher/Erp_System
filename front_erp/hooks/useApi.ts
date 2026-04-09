@@ -13,6 +13,11 @@
 //   const { data } = useApi<CustomerList>(`/customers?page=${page}&search=${search}`)
 //
 // ملاحظة: لما يتغير الـ endpoint (مثلاً تغيرت الـ page) بيعمل fetch تلقائي
+//
+// Fix #5: إصلاح AbortController — كان يُنشأ لكن signal لم يُمرَّر لـ fetch
+// الآن api.get يقبل signal مباشرة ويُمرَّر لـ fetch فعلياً.
+// النتيجة: عند تغيير الـ endpoint أو unmount الـ component، الطلب القديم
+// يُلغى فعلياً ولا يُحدَّث state الـ component بعد التدمير (يمنع memory leak).
 // ══════════════════════════════════════════════════════════
 
 import { useState, useEffect, useCallback, useRef } from 'react'
@@ -39,20 +44,26 @@ export function useApi<T = any>(
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState<string | null>(null)
 
-  // نستخدم ref عشان نتجنب race conditions لو الـ endpoint اتغير بسرعة
+  // Fix #5: نستخدم ref للـ AbortController عشان نتجنب race conditions
+  // لو الـ endpoint اتغير بسرعة، نلغي الطلب القديم قبل ما نبدأ الجديد
   const abortRef = useRef<AbortController | null>(null)
 
   const fetchData = useCallback(async () => {
     if (!enabled || !endpoint) return
 
-    // إلغاء الطلب القديم لو لسه شغال
+    // إلغاء الطلب القديم لو لسه شغال (abort فعلي الآن)
     abortRef.current?.abort()
     abortRef.current = new AbortController()
 
     setLoading(true)
     setError(null)
 
-    const res = await api.get<T>(endpoint)
+    // Fix #5: تمرير signal لـ api.get — الآن الإلغاء يعمل فعلياً
+    const res = await api.get<T>(endpoint, abortRef.current.signal)
+
+    // لو الطلب اتلغى (abort) → res.error = null وres.status = 0
+    // في الحالة دي نوقف هنا بدون تحديث state
+    if (res.status === 0 && res.error === null) return
 
     setLoading(false)
 
@@ -67,6 +78,7 @@ export function useApi<T = any>(
   // اعمل fetch لما يتغير الـ endpoint أو enabled
   useEffect(() => {
     fetchData()
+    // Cleanup: إلغاء الطلب عند unmount الـ component أو تغيير الـ endpoint
     return () => abortRef.current?.abort()
   }, [fetchData])
 
@@ -102,7 +114,7 @@ export function useMutation<T = any>(
     setError(null)
 
     let res
-    if (method === 'POST')   res = await api.post<T>(endpoint, body)
+    if (method === 'POST')        res = await api.post<T>(endpoint, body)
     else if (method === 'PUT')    res = await api.put<T>(endpoint, body)
     else if (method === 'PATCH')  res = await api.patch<T>(endpoint, body)
     else                          res = await api.delete<T>(endpoint)

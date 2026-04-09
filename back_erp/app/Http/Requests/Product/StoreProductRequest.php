@@ -17,7 +17,7 @@ class StoreProductRequest extends FormRequest
 
         return [
             'name'         => 'required|string|max:200',
-            'sku'          => 'required|string|unique:products,sku,' . $productId,
+            'sku'          => 'nullable|string|unique:products,sku,' . $productId, // ✅ nullable بدل required
             'barcode'      => 'nullable|string|unique:products,barcode,' . $productId,
             'category_id'  => 'required|exists:categories,id',
             'price'        => 'required|numeric|min:0',
@@ -36,9 +36,9 @@ class StoreProductRequest extends FormRequest
     {
         return [
             'name.required'        => 'اسم المنتج مطلوب.',
-            'sku.required'         => 'كود المنتج (SKU) مطلوب.',
             'sku.unique'           => 'كود المنتج موجود بالفعل.',
             'category_id.required' => 'التصنيف مطلوب.',
+            'category_id.exists'   => 'التصنيف المختار غير موجود.',
             'price.required'       => 'سعر البيع مطلوب.',
         ];
     }

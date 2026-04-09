@@ -47,7 +47,10 @@ export default function AccountingPage() {
   const fetchAccounts = async () => {
     setLoading(true)
     const res = await api.get<{ data: Account[] }>('/accounts?per_page=50')
-    if (res.data) setAccounts(res.data.data || [])
+    if (res.data) {
+      const list = Array.isArray(res.data) ? res.data : (res.data.data || [])
+      setAccounts(list)
+    }
     setLoading(false)
   }
 
@@ -55,7 +58,10 @@ export default function AccountingPage() {
   const fetchJournals = async () => {
     setLoading(true)
     const res = await api.get<{ data: JournalEntry[] }>('/journal-entries?per_page=20')
-    if (res.data) setJournals(res.data.data || [])
+    if (res.data) {
+      const list = Array.isArray(res.data) ? res.data : (res.data.data || [])
+      setJournals(list)
+    }
     setLoading(false)
   }
 

@@ -2,25 +2,17 @@
 
 namespace App\Models;
 
-use App\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 
-/**
- * SaleItem — بنود فاتورة المبيعات
- *
- * Fix: وُحّدت أسماء الأعمدة مع الـ Migration
- *   qty   → quantity
- *   price → unit_price
- */
 class SaleItem extends Model
 {
-    use BelongsToCompany;
+    // ❌ شيلنا: use BelongsToCompany
 
     protected $fillable = [
         'sale_id',
         'product_id',
-        'quantity',    // كان: qty
-        'unit_price',  // كان: price
+        'quantity',
+        'unit_price',
         'discount',
         'total',
     ];
@@ -42,7 +34,6 @@ class SaleItem extends Model
         return $this->belongsTo(Product::class);
     }
 
-    /** السعر بعد الخصم */
     public function getNetPriceAttribute(): float
     {
         return max(0, (float) $this->unit_price - (float) $this->discount);

@@ -1,9 +1,11 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { api } from '../../../lib/api'
-import { StatCard } from '../../../components/ui'
+import { StatCard, ToastContainer } from '../../../components/ui'
+import { useToast } from '../../../hooks/useToast'
 
 export default function MonitoringPage() {
+  const { toasts, show, remove } = useToast()
   const [data, setData]               = useState<any>(null)
   const [loading, setLoading]         = useState(true)
   const [lastRefresh, setLastRefresh] = useState(new Date())
@@ -11,8 +13,12 @@ export default function MonitoringPage() {
   const load = async () => {
     setLoading(true)
     const res = await api.get('/super-admin/monitoring')
-    if (res.data) setData(res.data)
-    setLastRefresh(new Date())
+    if (res.error) {
+      show(res.error, 'error')
+    } else if (res.data) {
+      setData(res.data)
+      setLastRefresh(new Date())
+    }
     setLoading(false)
   }
 
@@ -24,8 +30,11 @@ export default function MonitoringPage() {
 
   // ── مساعدات قراءة الـ response ─────────────────────────────
   // البيانات: data.system.* | data.services.database.* | data.services.cache.* | data.services.queue.*
-  const sys      = data?.system      ?? {}
-  const services = data?.services    ?? {}
+  const sys = (data && typeof data === 'object' ? data.system : null) ?? {}
+  const services = (data && typeof data === 'object' ? data.services : null) ?? {}
+  const serverTime = (data && typeof data === 'object' ? data.server_time : null) ?? '—'
+  const uptime = (data && typeof data === 'object' ? data.uptime_since : null) ?? '—'
+
   const db       = services.database ?? {}
   const cache    = services.cache    ?? {}
   const queue    = services.queue    ?? {}
@@ -44,6 +53,7 @@ export default function MonitoringPage() {
 
   return (
     <div>
+      <ToastContainer toasts={toasts} remove={remove} />
       <div className="page-header">
         <div>
           <h1 className="page-title">📡 مراقبة النظام</h1>

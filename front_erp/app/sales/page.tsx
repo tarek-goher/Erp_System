@@ -14,9 +14,10 @@
 
 import { useState, useEffect, FormEvent } from 'react'
 import ERPLayout from '../../components/layout/ERPLayout'
-import { api } from '../../lib/api'
+import { api, extractArray } from '../../lib/api'
+import { useToast } from '../../hooks/useToast'
+import { StatCard, Badge, EmptyState, SearchInput, Modal, ToastContainer } from '../../components/ui'
 import { useI18n } from '../../lib/i18n'
-import './page.css'
 
 // ─── أنواع البيانات ────────────────────────────────────
 type Sale = {
@@ -35,6 +36,7 @@ type Customer = { id: number; name: string }
 const STATUSES = ['draft', 'pending', 'completed', 'cancelled', 'refunded']
 
 export default function SalesPage() {
+  const { show, toasts, remove } = useToast()
   const { t, lang } = useI18n()
 
   // ─── البيانات ──────────────────────────────────────────
@@ -92,7 +94,7 @@ export default function SalesPage() {
     })
     const res = await api.get<{ data: Sale[]; total: number }>(`/sales?${params}`)
     if (res.data) {
-      setSales(res.data.data || [])
+      setSales(extractArray(res.data))
       setTotal(res.data.total || 0)
     }
     setLoading(false)
@@ -101,18 +103,17 @@ export default function SalesPage() {
   // جلب العملاء
   const fetchCustomers = async () => {
     const res = await api.get<{ data: Customer[] }>('/customers?per_page=200')
-    if (res.data) setCustomers(res.data.data || [])
+    if (res.data) setCustomers(extractArray(res.data))
   }
 
   useEffect(() => { fetchSales() }, [page, search, statusFilter])
   useEffect(() => {
     fetchCustomers()
     api.get<any>('/tax-rates').then(r => {
-      const list = r.data?.data ?? r.data ?? []
-      setTaxRates(Array.isArray(list) ? list : [])
+      if (r.data) setTaxRates(extractArray(r.data))
     })
     api.get<any>('/products?per_page=200').then(r => {
-      setProducts(r.data?.data || [])
+      if (r.data) setProducts(extractArray(r.data))
     })
   }, [])
 
@@ -183,8 +184,9 @@ export default function SalesPage() {
     })
     setFormLoading(false)
 
-    if (res.error) { setFormError(res.error); return }
+    if (res.error) { show(res.error, 'error'); return }
 
+    show('تم تسجيل عملية البيع ✅')
     setModalOpen(false)
     setForm({ customer_id: '', notes: '', status: 'draft', tax_rate_id: '', payment_method: 'cash' })
     setShowAddCustomer(false)
@@ -220,7 +222,7 @@ export default function SalesPage() {
 
   return (
     <ERPLayout pageTitle={t('sales')}>
-
+      <ToastContainer toasts={toasts} remove={remove} />
       {/* ── Toolbar ─────────────────────────────────────── */}
       <div className="toolbar">
         <div className="toolbar-actions">

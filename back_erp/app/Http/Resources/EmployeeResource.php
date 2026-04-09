@@ -31,13 +31,13 @@ class EmployeeResource extends JsonResource
         ];
     }
 
-    private function getStatusLabel(): string
-    {
-        return match ($this->status) {
-            'active'   => 'نشط',
-            'inactive' => 'غير نشط',
-            'on_leave' => 'في إجازة',
-            default    => $this->status,
-        };
-    }
+private function getStatusLabel(): string
+{
+    return match ($this->status ?? 'inactive') {
+        'active'   => 'نشط',
+        'inactive' => 'غير نشط',
+        'on_leave' => 'في إجازة',
+        default    => $this->status ?? 'غير محدد',
+    };
+}
 }

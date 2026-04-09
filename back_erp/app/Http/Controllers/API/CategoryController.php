@@ -11,14 +11,15 @@ class CategoryController extends BaseController
         return $this->success($categories);
     }
     public function store(Request $request): JsonResponse
-    {
-        $data = $request->validate([
-            'name'        => 'required|string|max:100',
-            'description' => 'nullable|string',
-            'parent_id'   => 'nullable|exists:categories,id',
-        ]);
-        return $this->created(Category::create($data));
-    }
+{
+    $data = $request->validate([
+        'name'        => 'required|string|max:100',
+        'description' => 'nullable|string',
+        'parent_id'   => 'nullable|exists:categories,id',
+    ]);
+    $data['company_id'] = $this->companyId();
+    return $this->created(Category::create($data));
+}
     public function show(Category $category): JsonResponse
     {
         return $this->success($category->load('children', 'products'));
