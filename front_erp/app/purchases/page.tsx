@@ -117,9 +117,15 @@ export default function PurchasesPage() {
 const handleView = async (id: number) => {
   setViewLoading(true)
   setViewPurchase({ id, order_number: '', total: 0, status: '', created_at: '' })
-  const res = await api.get<any>(`/purchases/${id}`)
-  if (res.data) setViewPurchase(res.data.data ?? res.data)
-  else setViewPurchase(null)
+  try {
+    const res = await api.get<any>(`/purchases/${id}`)
+    // ← غير السطر ده
+    const data = res.data?.data ?? res.data ?? res
+    if (data?.id) setViewPurchase(data)
+    else setViewPurchase({ id, order_number: '—', total: 0, status: '—', created_at: '' })
+  } catch {
+    setViewPurchase(null)
+  }
   setViewLoading(false)
 }
 
@@ -201,20 +207,26 @@ const handleView = async (id: number) => {
       setFormErr(lang === 'ar' ? 'يجب اختيار المورد' : 'Supplier is required')
       return
     }
-    const validItems = orderItems.filter(i => i.product_id && i.qty > 0 && i.cost >= 0)
-    if (validItems.length === 0) {
-      setFormErr(lang === 'ar' ? 'يجب إضافة صنف واحد على الأقل' : 'Add at least one item')
-      return
-    }
+ const validItems = orderItems.filter(i => 
+    i.product_id && 
+    Number(i.product_id) > 0 &&  // ✅ تأكد إن الـ id مش 0
+    i.qty > 0 && 
+    i.cost >= 0
+)
     setSaving(true)
-    const payload = {
-      supplier_id:   Number(form.supplier_id),
-      status:        form.status,
-      notes:         form.notes,
-      expected_date: form.expected_date || undefined,
-      items:         validItems.map(i => ({ product_id: Number(i.product_id), qty: i.qty, cost: i.cost })),
-      ...(form.tax_rate_id && { tax_rate_id: Number(form.tax_rate_id) }),
-    }
+// ✅ الصح
+const payload = {
+  supplier_id:   Number(form.supplier_id),
+  status:        form.status,
+  notes:         form.notes,
+  expected_date: form.expected_date || undefined,
+  items: validItems.map(i => ({
+    product_id: Number(i.product_id),
+    quantity:   i.qty,
+    unit_price: i.cost,
+  })),
+  ...(form.tax_rate_id && { tax_rate_id: Number(form.tax_rate_id) }),
+}
 
     const res = editId
       ? await api.put(`/purchases/${editId}`, payload)
@@ -231,11 +243,10 @@ const handleDelete = async () => {
   if (!deleteId) return
   const res = await api.delete(`/purchases/${deleteId}`)
   if (!res.error) {
-    setItems(p => p.filter(i => i.id !== deleteId))
+    await fetchItems() // ← refresh من السيرفر مش local فقط
   }
   setDeleteId(null)
 }
-
   const fmt     = (n: number) => new Intl.NumberFormat(lang === 'ar' ? 'ar-EG' : 'en-US').format(n || 0)
   const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US') : '—'
   const badge   = (s: string) => ({

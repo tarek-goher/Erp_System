@@ -239,18 +239,20 @@ class ReportService
                 ", [$today, $thisMonth, $today])
                 ->first();
 
-            return [
-                'today_revenue'   => round((float) ($salesStats->today_revenue  ?? 0), 2),
-                'month_revenue'   => round((float) ($salesStats->month_revenue  ?? 0), 2),
-                'today_orders'    => (int)          ($salesStats->today_orders   ?? 0),
-                'employees'       => \App\Models\Employee::where('company_id', $companyId)->where('status', 'active')->count(),
-                'low_stock'       => \App\Models\Product::where('company_id', $companyId)->whereColumn('qty', '<=', 'min_qty')->count(),
-                'pending_payroll' => \App\Models\Payroll::where('company_id', $companyId)
-                    ->where('status', 'pending')
-                    ->where('year',  now()->year)
-                    ->where('month', now()->month)
-                    ->count(),
-            ];
+       return [
+    'sales_today'      => round((float) ($salesStats->today_revenue  ?? 0), 2),
+    'sales_month'      => round((float) ($salesStats->month_revenue  ?? 0), 2),
+    'purchases_month'  => \App\Models\Purchase::where('company_id', $companyId)
+                            ->whereDate('created_at', '>=', now()->startOfMonth())
+                            ->sum('total'),
+    'active_employees' => \App\Models\Employee::where('company_id', $companyId)->where('status', 'active')->count(),
+    'low_stock_count'  => \App\Models\Product::where('company_id', $companyId)->whereColumn('qty', '<=', 'min_qty')->count(),
+    'pending_invoices' => \App\Models\Payroll::where('company_id', $companyId)
+                            ->where('status', 'pending')
+                            ->where('year',  now()->year)
+                            ->where('month', now()->month)
+                            ->count(),
+];
         });
     }
 

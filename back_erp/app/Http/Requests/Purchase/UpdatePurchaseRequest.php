@@ -33,7 +33,7 @@ class UpdatePurchaseRequest extends FormRequest
         return [
             'supplier_id'        => 'required|exists:suppliers,id',
             'items'              => 'required|array|min:1',
-            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.product_id' => 'required|integer|min:1|exists:products,id', // ✅
             'items.*.quantity'   => 'required|numeric|min:0.001',
             'items.*.unit_price' => 'required|numeric|min:0',
             'tax'                => 'nullable|numeric|min:0',
@@ -42,6 +42,18 @@ class UpdatePurchaseRequest extends FormRequest
             'notes'              => 'nullable|string|max:1000',
             'expected_date'      => 'nullable|date',
             'expected_at'        => 'nullable|date',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'supplier_id.required'        => 'المورد مطلوب.',
+            'supplier_id.exists'          => 'المورد غير موجود.',
+            'items.required'              => 'يجب إضافة منتج واحد على الأقل.',
+            'items.*.product_id.required' => 'يجب اختيار منتج لكل صنف.',
+            'items.*.product_id.min'      => 'يجب اختيار منتج صحيح.',
+            'items.*.product_id.exists'   => 'المنتج غير موجود.',
         ];
     }
 }
