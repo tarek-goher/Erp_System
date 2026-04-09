@@ -13,63 +13,64 @@
 
 /* ══════════════════════════════════════════════════════════
    متغيرات اللوان — Light Mode (الوضع الفاتح)
+   Shadcn Luxury - White & Black Theme (Enhanced)
    ══════════════════════════════════════════════════════════ */
 :root {
   /* ── الألوان الرئيسية ─────────────────────────────── */
-  --color-primary:        #2563eb;   /* أزرق — اللون الأساسي */
-  --color-primary-hover:  #1d4ed8;   /* أزرق أغمق عند hover */
-  --color-primary-light:  #dbeafe;   /* أزرق فاتح جداً للخلفيات */
-  --color-primary-dark:   #1e40af;   /* أزرق داكن */
+  --color-primary:        #1a1a1a;   /* أسود عميق — اللون الأساسي */
+  --color-primary-hover:  #0d0d0d;   /* أسود أغمق عند hover */
+  --color-primary-light:  #f8f8f8;   /* أبيض فاتح جداً للخلفيات */
+  --color-primary-dark:   #000000;   /* أسود صاف */
 
-  --color-secondary:      #7c3aed;   /* بنفسجي — للـ accents */
-  --color-secondary-light:#ede9fe;
+  --color-secondary:      #4a4a4a;   /* رمادي غامق — للـ accents */
+  --color-secondary-light:#ebebeb;
 
-  --color-success:        #16a34a;   /* أخضر */
-  --color-success-light:  #dcfce7;
-  --color-warning:        #d97706;   /* برتقالي */
-  --color-warning-light:  #fef3c7;
-  --color-danger:         #dc2626;   /* أحمر */
-  --color-danger-light:   #fee2e2;
-  --color-info:           #0891b2;   /* تركواز */
-  --color-info-light:     #cffafe;
+  --color-success:        #166534;   /* أخضر داكن محسّن */
+  --color-success-light:  #f0fdf4;
+  --color-warning:        #a83d0c;   /* برتقالي داكن محسّن */
+  --color-warning-light:  #fffbeb;
+  --color-danger:         #ac1f1f;   /* أحمر داكن محسّن */
+  --color-danger-light:   #fef2f2;
+  --color-info:           #0f5f6e;   /* تركواز داكن محسّن */
+  --color-info-light:     #f0fdfa;
 
   /* ── ألوان الخلفية ────────────────────────────────── */
-  --bg-page:        #f1f5f9;   /* خلفية الصفحة الرئيسية */
+  --bg-page:        #ffffff;   /* خلفية الصفحة الرئيسية */
   --bg-card:        #ffffff;   /* خلفية الكروت */
-  --bg-sidebar:     #ffffff;   /* خلفية الـ sidebar */
+  --bg-sidebar:     #D0E5E5;   /* خلفية الـ sidebar - أسود عميق */  
   --bg-navbar:      #ffffff;   /* خلفية الـ navbar */
   --bg-input:       #ffffff;   /* خلفية الـ inputs */
-  --bg-hover:       #f8fafc;   /* خلفية عند hover */
-  --bg-selected:    #eff6ff;   /* خلفية العنصر المختار */
-  --bg-table-head:  #f8fafc;   /* خلفية رأس الجدول */
+  --bg-hover:       #f3f3f3;   /* خلفية عند hover */
+  --bg-selected:    #ebebeb;   /* خلفية العنصر المختار */
+  --bg-table-head:  #f8f8f8;   /* خلفية رأس الجدول */
   --bg-table-row:   #ffffff;   /* خلفية صف الجدول */
-  --bg-table-alt:   #f8fafc;   /* خلفية صف بديل (zebra) */
-  --bg-modal:       rgba(0, 0, 0, 0.5); /* خلفية الـ modal */
+  --bg-table-alt:   #f8f8f8;   /* خلفية صف بديل (zebra) */
+  --bg-modal:       rgba(0, 0, 0, 0.45); /* خلفية الـ modal */
 
   /* ── ألوان النصوص ─────────────────────────────────── */
-  --text-primary:   #0f172a;   /* النص الرئيسي (داكن جداً) */
-  --text-secondary: #475569;   /* النص الثانوي */
-  --text-muted:     #94a3b8;   /* النص الباهت */
+  --text-primary:   #0f0f0f;   /* النص الرئيسي (أسود عميق) */
+  --text-secondary: #4a4a4a;   /* النص الثانوي */
+  --text-muted:     #989898;   /* النص الباهت */
   --text-inverse:   #ffffff;   /* نص على خلفية داكنة */
-  --text-link:      #2563eb;   /* لون الـ links */
+  --text-link:      #1a1a1a;   /* لون الـ links */
 
   /* ── الحدود ───────────────────────────────────────── */
-  --border:         #e2e8f0;   /* حدود عامة */
-  --border-light:   #f1f5f9;   /* حدود فاتحة */
-  --border-focus:   #2563eb;   /* حدود عند focus */
+  --border:         #e0e0e0;   /* حدود عامة */
+  --border-light:   #f0f0f0;   /* حدود فاتحة */
+  --border-focus:   #1a1a1a;   /* حدود عند focus */
 
   /* ── الـ sidebar ──────────────────────────────────── */
   --sidebar-width:      260px;  /* عرض الـ sidebar */
   --sidebar-collapsed:   72px;  /* عرض الـ sidebar لما ينكمش */
-  --sidebar-item-color: #475569;
-  --sidebar-item-active-bg:   #eff6ff;
-  --sidebar-item-active-text: #2563eb;
+  --sidebar-item-color: #808080;
+  --sidebar-item-active-bg:   #2a2a2a;
+  --sidebar-item-active-text: #ffffff;
 
   /* ── الظلال ───────────────────────────────────────── */
-  --shadow-sm:  0 1px 2px rgba(0,0,0,0.05);
-  --shadow-md:  0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.05);
-  --shadow-lg:  0 10px 15px rgba(0,0,0,0.08), 0 4px 6px rgba(0,0,0,0.05);
-  --shadow-xl:  0 20px 25px rgba(0,0,0,0.1), 0 8px 10px rgba(0,0,0,0.06);
+  --shadow-sm:  0 1px 2px rgba(0,0,0,0.08);
+  --shadow-md:  0 4px 8px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
+  --shadow-lg:  0 12px 20px rgba(0,0,0,0.12), 0 4px 6px rgba(0,0,0,0.08);
+  --shadow-xl:  0 25px 35px rgba(0,0,0,0.15), 0 10px 15px rgba(0,0,0,0.08);
 
   /* ── التدوير ──────────────────────────────────────── */
   --radius-sm:  6px;
@@ -91,56 +92,56 @@
 
 /* ══════════════════════════════════════════════════════════
    متغيرات اللوان — Dark Mode (الوضع الداكن)
-   عند إضافة class="dark" على الـ <html>
+   Shadcn Luxury - عند إضافة class="dark" على الـ <html> (Enhanced)
    ══════════════════════════════════════════════════════════ */
 .dark {
-  --color-primary:        #3b82f6;
-  --color-primary-hover:  #2563eb;
-  --color-primary-light:  #1e3a5f;
-  --color-primary-dark:   #60a5fa;
+  --color-primary:        #f5f5f5;
+  --color-primary-hover:  #d8d8d8;
+  --color-primary-light:  #2a2a2a;
+  --color-primary-dark:   #ffffff;
 
-  --color-secondary:      #a78bfa;
-  --color-secondary-light:#2e1065;
+  --color-secondary:      #c8c8c8;
+  --color-secondary-light:#404040;
 
-  --color-success:        #22c55e;
-  --color-success-light:  #14532d;
-  --color-warning:        #f59e0b;
-  --color-warning-light:  #451a03;
-  --color-danger:         #f87171;
-  --color-danger-light:   #450a0a;
-  --color-info:           #22d3ee;
-  --color-info-light:     #083344;
+  --color-success:        #7ee8d0;
+  --color-success-light:  #0f2817;
+  --color-warning:        #face6b;
+  --color-warning-light:  #2c1f0f;
+  --color-danger:         #f97474;
+  --color-danger-light:   #3f0a0a;
+  --color-info:           #68dfd6;
+  --color-info-light:     #0f3432;
 
-  --bg-page:        #0f172a;
-  --bg-card:        #1e293b;
-  --bg-sidebar:     #1e293b;
-  --bg-navbar:      #1e293b;
-  --bg-input:       #0f172a;
-  --bg-hover:       #263348;
-  --bg-selected:    #1e3a5f;
-  --bg-table-head:  #263348;
-  --bg-table-row:   #1e293b;
-  --bg-table-alt:   #223044;
-  --bg-modal:       rgba(0, 0, 0, 0.7);
+  --bg-page:        #0a0a0a;
+  --bg-card:        #1a1a1a;
+  --bg-sidebar:     #0f0f0f;
+  --bg-navbar:      #1a1a1a;
+  --bg-input:       #1a1a1a;
+  --bg-hover:       #2a2a2a;
+  --bg-selected:    #353535;
+  --bg-table-head:  #1f1f1f;
+  --bg-table-row:   #1a1a1a;
+  --bg-table-alt:   #242424;
+  --bg-modal:       rgba(0, 0, 0, 0.75);
 
-  --text-primary:   #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted:     #64748b;
-  --text-inverse:   #0f172a;
-  --text-link:      #60a5fa;
+  --text-primary:   #f5f5f5;
+  --text-secondary: #c8c8c8;
+  --text-muted:     #7a7a7a;
+  --text-inverse:   #0a0a0a;
+  --text-link:      #f5f5f5;
 
-  --border:         #334155;
-  --border-light:   #263348;
-  --border-focus:   #3b82f6;
+  --border:         #303030;
+  --border-light:   #242424;
+  --border-focus:   #f5f5f5;
 
-  --sidebar-item-color:       #94a3b8;
-  --sidebar-item-active-bg:   #1e3a5f;
-  --sidebar-item-active-text: #60a5fa;
+  --sidebar-item-color:       #808080;
+  --sidebar-item-active-bg:   #3a3a3a;
+  --sidebar-item-active-text: #f5f5f5;
 
-  --shadow-sm:  0 1px 2px rgba(0,0,0,0.3);
-  --shadow-md:  0 4px 6px rgba(0,0,0,0.4);
-  --shadow-lg:  0 10px 15px rgba(0,0,0,0.5);
-  --shadow-xl:  0 20px 25px rgba(0,0,0,0.6);
+  --shadow-sm:  0 1px 2px rgba(0,0,0,0.4);
+  --shadow-md:  0 4px 8px rgba(0,0,0,0.5);
+  --shadow-lg:  0 12px 20px rgba(0,0,0,0.6);
+  --shadow-xl:  0 25px 35px rgba(0,0,0,0.7);
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -239,7 +240,7 @@ html[dir="ltr"] body {
 }
 .btn-primary:hover:not(:disabled) {
   background: var(--color-primary-hover);
-  box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
   transform: translateY(-1px);
 }
 
@@ -307,7 +308,7 @@ html[dir="ltr"] body {
 }
 .input:focus {
   border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+  box-shadow: 0 0 0 3px rgba(0,0,0,0.1);
 }
 .input::placeholder {
   color: var(--text-muted);
