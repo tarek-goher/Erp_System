@@ -145,7 +145,7 @@ class PurchaseService
                 'notes'       => $data['notes'] ?? null,
                 'expected_at' => $data['expected_at'] ?? null,
             ]);
-
+$purchase = $purchase->fresh();
             // ── إنشاء الأصناف الجديدة وتحديث المخزون ──
             foreach ($data['items'] as $item) {
                 PurchaseItem::create([

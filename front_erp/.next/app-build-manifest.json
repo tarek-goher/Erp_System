@@ -66,6 +66,11 @@
       "static/chunks/main-app.js",
       "static/css/css-app_dashboard_page_css-components_layout_ERPLayout_css-components_layout_Navbar_css-compo-d9050e.css",
       "static/chunks/app/purchases/page.js"
+    ],
+    "/_not-found/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/_not-found/page.js"
     ]
   }
 }
