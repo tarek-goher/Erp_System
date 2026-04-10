@@ -7,6 +7,7 @@
 // ══════════════════════════════════════════════════════════
 
 import { useState, useEffect, FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 import ERPLayout from '../../components/layout/ERPLayout'
 import { api } from '../../lib/api'
 import { useI18n } from '../../lib/i18n'
@@ -18,6 +19,10 @@ const TABS = ['accounts', 'journal', 'trial-balance']
 
 export default function AccountingPage() {
   const { t, lang } = useI18n()
+  
+  // لضمان عمل الـ Portal بدون أخطاء Hydration
+  const [isMounted, setIsMounted] = useState(false)
+  
   const [activeTab,    setActiveTab]    = useState('accounts')
   const [accounts,     setAccounts]     = useState<Account[]>([])
   const [journals,     setJournals]     = useState<JournalEntry[]>([])
@@ -74,10 +79,25 @@ export default function AccountingPage() {
   }
 
   useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  useEffect(() => {
     if (activeTab === 'accounts')      fetchAccounts()
     if (activeTab === 'journal')       fetchJournals()
     if (activeTab === 'trial-balance') fetchTrialBalance()
   }, [activeTab])
+
+  // ── فتح نافذة الإضافة ────────────────────────────────
+  const handleOpenModal = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    setForm({ name: '', code: '', type: 'asset' });
+    setFormErr('');
+    setModal(true);
+  }
 
   // ── إضافة حساب ────────────────────────────────────────
   const handleSubmit = async (e: FormEvent) => {
@@ -87,7 +107,9 @@ export default function AccountingPage() {
     const res = await api.post('/accounts', { name: form.name, code: form.code, type: form.type })
     setSaving(false)
     if (res.error) { setFormErr(res.error); return }
-    setModal(false); setForm({ name: '', code: '', type: 'asset' }); fetchAccounts()
+    setModal(false); 
+    setForm({ name: '', code: '', type: 'asset' }); 
+    fetchAccounts();
   }
 
   const fmt = (n: number) => new Intl.NumberFormat(lang === 'ar' ? 'ar-EG' : 'en-US').format(n || 0)
@@ -120,7 +142,9 @@ export default function AccountingPage() {
             <span className="fw-semibold text-secondary">
               {lang === 'ar' ? `${accounts.length} حساب` : `${accounts.length} accounts`}
             </span>
-            <button className="btn btn-primary" onClick={() => setModal(true)}>+ {lang === 'ar' ? 'حساب جديد' : 'New Account'}</button>
+            <button type="button" className="btn btn-primary" onClick={handleOpenModal}>
+              + {lang === 'ar' ? 'حساب جديد' : 'New Account'}
+            </button>
           </div>
           <div className="card" style={{ padding: 0 }}>
             {loading ? (
@@ -219,42 +243,79 @@ export default function AccountingPage() {
         </div>
       )}
 
-      {/* Modal: حساب جديد */}
-      {modal && (
-        <div className="modal-overlay" onClick={() => setModal(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 className="modal-title">{lang === 'ar' ? 'حساب جديد' : 'New Account'}</h3>
-              <button className="btn-icon" onClick={() => setModal(false)}>✕</button>
+      {/* ── Modal: حساب جديد ─────────────────────────── */}
+      {modal && isMounted && createPortal(
+        <div 
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999999, opacity: 1, visibility: 'visible' }} 
+          onClick={() => setModal(false)}
+        >
+          <div 
+            style={{ maxWidth: 500, width: '95%', background: 'var(--bg-card, #fff)', color: 'var(--text-color, #000)', borderRadius: 8, display: 'flex', flexDirection: 'column', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)' }} 
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-color, #e5e7eb)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600 }}>{lang === 'ar' ? 'حساب جديد' : 'New Account'}</h3>
+              <button type="button" onClick={() => setModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#6b7280' }}>✕</button>
             </div>
-            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
-              <div className="modal-body">
-                <div className="form-grid form-grid-2">
-                  <div className="input-group">
-                    <label className="input-label">{t('name')} *</label>
-                    <input className="input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
+            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column" }}>
+              <div style={{ padding: '1.5rem', overflowY: 'auto' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <label style={{ fontWeight: 500 }}>{t('name')} *</label>
+                    <input 
+                      className="input" 
+                      value={form.name} 
+                      onChange={e => setForm({ ...form, name: e.target.value })} 
+                      required 
+                      autoFocus
+                      style={{ padding: '0.625rem 0.75rem', border: '1px solid #d1d5db', borderRadius: 4, background: '#fff', color: '#000', width: '100%', boxSizing: 'border-box' }} 
+                    />
                   </div>
-                  <div className="input-group">
-                    <label className="input-label">{t('code')} *</label>
-                    <input className="input" value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} required />
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <label style={{ fontWeight: 500 }}>{t('code')} *</label>
+                    <input 
+                      className="input" 
+                      value={form.code} 
+                      onChange={e => setForm({ ...form, code: e.target.value })} 
+                      required 
+                      style={{ padding: '0.625rem 0.75rem', border: '1px solid #d1d5db', borderRadius: 4, background: '#fff', color: '#000', width: '100%', boxSizing: 'border-box' }} 
+                    />
                   </div>
-                  <div className="input-group" style={{ gridColumn: '1 / -1' }}>
-                    <label className="input-label">{t('type')}</label>
-                    <select className="input" value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
+
+                  <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <label style={{ fontWeight: 500 }}>{t('type')}</label>
+                    <select 
+                      className="input" 
+                      value={form.type} 
+                      onChange={e => setForm({ ...form, type: e.target.value })} 
+                      style={{ padding: '0.625rem 0.75rem', border: '1px solid #d1d5db', borderRadius: 4, background: '#fff', color: '#000', width: '100%', boxSizing: 'border-box' }}
+                    >
                       {ACCOUNT_TYPES.map(at => <option key={at.value} value={at.value}>{lang === 'ar' ? at.ar : at.en}</option>)}
                     </select>
                   </div>
+
                 </div>
-                {formErr && <div style={{ color: 'var(--color-danger)', marginTop: '0.75rem', fontSize: '0.875rem' }}>⚠️ {formErr}</div>}
+                {formErr && (
+                  <div style={{ color: '#dc2626', background: 'rgba(220,38,38,0.1)', padding: '0.5rem', borderRadius: 4, marginTop: '0.75rem', fontSize: '0.875rem' }}>
+                    ⚠️ {formErr}
+                  </div>
+                )}
               </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setModal(false)}>{t('cancel')}</button>
-                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? t('loading') : t('save')}</button>
+              <div style={{ padding: '1.5rem', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <button type="button" onClick={() => setModal(false)} style={{ padding: '0.625rem 1rem', border: '1px solid #d1d5db', borderRadius: 6, cursor: 'pointer', fontWeight: 500, background: '#fff', color: '#000' }}>
+                  {t('cancel')}
+                </button>
+                <button type="submit" disabled={saving} style={{ padding: '0.625rem 1rem', border: 'none', borderRadius: 6, background: '#1d4ed8', color: '#fff', cursor: 'pointer', fontWeight: 500 }}>
+                  {saving ? t('loading') : t('save')}
+                </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>, document.body
       )}
+
     </ERPLayout>
   )
 }
