@@ -6,11 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class SaleItem extends Model
 {
-    // ❌ شيلنا: use BelongsToCompany
-
     protected $fillable = [
         'sale_id',
         'product_id',
+        'warehouse_id',
         'quantity',
         'unit_price',
         'discount',
@@ -32,6 +31,11 @@ class SaleItem extends Model
     public function product(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function warehouse(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class);
     }
 
     public function getNetPriceAttribute(): float

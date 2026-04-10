@@ -26,6 +26,8 @@ type PurchaseItem = {
   qty: number
   cost: number
   total: number
+  warehouse_id?: number
+  warehouse?: { id: number; name: string }
 }
 
 type Purchase = {
@@ -42,13 +44,15 @@ type Purchase = {
   items?: PurchaseItem[]
 }
 
-type Supplier = { id: number; name: string }
-type TaxRate  = { id: number; name: string; rate: number }
-type Product  = { id: number; name: string; cost?: number; purchase_price?: number }
+type Supplier  = { id: number; name: string }
+type TaxRate   = { id: number; name: string; rate: number }
+type Product   = { id: number; name: string; cost?: number; purchase_price?: number }
+type Warehouse = { id: number; name: string }
 
 const STATUSES = ['draft', 'pending', 'approved', 'received', 'cancelled']
 
-type OrderItem = { product_id: string; name: string; qty: number; cost: number }
+// ✅ أضفنا warehouse_id هنا
+type OrderItem = { product_id: string; name: string; qty: number; cost: number; warehouse_id: string }
 
 export default function PurchasesPage() {
   const { t, lang } = useI18n()
@@ -57,6 +61,7 @@ export default function PurchasesPage() {
   const [suppliers,    setSuppliers]    = useState<Supplier[]>([])
   const [taxRates,     setTaxRates]     = useState<TaxRate[]>([])
   const [products,     setProducts]     = useState<Product[]>([])
+  const [warehouses,   setWarehouses]   = useState<Warehouse[]>([])   // ✅ جديد
   const [loading,      setLoading]      = useState(true)
   const [search,       setSearch]       = useState('')
   const [statusFilter, setStatusFilter] = useState('')
@@ -65,15 +70,12 @@ export default function PurchasesPage() {
   const [saving,       setSaving]       = useState(false)
   const [formErr,      setFormErr]      = useState('')
 
-  // مودال العرض
   const [viewPurchase, setViewPurchase] = useState<Purchase | null>(null)
   const [viewLoading,  setViewLoading]  = useState(false)
 
-  // مودال التعديل
   const [editId,      setEditId]      = useState<number | null>(null)
   const [editLoading, setEditLoading] = useState(false)
 
-  // إضافة مورد inline
   const [showAddSupplier,  setShowAddSupplier]  = useState(false)
   const [newSupplierName,  setNewSupplierName]  = useState('')
   const [newSupplierEmail, setNewSupplierEmail] = useState('')
@@ -85,14 +87,15 @@ export default function PurchasesPage() {
     supplier_id: '', status: 'draft', notes: '', tax_rate_id: '', expected_date: '',
   })
 
+  // ✅ أضفنا warehouse_id في الـ default
   const [orderItems, setOrderItems] = useState<OrderItem[]>([
-    { product_id: '', name: '', qty: 1, cost: 0 }
+    { product_id: '', name: '', qty: 1, cost: 0, warehouse_id: '' }
   ])
 
-  // ── helpers ──
   const resetForm = () => {
     setForm({ supplier_id: '', status: 'draft', notes: '', tax_rate_id: '', expected_date: '' })
-    setOrderItems([{ product_id: '', name: '', qty: 1, cost: 0 }])
+    // ✅ reset مع warehouse_id
+    setOrderItems([{ product_id: '', name: '', qty: 1, cost: 0, warehouse_id: '' }])
     setShowAddSupplier(false)
     setFormErr('')
     setEditId(null)
@@ -126,9 +129,13 @@ export default function PurchasesPage() {
     api.get<{ data: Product[] }>('/products?per_page=200').then(r => {
       setProducts(extractArray(r?.data) || [])
     }).catch(() => setProducts([]))
+
+    // ✅ جلب المخازن
+    api.get<any>('/warehouses').then(r => {
+      if (r.data) setWarehouses(r.data.data ?? r.data)
+    }).catch(() => setWarehouses([]))
   }, [])
 
-  // ── عرض التفاصيل ──
   const handleView = async (id: number) => {
     setViewLoading(true)
     setViewPurchase({ id, order_number: '', total: 0, status: '', created_at: '' })
@@ -143,7 +150,6 @@ export default function PurchasesPage() {
     setViewLoading(false)
   }
 
-  // ── فتح مودال التعديل ──
   const handleEdit = async (id: number) => {
     setEditLoading(true)
     setEditId(id)
@@ -161,18 +167,18 @@ export default function PurchasesPage() {
       setOrderItems(
         p.items && p.items.length > 0
           ? p.items.map((i: PurchaseItem) => ({
-              product_id: String(i.product?.id || i.product_id || ''),
-              name:       i.product?.name || '',
-              qty:        i.qty,
-              cost:       i.cost,
+              product_id:  String(i.product?.id || i.product_id || ''),
+              name:        i.product?.name || '',
+              qty:         i.qty,
+              cost:        i.cost,
+              warehouse_id: String(i.warehouse?.id || i.warehouse_id || ''),  // ✅
             }))
-          : [{ product_id: '', name: '', qty: 1, cost: 0 }]
+          : [{ product_id: '', name: '', qty: 1, cost: 0, warehouse_id: '' }]
       )
     }
     setEditLoading(false)
   }
 
-  // ── إضافة مورد ──
   const handleAddSupplier = async (e: FormEvent) => {
     e.preventDefault(); setAddSupplierErr('')
     if (!newSupplierName.trim()) {
@@ -194,13 +200,13 @@ export default function PurchasesPage() {
     setNewSupplierName(''); setNewSupplierEmail(''); setNewSupplierPhone('')
   }
 
-  // ── حساب الإجمالي ──
   const subtotal    = orderItems.reduce((s, i) => s + (i.qty * i.cost), 0)
   const selectedTax = taxRates.find(tx => String(tx.id) === form.tax_rate_id)
   const taxAmount   = selectedTax ? Math.round(subtotal * selectedTax.rate) / 100 : 0
   const grandTotal  = subtotal + taxAmount
 
-  const addItem    = () => setOrderItems(prev => [...prev, { product_id: '', name: '', qty: 1, cost: 0 }])
+  // ✅ أضفنا warehouse_id في addItem
+  const addItem    = () => setOrderItems(prev => [...prev, { product_id: '', name: '', qty: 1, cost: 0, warehouse_id: '' }])
   const removeItem = (idx: number) => setOrderItems(prev => prev.filter((_, i) => i !== idx))
   const updateItem = (idx: number, field: keyof OrderItem, val: any) => {
     setOrderItems(prev => {
@@ -214,7 +220,6 @@ export default function PurchasesPage() {
     })
   }
 
-  // ── حفظ (إنشاء أو تعديل) ──
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault(); setFormErr('')
     if (!form.supplier_id) {
@@ -233,10 +238,12 @@ export default function PurchasesPage() {
       status:        form.status,
       notes:         form.notes,
       expected_date: form.expected_date || undefined,
+      // ✅ أضفنا warehouse_id في الـ POST
       items: validItems.map(i => ({
-        product_id: Number(i.product_id),
-        quantity:   i.qty,
-        unit_price: i.cost,
+        product_id:   Number(i.product_id),
+        quantity:     i.qty,
+        unit_price:   i.cost,
+        warehouse_id: i.warehouse_id ? Number(i.warehouse_id) : undefined,
       })),
       ...(form.tax_rate_id && { tax_rate_id: Number(form.tax_rate_id) }),
     }
@@ -261,7 +268,6 @@ export default function PurchasesPage() {
     setDeleteId(null)
   }
 
-  // ── فتح مودال طلب جديد ──
   const handleOpenNewOrder = (e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
@@ -418,6 +424,7 @@ export default function PurchasesPage() {
                         <thead>
                           <tr>
                             <th>{lang === 'ar' ? 'المنتج' : 'Product'}</th>
+                            <th>{lang === 'ar' ? 'المخزن' : 'Warehouse'}</th>
                             <th>{lang === 'ar' ? 'الكمية' : 'Qty'}</th>
                             <th>{lang === 'ar' ? 'سعر التكلفة' : 'Cost'}</th>
                             <th>{lang === 'ar' ? 'الإجمالي' : 'Total'}</th>
@@ -427,6 +434,7 @@ export default function PurchasesPage() {
                           {viewPurchase.items.map((item, idx) => (
                             <tr key={idx}>
                               <td>{item.product?.name || '—'}</td>
+                              <td style={{ color: '#6b7280', fontSize: '0.8rem' }}>{item.warehouse?.name || '—'}</td>
                               <td>{item.qty}</td>
                               <td>{fmt(item.cost)}</td>
                               <td style={{fontWeight: 600}}>{fmt(item.total)}</td>
@@ -594,7 +602,8 @@ export default function PurchasesPage() {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {orderItems.map((item, idx) => (
-                        <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 8, alignItems: 'center' }}>
+                        // ✅ grid بـ 4 أعمدة بدل 3 عشان نضيف المخزن
+                        <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr auto', gap: 8, alignItems: 'center' }}>
                           <select value={item.product_id} onChange={e => updateItem(idx, 'product_id', e.target.value)} style={{ padding: '0.625rem 0.75rem', border: '1px solid #d1d5db', borderRadius: 4, fontSize: '0.875rem', background: '#fff', color: '#000', width: '100%', boxSizing: 'border-box' }}>
                             <option value="">{lang === 'ar' ? 'اختر منتج' : 'Select Product'}</option>
                             {(products || []).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -605,6 +614,15 @@ export default function PurchasesPage() {
                           <input type="number" min="0" step="0.01"
                             placeholder={lang === 'ar' ? 'سعر التكلفة' : 'Cost'}
                             value={item.cost} onChange={e => updateItem(idx, 'cost', Number(e.target.value))} style={{ padding: '0.625rem 0.75rem', border: '1px solid #d1d5db', borderRadius: 4, fontSize: '0.875rem', background: '#fff', color: '#000', width: '100%', boxSizing: 'border-box' }} />
+                          {/* ✅ select المخزن الجديد */}
+                          <select
+                            value={item.warehouse_id}
+                            onChange={e => updateItem(idx, 'warehouse_id', e.target.value)}
+                            style={{ padding: '0.625rem 0.75rem', border: '1px solid #d1d5db', borderRadius: 4, fontSize: '0.875rem', background: '#fff', color: '#000', width: '100%', boxSizing: 'border-box' }}
+                          >
+                            <option value="">{lang === 'ar' ? 'المخزن' : 'Warehouse'}</option>
+                            {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                          </select>
                           <button type="button" onClick={() => removeItem(idx)} style={{ color: '#dc2626', background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer' }} aria-label={t('delete')}>
                             <FontAwesomeIcon icon={faXmark} />
                           </button>

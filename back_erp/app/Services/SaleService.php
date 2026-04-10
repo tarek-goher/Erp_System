@@ -39,6 +39,7 @@ class SaleService
             $sale = Sale::create([
                 'company_id'     => $companyId,
                 'customer_id'    => $data['customer_id'],
+                // 'warehouse_id'   => $warehouseId ?? null,
                 'user_id'        => auth()->id(),
                 'subtotal'       => $subtotal,
                 'tax'            => $tax,
@@ -61,14 +62,29 @@ class SaleService
                     'total'      => $qty * $unitPrice,
                 ]);
 
-                $product = Product::withoutGlobalScopes()->find($item['product_id']);
-                if ($product) {
-                    $qtyBefore = $product->qty;
-                    $product->decrement('qty', $qty);
+             $product = Product::withoutGlobalScopes()->find($item['product_id']);
+if ($product) {
+    $warehouseId = $item['warehouse_id'] ?? $product->warehouse_id ?? null;
+    $qtyBefore = $product->qty;
+
+    // خصم من product_locations لو في مخزن محدد
+    if ($warehouseId) {
+        $location = \App\Models\ProductLocation::firstOrCreate(
+            ['product_id' => $item['product_id'], 'warehouse_id' => $warehouseId, 'company_id' => $companyId],
+            ['qty' => 0]
+        );
+        if ($location->qty < $qty) {
+            throw new \Exception("المخزون غير كافٍ في المخزن المحدد — المتاح: {$location->qty}، المطلوب: {$qty}");
+        }
+        $location->decrement('qty', $qty);
+    }
+
+    $product->decrement('qty', $qty);
 
                     StockMovement::create([
                         'company_id'     => $companyId,
                         'product_id'     => $item['product_id'],
+                           'warehouse_id'   => $warehouseId ?? null,
                         'user_id'        => auth()->id(),
                         'type'           => 'out',
                         'qty'            => $qty,
@@ -120,8 +136,16 @@ class SaleService
                 $product = Product::withoutGlobalScopes()->find($item->product_id);
                 if ($product) {
                     // Fix #5b: نحفظ القيمة قبل الـ increment
-                    $qtyBefore = $product->qty;
-                    $product->increment('qty', $item->quantity);
+                 $qtyBefore = $product->qty;
+$warehouseId = $item->warehouse_id ?? $product->warehouse_id ?? null;
+if ($warehouseId) {
+    $location = \App\Models\ProductLocation::firstOrCreate(
+        ['product_id' => $item->product_id, 'warehouse_id' => $warehouseId, 'company_id' => $sale->company_id],
+        ['qty' => 0]
+    );
+    $location->increment('qty', $item->quantity);
+}
+$product->increment('qty', $item->quantity);
 
                     StockMovement::create([
                         'company_id'     => $sale->company_id,
