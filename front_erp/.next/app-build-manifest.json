@@ -35,6 +35,18 @@
       "static/chunks/main-app.js",
       "static/css/css-app_dashboard_page_css-components_layout_ERPLayout_css-components_layout_Navbar_css-compo-d9050e.css",
       "static/chunks/app/suppliers/page.js"
+    ],
+    "/inventory/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/css-app_dashboard_page_css-components_layout_ERPLayout_css-components_layout_Navbar_css-compo-d9050e.css",
+      "static/chunks/app/inventory/page.js"
+    ],
+    "/accounting/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/css-app_dashboard_page_css-components_layout_ERPLayout_css-components_layout_Navbar_css-compo-d9050e.css",
+      "static/chunks/app/accounting/page.js"
     ]
   }
 }
