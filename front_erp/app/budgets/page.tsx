@@ -13,6 +13,7 @@
 // ══════════════════════════════════════════════════════════
 
 import { useState, useEffect, FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 import ERPLayout from '../../components/layout/ERPLayout'
 import { api } from '../../lib/api'
 import { useI18n } from '../../lib/i18n'
@@ -69,6 +70,9 @@ export default function BudgetsPage() {
   const [vsLoading,  setVsLoading]  = useState(false)
   const [vsBudget,   setVsBudget]   = useState<Budget | null>(null)
 
+  const [isMounted,  setIsMounted]  = useState(false)
+  useEffect(() => { setIsMounted(true) }, [])
+
   const fetchBudgets = async () => {
     setLoading(true)
     const res = await api.get<{ data: Budget[]; total: number }>(`/budgets?page=${page}&per_page=15`)
@@ -84,14 +88,16 @@ export default function BudgetsPage() {
   useEffect(() => { fetchBudgets() }, [page])
   useEffect(() => { fetchAccounts() }, [])
 
-  const openAdd = () => {
+  const openAdd = (e?: React.MouseEvent) => {
+    if (e) { e.preventDefault(); e.stopPropagation() }
     setEditBudget(null)
     setForm({ ...EMPTY_FORM, period_start: new Date().toISOString().split('T')[0] })
     setFormErr('')
     setModal(true)
   }
 
-  const openEdit = (b: Budget) => {
+  const openEdit = (b: Budget, e?: React.MouseEvent) => {
+    if (e) { e.preventDefault(); e.stopPropagation() }
     setEditBudget(b)
     setForm({
       name: b.name,
@@ -105,7 +111,8 @@ export default function BudgetsPage() {
     setModal(true)
   }
 
-  const openVs = async (b: Budget) => {
+  const openVs = async (b: Budget, e?: React.MouseEvent) => {
+    if (e) { e.preventDefault(); e.stopPropagation() }
     setVsBudget(b)
     setVsLoading(true)
     setVsModal(true)
@@ -160,7 +167,7 @@ export default function BudgetsPage() {
       {/* ── Toolbar ─────────────────────────────────────────── */}
       <div className="toolbar">
         <div className="toolbar-actions" />
-        <button className="btn btn-primary" onClick={openAdd}>
+        <button type="button" className="btn btn-primary" onClick={openAdd}>
           + {ar('ميزانية جديدة', 'New Budget')}
         </button>
       </div>
@@ -199,11 +206,11 @@ export default function BudgetsPage() {
                     <td className="text-muted">{fmtDate(b.period_start)} – {fmtDate(b.period_end)}</td>
                     <td>
                       <div style={{ display: 'flex', gap: 4 }}>
-                        <button className="btn btn-secondary btn-sm" onClick={() => openVs(b)}>
+                        <button type="button" className="btn btn-secondary btn-sm" onClick={() => openVs(b)}>
                           📊 {ar('مقارنة', 'Compare')}
                         </button>
-                        <button className="btn btn-secondary btn-sm" onClick={() => openEdit(b)}>{t('edit')}</button>
-                        <button className="btn btn-danger btn-sm" onClick={() => setDeleteId(b.id)}>{t('delete')}</button>
+                        <button type="button" className="btn btn-secondary btn-sm" onClick={() => openEdit(b)}>{t('edit')}</button>
+                        <button type="button" className="btn btn-danger btn-sm" onClick={() => setDeleteId(b.id)}>{t('delete')}</button>
                       </div>
                     </td>
                   </tr>
@@ -227,15 +234,15 @@ export default function BudgetsPage() {
       </div>
 
       {/* ── Modal: Budget vs Actual ────────────────────────── */}
-      {vsModal && (
-        <div className="modal-overlay" onClick={() => { setVsModal(false); setVsData(null) }}>
-          <div className="modal" style={{ maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+      {vsModal && isMounted && createPortal(
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999999, opacity: 1, visibility: 'visible' }} onClick={() => { setVsModal(false); setVsData(null) }}>
+          <div style={{ maxWidth: 480, width: '95%', background: 'var(--bg-card, #fff)', color: 'var(--text-color, #000)', borderRadius: 8, display: 'flex', flexDirection: 'column', maxHeight: '90vh', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">
                 {ar('الميزانية مقابل الفعلي', 'Budget vs Actual')}
                 {vsBudget && <span className="text-muted" style={{ fontWeight: 400, fontSize: '0.875rem', marginInlineStart: '0.5rem' }}>— {vsBudget.name}</span>}
               </h3>
-              <button className="btn-icon" onClick={() => { setVsModal(false); setVsData(null) }}>✕</button>
+              <button type="button" className="btn-icon" onClick={() => { setVsModal(false); setVsData(null) }}>✕</button>
             </div>
             <div className="modal-body">
               {vsLoading ? (
@@ -286,21 +293,22 @@ export default function BudgetsPage() {
               )}
             </div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => { setVsModal(false); setVsData(null) }}>{t('close')}</button>
+              <button type="button" className="btn btn-secondary" onClick={() => { setVsModal(false); setVsData(null) }}>{t('close')}</button>
             </div>
           </div>
-        </div>
-      )}
+        </div>,
+        document.body
+      )} 
 
       {/* ── Modal: إضافة / تعديل ──────────────────────────── */}
-      {modal && (
-        <div className="modal-overlay" onClick={() => setModal(false)}>
-          <div className="modal" style={{ maxWidth: 580 }} onClick={e => e.stopPropagation()}>
+      {modal && isMounted && createPortal(
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999999, opacity: 1, visibility: 'visible' }} onClick={() => setModal(false)}>
+          <div style={{ maxWidth: 580, width: '95%', background: 'var(--bg-card, #fff)', color: 'var(--text-color, #000)', borderRadius: 8, display: 'flex', flexDirection: 'column', maxHeight: '90vh', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">
                 {editBudget ? ar('تعديل ميزانية', 'Edit Budget') : ar('ميزانية جديدة', 'New Budget')}
               </h3>
-              <button className="btn-icon" onClick={() => setModal(false)}>✕</button>
+              <button type="button" className="btn-icon" onClick={() => setModal(false)}>✕</button>
             </div>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
               <div className="modal-body">
@@ -352,24 +360,26 @@ export default function BudgetsPage() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ── Modal: تأكيد الحذف ─────────────────────────────── */}
-      {deleteId && (
-        <div className="modal-overlay" onClick={() => setDeleteId(null)}>
-          <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+      {deleteId && isMounted && createPortal(
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999999, opacity: 1, visibility: 'visible' }} onClick={() => setDeleteId(null)}>
+          <div style={{ maxWidth: 400, width: '95%', background: 'var(--bg-card, #fff)', color: 'var(--text-color, #000)', borderRadius: 8, display: 'flex', flexDirection: 'column', maxHeight: '90vh', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">{ar('تأكيد الحذف', 'Confirm Delete')}</h3>
-              <button className="btn-icon" onClick={() => setDeleteId(null)}>✕</button>
+              <button type="button" className="btn-icon" onClick={() => setDeleteId(null)}>✕</button>
             </div>
             <div className="modal-body"><p>{ar('هل أنت متأكد من حذف هذه الميزانية؟', 'Are you sure you want to delete this budget?')}</p></div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setDeleteId(null)}>{t('cancel')}</button>
-              <button className="btn btn-danger" onClick={handleDelete}>{t('delete')}</button>
+              <button type="button" className="btn btn-secondary" onClick={() => setDeleteId(null)}>{t('cancel')}</button>
+              <button type="button" className="btn btn-danger" onClick={handleDelete}>{t('delete')}</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </ERPLayout>
