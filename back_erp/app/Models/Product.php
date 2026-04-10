@@ -33,6 +33,7 @@ class Product extends Model
     public function category()        { return $this->belongsTo(Category::class); }
     public function warehouse()       { return $this->belongsTo(Warehouse::class); }
     public function stockMovements()  { return $this->hasMany(StockMovement::class); }
+    public function locations()       { return $this->hasMany(ProductLocation::class); }
     public function saleItems()       { return $this->hasMany(SaleItem::class); }
     public function purchaseItems()   { return $this->hasMany(PurchaseItem::class); }
 

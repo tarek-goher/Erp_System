@@ -6,6 +6,7 @@ use App\Http\Requests\Product\StoreProductRequest;
 use App\Http\Requests\Product\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
+use App\Models\ProductLocation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -14,9 +15,6 @@ use Illuminate\Http\Request;
  */
 class ProductController extends BaseController
 {
-    /**
-     * التحقق إن المنتج تابع لشركة المستخدم الحالي
-     */
     private function authorizeProduct(Product $product): void
     {
         if ($product->company_id !== $this->companyId()) {
@@ -26,7 +24,13 @@ class ProductController extends BaseController
 
     public function index(Request $request): JsonResponse
     {
-        $products = Product::with('category', 'warehouse')
+        $products = Product::with(['category', 'warehouse',
+    'locations' => function($q) use ($request) {
+        if ($request->warehouse_id) {
+            $q->where('warehouse_id', $request->warehouse_id);
+        }
+    }
+])
             ->where('company_id', $this->companyId())
             ->when($request->search,      fn($q) => $q->where('name', 'like', "%{$request->search}%")
                 ->orWhere('sku', 'like', "%{$request->search}%")
@@ -43,7 +47,6 @@ class ProductController extends BaseController
     {
         $data = $request->validated();
 
-        // ✅ لو SKU مش موجود → ولّده تلقائياً بشكل مضمون unique
         if (empty($data['sku'])) {
             do {
                 $data['sku'] = 'SKU-' . strtoupper(uniqid());
@@ -80,29 +83,35 @@ class ProductController extends BaseController
         $this->authorizeProduct($product);
 
         $request->validate([
-            'quantity' => 'required|numeric|min:0',
-            'notes'    => 'nullable|string|max:500',
+            'quantity'     => 'required|numeric|min:0',
+            'warehouse_id' => 'required|exists:warehouses,id',
+            'notes'        => 'nullable|string|max:500',
         ]);
 
-        $newQty = (int) $request->quantity;
-        $oldQty = (int) $product->qty;
-        $diff   = $newQty - $oldQty;
+        $newQty      = (float) $request->quantity;
+        $oldQty      = (float) $product->qty;
+        $diff        = $newQty - $oldQty;
+        $warehouseId = $request->warehouse_id;
+        $companyId   = $this->companyId();
 
-        // سجّل حركة المخزون لو فيه فرق
         if ($diff !== 0) {
-            try {
-                $product->stockMovements()->create([
-                    'company_id' => $this->companyId(),
-                    'type'       => $diff > 0 ? 'in' : 'out',
-                    'quantity'   => abs($diff),
-                    'notes'      => $request->notes ?? 'تعديل يدوي',
-                    'before_qty' => $oldQty,
-                    'after_qty'  => $newQty,
-                ]);
-            } catch (\Exception $e) {
-                // لو جدول stock_movements فيه مشكلة → كمّل بدونه
-                \Log::warning('adjustStock: ' . $e->getMessage());
-            }
+            // ── تحديث product_locations ──
+            $location = ProductLocation::firstOrCreate(
+                ['product_id' => $product->id, 'warehouse_id' => $warehouseId, 'company_id' => $companyId],
+                ['qty' => 0]
+            );
+            $location->update(['qty' => max(0, $location->qty + $diff)]);
+
+            // ── سجل الحركة ──
+            $product->stockMovements()->create([
+                'company_id'   => $companyId,
+                'warehouse_id' => $warehouseId,
+                'type'         => $diff > 0 ? 'in' : 'out',
+                'qty'          => abs($diff),
+                'qty_before'   => $oldQty,
+                'qty_after'    => $newQty,
+                'notes'        => $request->notes ?? 'تعديل يدوي',
+            ]);
         }
 
         $product->update(['qty' => $newQty]);

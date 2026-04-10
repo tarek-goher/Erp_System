@@ -1,0 +1,157 @@
+{
+  "pages": {
+    "/layout": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/css-node_modules_fortawesome_fontawesome-svg-core_styles_css-styles_globals_css.css",
+      "static/chunks/app/layout.js"
+    ],
+    "/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/page.js"
+    ],
+    "/dashboard/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/css-app_dashboard_page_css-components_layout_ERPLayout_css-components_layout_Navbar_css-compo-d9050e.css",
+      "static/chunks/app/dashboard/page.js"
+    ],
+    "/login/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/css-app_login_login_css.css",
+      "static/chunks/app/login/page.js"
+    ],
+    "/offline/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/offline/page.js"
+    ],
+    "/notifications/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/css-app_dashboard_page_css-components_layout_ERPLayout_css-components_layout_Navbar_css-compo-d9050e.css",
+      "static/chunks/app/notifications/page.js"
+    ],
+    "/sales/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/css-app_dashboard_page_css-components_layout_ERPLayout_css-components_layout_Navbar_css-compo-d9050e.css",
+      "static/chunks/app/sales/page.js"
+    ],
+    "/quotations/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/css-app_dashboard_page_css-components_layout_ERPLayout_css-components_layout_Navbar_css-compo-d9050e.css",
+      "static/chunks/app/quotations/page.js"
+    ],
+    "/purchases/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/css-app_dashboard_page_css-components_layout_ERPLayout_css-components_layout_Navbar_css-compo-d9050e.css",
+      "static/chunks/app/purchases/page.js"
+    ],
+    "/suppliers/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/css-app_dashboard_page_css-components_layout_ERPLayout_css-components_layout_Navbar_css-compo-d9050e.css",
+      "static/chunks/app/suppliers/page.js"
+    ],
+    "/inventory/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/css-app_dashboard_page_css-components_layout_ERPLayout_css-components_layout_Navbar_css-compo-d9050e.css",
+      "static/chunks/app/inventory/page.js"
+    ],
+    "/warehouses/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/css-app_dashboard_page_css-components_layout_ERPLayout_css-components_layout_Navbar_css-compo-d9050e.css",
+      "static/chunks/app/warehouses/page.js"
+    ],
+    "/accounting/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/css-app_dashboard_page_css-components_layout_ERPLayout_css-components_layout_Navbar_css-compo-d9050e.css",
+      "static/chunks/app/accounting/page.js"
+    ],
+    "/budgets/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/css-app_dashboard_page_css-components_layout_ERPLayout_css-components_layout_Navbar_css-compo-d9050e.css",
+      "static/chunks/app/budgets/page.js"
+    ],
+    "/fixed-assets/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/css-app_dashboard_page_css-components_layout_ERPLayout_css-components_layout_Navbar_css-compo-d9050e.css",
+      "static/chunks/app/fixed-assets/page.js"
+    ],
+    "/hr/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/css-app_dashboard_page_css-components_layout_ERPLayout_css-components_layout_Navbar_css-compo-d9050e.css",
+      "static/chunks/app/hr/page.js"
+    ],
+    "/payroll/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/css-app_dashboard_page_css-components_layout_ERPLayout_css-components_layout_Navbar_css-compo-d9050e.css",
+      "static/chunks/app/payroll/page.js"
+    ],
+    "/recruitment/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/css-app_dashboard_page_css-components_layout_ERPLayout_css-components_layout_Navbar_css-compo-d9050e.css",
+      "static/chunks/app/recruitment/page.js"
+    ],
+    "/appraisals/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/css-app_dashboard_page_css-components_layout_ERPLayout_css-components_layout_Navbar_css-compo-d9050e.css",
+      "static/chunks/app/appraisals/page.js"
+    ],
+    "/taxes/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/css-app_dashboard_page_css-components_layout_ERPLayout_css-components_layout_Navbar_css-compo-d9050e.css",
+      "static/chunks/app/taxes/page.js"
+    ],
+    "/helpdesk/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/css-app_dashboard_page_css-components_layout_ERPLayout_css-components_layout_Navbar_css-compo-d9050e.css",
+      "static/chunks/app/helpdesk/page.js"
+    ],
+    "/helpdesk/analytics/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/css-app_dashboard_page_css-components_layout_ERPLayout_css-components_layout_Navbar_css-compo-d9050e.css",
+      "static/chunks/app/helpdesk/analytics/page.js"
+    ],
+    "/helpdesk/workflows/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/css-app_dashboard_page_css-components_layout_ERPLayout_css-components_layout_Navbar_css-compo-d9050e.css",
+      "static/chunks/app/helpdesk/workflows/page.js"
+    ],
+    "/manufacturing/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/css-app_dashboard_page_css-components_layout_ERPLayout_css-components_layout_Navbar_css-compo-d9050e.css",
+      "static/chunks/app/manufacturing/page.js"
+    ],
+    "/sales/[id]/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/css-app_dashboard_page_css-components_layout_ERPLayout_css-components_layout_Navbar_css-compo-d9050e.css",
+      "static/chunks/app/sales/[id]/page.js"
+    ],
+    "/_not-found/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/_not-found/page.js"
+    ]
+  }
+}

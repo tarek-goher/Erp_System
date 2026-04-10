@@ -1,15 +1,5 @@
 'use client'
 
-// ══════════════════════════════════════════════════════════
-// app/warehouses/page.tsx — صفحة المخازن
-// API:
-//   GET    /api/warehouses          → قائمة المخازن
-//   POST   /api/warehouses          → إضافة مخزن
-//   PUT    /api/warehouses/{id}     → تعديل
-//   DELETE /api/warehouses/{id}     → حذف
-//   POST   /api/warehouses/transfer → نقل بين مخازن
-// ══════════════════════════════════════════════════════════
-
 import { useState, useEffect, FormEvent } from 'react'
 import ERPLayout from '../../components/layout/ERPLayout'
 import { api } from '../../lib/api'
@@ -23,6 +13,38 @@ type Warehouse = {
   stock_movements_count?: number
 }
 type Product = { id: number; name: string }
+type Tab = 'list' | 'transfer' | 'stock' | 'transfers_log' | 'movements'
+type StockBalance = {
+  product_id: number
+  product: { name: string; sku: string }
+  balance: number
+}
+type WarehouseStock = {
+  warehouse: Warehouse
+  stock: StockBalance[]
+}
+type TransferLog = {
+  id: number
+  product: { name: string; sku: string }
+  from_warehouse: { name: string }
+  to_warehouse: { name: string }
+  qty: number
+  user?: { name: string }
+  notes?: string
+  created_at: string
+}
+type Movement = {
+  id: number
+  product: { name: string; sku: string }
+  warehouse: { name: string }
+  type: string
+  qty: number
+  qty_before?: number
+  qty_after?: number
+  user?: { name: string }
+  notes?: string
+  created_at: string
+}
 
 const EMPTY_FORM = { name: '', location: '', is_active: true, notes: '' }
 const EMPTY_TRANSFER = { product_id: '', from_id: '', to_id: '', qty: '', notes: '' }
@@ -31,17 +53,24 @@ export default function WarehousesPage() {
   const { lang } = useI18n()
   const ar = lang === 'ar'
 
-  const [warehouses,  setWarehouses]  = useState<Warehouse[]>([])
-  const [products,    setProducts]    = useState<Product[]>([])
-  const [loading,     setLoading]     = useState(true)
-  const [saving,      setSaving]      = useState(false)
-  const [tab,         setTab]         = useState<'list' | 'transfer'>('list')
-  const [modalOpen,   setModalOpen]   = useState(false)
-  const [editing,     setEditing]     = useState<Warehouse | null>(null)
-  const [form,        setForm]        = useState({ ...EMPTY_FORM })
-  const [transfer,    setTransfer]    = useState({ ...EMPTY_TRANSFER })
-  const [errors,      setErrors]      = useState<Record<string, string>>({})
-  const [toast,       setToast]       = useState<{ msg: string; ok: boolean } | null>(null)
+  const [warehouses,    setWarehouses]   = useState<Warehouse[]>([])
+  const [products,      setProducts]     = useState<Product[]>([])
+  const [loading,       setLoading]      = useState(true)
+  const [saving,        setSaving]       = useState(false)
+  const [tab,           setTab]          = useState<Tab>('list')
+  const [modalOpen,     setModalOpen]    = useState(false)
+  const [editing,       setEditing]      = useState<Warehouse | null>(null)
+  const [form,          setForm]         = useState({ ...EMPTY_FORM })
+  const [transfer,      setTransfer]     = useState({ ...EMPTY_TRANSFER })
+  const [errors,        setErrors]       = useState<Record<string, string>>({})
+  const [toast,         setToast]        = useState<{ msg: string; ok: boolean } | null>(null)
+  const [stockData,     setStockData]    = useState<WarehouseStock[]>([])
+  const [stockLoading,  setStockLoading] = useState(false)
+  const [transfersLog,  setTransfersLog] = useState<TransferLog[]>([])
+  const [movements,     setMovements]    = useState<Movement[]>([])
+  const [logsLoading,   setLogsLoading]  = useState(false)
+  const [mvWarehouse,   setMvWarehouse]  = useState('')
+  const [mvType,        setMvType]       = useState('')
 
   const flash = (msg: string, ok = true) => {
     setToast({ msg, ok })
@@ -59,7 +88,41 @@ export default function WarehousesPage() {
     setLoading(false)
   }
 
+  const fetchStock = async () => {
+    setStockLoading(true)
+    const results = await Promise.all(
+      warehouses.map(async w => {
+        const res = await api.get(`/warehouses/${w.id}`)
+        return {
+          warehouse: w,
+          stock: res.data?.stock ?? [],
+        }
+      })
+    )
+    setStockData(results)
+    setStockLoading(false)
+  }
+
+  const fetchLogs = async () => {
+    setLogsLoading(true)
+    const [tfRes, mvRes] = await Promise.all([
+      api.get('/stock-transfers?per_page=100'),
+      api.get(`/stock-movements?per_page=100${mvWarehouse ? `&warehouse_id=${mvWarehouse}` : ''}${mvType ? `&type=${mvType}` : ''}`),
+    ])
+    if (tfRes.data) setTransfersLog(tfRes.data.data ?? tfRes.data)
+    if (mvRes.data) setMovements(mvRes.data.data ?? mvRes.data)
+    setLogsLoading(false)
+  }
+
   useEffect(() => { fetchAll() }, [])
+
+  useEffect(() => {
+    if (tab === 'stock' && warehouses.length > 0) fetchStock()
+  }, [tab, warehouses])
+
+  useEffect(() => {
+    if ((tab === 'transfers_log' || tab === 'movements') && warehouses.length > 0) fetchLogs()
+  }, [tab, mvWarehouse, mvType])
 
   // ── Warehouse CRUD ────────────────────────────────────
   const openAdd = () => {
@@ -112,13 +175,13 @@ export default function WarehousesPage() {
     if (Object.keys(err).length) return
 
     setSaving(true)
-    const res = await api.post('/warehouses/transfer', {
-      product_id: Number(transfer.product_id),
-      from_id:    Number(transfer.from_id),
-      to_id:      Number(transfer.to_id),
-      qty:        Number(transfer.qty),
-      notes:      transfer.notes,
-    })
+  const res = await api.post('/stock-movements/transfer', {
+    product_id:        Number(transfer.product_id),
+    from_warehouse_id: Number(transfer.from_id),
+    to_warehouse_id:   Number(transfer.to_id),
+    qty:               Number(transfer.qty),
+    notes:             transfer.notes,
+})
     setSaving(false)
     if (res.error) { flash(res.error, false); return }
     flash(ar ? '✅ تم النقل بنجاح' : '✅ Transfer completed')
@@ -129,6 +192,14 @@ export default function WarehousesPage() {
   const inp = (style?: object) => ({
     width: '100%', padding: '10px 12px', border: '1px solid #d1d5db',
     borderRadius: 8, fontSize: 14, boxSizing: 'border-box' as const, ...style,
+  })
+
+  const tabStyle = (t: Tab) => ({
+    padding: '8px 20px', borderRadius: 8, border: 'none', cursor: 'pointer',
+    fontWeight: 600, fontSize: 13,
+    background: tab === t ? '#fff' : 'transparent',
+    color: tab === t ? '#1a56db' : '#6b7280',
+    boxShadow: tab === t ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
   })
 
   return (
@@ -159,16 +230,18 @@ export default function WarehousesPage() {
         </div>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: '#f3f4f6', borderRadius: 10, padding: 4, width: 'fit-content' }}>
-          {(['list', 'transfer'] as const).map(t => (
-            <button key={t} onClick={() => setTab(t)} style={{
-              padding: '8px 20px', borderRadius: 8, border: 'none', cursor: 'pointer',
-              fontWeight: 600, fontSize: 13,
-              background: tab === t ? '#fff' : 'transparent',
-              color: tab === t ? '#1a56db' : '#6b7280',
-              boxShadow: tab === t ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
-            }}>
-              {t === 'list' ? (ar ? '📋 قائمة المخازن' : '📋 List') : (ar ? '🔄 نقل المخزون' : '🔄 Transfer Stock')}
+        <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: '#f3f4f6', borderRadius: 10, padding: 4, width: 'fit-content', flexWrap: 'wrap' }}>
+          {(['list', 'transfer', 'stock', 'transfers_log', 'movements'] as const).map(t => (
+            <button key={t} onClick={() => setTab(t)} style={tabStyle(t)}>
+              {t === 'list'
+                ? (ar ? '📋 قائمة المخازن'  : '📋 List')
+                : t === 'transfer'
+                ? (ar ? '🔄 نقل المخزون'    : '🔄 Transfer')
+                : t === 'stock'
+                ? (ar ? '📊 رصيد المخازن'   : '📊 Stock Balance')
+                : t === 'transfers_log'
+                ? (ar ? '🔃 سجل التحويلات'  : '🔃 Transfers Log')
+                :        (ar ? '📦 حركات المخزون'  : '📦 Movements')}
             </button>
           ))}
         </div>
@@ -236,7 +309,6 @@ export default function WarehousesPage() {
               {ar ? '🔄 نقل مخزون بين مخزنين' : '🔄 Transfer Stock Between Warehouses'}
             </h2>
             <form onSubmit={handleTransfer}>
-              {/* Product */}
               <div style={{ marginBottom: 16 }}>
                 <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, fontSize: 13 }}>
                   {ar ? 'المنتج *' : 'Product *'}
@@ -252,7 +324,6 @@ export default function WarehousesPage() {
                 {errors.product_id && <p style={{ color: '#ef4444', fontSize: 12, margin: '4px 0 0' }}>{errors.product_id}</p>}
               </div>
 
-              {/* From */}
               <div style={{ marginBottom: 16 }}>
                 <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, fontSize: 13 }}>
                   {ar ? 'من مخزن *' : 'From Warehouse *'}
@@ -268,7 +339,6 @@ export default function WarehousesPage() {
                 {errors.from_id && <p style={{ color: '#ef4444', fontSize: 12, margin: '4px 0 0' }}>{errors.from_id}</p>}
               </div>
 
-              {/* To */}
               <div style={{ marginBottom: 16 }}>
                 <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, fontSize: 13 }}>
                   {ar ? 'إلى مخزن *' : 'To Warehouse *'}
@@ -286,7 +356,6 @@ export default function WarehousesPage() {
                 {errors.to_id && <p style={{ color: '#ef4444', fontSize: 12, margin: '4px 0 0' }}>{errors.to_id}</p>}
               </div>
 
-              {/* Qty */}
               <div style={{ marginBottom: 16 }}>
                 <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, fontSize: 13 }}>
                   {ar ? 'الكمية *' : 'Quantity *'}
@@ -300,7 +369,6 @@ export default function WarehousesPage() {
                 {errors.qty && <p style={{ color: '#ef4444', fontSize: 12, margin: '4px 0 0' }}>{errors.qty}</p>}
               </div>
 
-              {/* Notes */}
               <div style={{ marginBottom: 24 }}>
                 <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, fontSize: 13 }}>
                   {ar ? 'ملاحظات' : 'Notes'}
@@ -323,6 +391,222 @@ export default function WarehousesPage() {
                 {saving ? (ar ? 'جاري التنفيذ...' : 'Processing...') : (ar ? '🔄 تنفيذ النقل' : '🔄 Execute Transfer')}
               </button>
             </form>
+          </div>
+        )}
+
+        {/* ── Tab: Stock ─────────────────────────────────── */}
+        {tab === 'stock' && (
+          stockLoading ? (
+            <div style={{ textAlign: 'center', padding: 60 }}>⏳ {ar ? 'جاري التحميل...' : 'Loading...'}</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {stockData.map(({ warehouse, stock }) => (
+                <div key={warehouse.id} style={{
+                  background: '#fff', borderRadius: 12, overflow: 'hidden',
+                  boxShadow: '0 1px 4px rgba(0,0,0,.08)',
+                  borderTop: `3px solid ${warehouse.is_active ? '#1a56db' : '#9ca3af'}`,
+                }}>
+                  <div style={{ padding: '14px 20px', background: '#f8faff', borderBottom: '1px solid #e5e7eb' }}>
+                    <span style={{ fontWeight: 700, fontSize: 15 }}>🏪 {warehouse.name}</span>
+                    {warehouse.location && (
+                      <span style={{ marginInlineStart: 10, color: '#6b7280', fontSize: 13 }}>📍 {warehouse.location}</span>
+                    )}
+                  </div>
+                  {stock.length === 0 ? (
+                    <div style={{ padding: '24px 20px', color: '#9ca3af', fontSize: 13 }}>
+                      {ar ? 'لا يوجد مخزون في هذا الفرع' : 'No stock in this warehouse'}
+                    </div>
+                  ) : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                      <thead>
+                        <tr style={{ background: '#f9fafb' }}>
+                          <th style={{ padding: '10px 16px', textAlign: 'start', color: '#6b7280', fontWeight: 600 }}>
+                            {ar ? 'المنتج' : 'Product'}
+                          </th>
+                          <th style={{ padding: '10px 16px', textAlign: 'start', color: '#6b7280', fontWeight: 600 }}>SKU</th>
+                          <th style={{ padding: '10px 16px', textAlign: 'start', color: '#6b7280', fontWeight: 600 }}>
+                            {ar ? 'الرصيد' : 'Balance'}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {stock.map(s => (
+                          <tr key={s.product_id} style={{ borderTop: '1px solid #f3f4f6' }}>
+                            <td style={{ padding: '10px 16px', fontWeight: 600 }}>{s.product?.name ?? '—'}</td>
+                            <td style={{ padding: '10px 16px', color: '#6b7280', fontFamily: 'monospace' }}>{s.product?.sku ?? '—'}</td>
+                            <td style={{ padding: '10px 16px' }}>
+                              <span style={{
+                                background: s.balance > 10 ? '#d1fae5' : s.balance > 0 ? '#fef9c3' : '#fee2e2',
+                                color: s.balance > 10 ? '#065f46' : s.balance > 0 ? '#92400e' : '#dc2626',
+                                padding: '3px 10px', borderRadius: 10, fontWeight: 700, fontSize: 13,
+                              }}>
+                                {s.balance}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              ))}
+            </div>
+          )
+        )}
+
+        {/* ── Tab: Transfers Log ─────────────────────────── */}
+        {tab === 'transfers_log' && (
+          logsLoading ? (
+            <div style={{ textAlign: 'center', padding: 60 }}>⏳ {ar ? 'جاري التحميل...' : 'Loading...'}</div>
+          ) : (
+            <div style={{ background: '#fff', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,.08)' }}>
+              <div style={{ padding: '14px 20px', background: '#f8faff', borderBottom: '1px solid #e5e7eb' }}>
+                <span style={{ fontWeight: 700, fontSize: 15 }}>🔃 {ar ? 'سجل التحويلات' : 'Transfers Log'}</span>
+              </div>
+              {transfersLog.length === 0 ? (
+                <div style={{ padding: '40px 20px', textAlign: 'center', color: '#9ca3af' }}>
+                  {ar ? 'لا توجد تحويلات مسجلة' : 'No transfers found'}
+                </div>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                  <thead>
+                    <tr style={{ background: '#f9fafb' }}>
+                      <th style={{ padding: '10px 16px', textAlign: 'start', color: '#6b7280', fontWeight: 600 }}>#</th>
+                      <th style={{ padding: '10px 16px', textAlign: 'start', color: '#6b7280', fontWeight: 600 }}>{ar ? 'المنتج' : 'Product'}</th>
+                      <th style={{ padding: '10px 16px', textAlign: 'start', color: '#6b7280', fontWeight: 600 }}>SKU</th>
+                      <th style={{ padding: '10px 16px', textAlign: 'start', color: '#6b7280', fontWeight: 600 }}>{ar ? 'من' : 'From'}</th>
+                      <th style={{ padding: '10px 16px', textAlign: 'start', color: '#6b7280', fontWeight: 600 }}>{ar ? 'إلى' : 'To'}</th>
+                      <th style={{ padding: '10px 16px', textAlign: 'start', color: '#6b7280', fontWeight: 600 }}>{ar ? 'الكمية' : 'Qty'}</th>
+                      <th style={{ padding: '10px 16px', textAlign: 'start', color: '#6b7280', fontWeight: 600 }}>{ar ? 'المستخدم' : 'User'}</th>
+                      <th style={{ padding: '10px 16px', textAlign: 'start', color: '#6b7280', fontWeight: 600 }}>{ar ? 'ملاحظات' : 'Notes'}</th>
+                      <th style={{ padding: '10px 16px', textAlign: 'start', color: '#6b7280', fontWeight: 600 }}>{ar ? 'التاريخ' : 'Date'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {transfersLog.map(t => (
+                      <tr key={t.id} style={{ borderTop: '1px solid #f3f4f6' }}>
+                        <td style={{ padding: '10px 16px', color: '#9ca3af', fontSize: 12 }}>{t.id}</td>
+                        <td style={{ padding: '10px 16px', fontWeight: 600 }}>{t.product?.name ?? '—'}</td>
+                        <td style={{ padding: '10px 16px', color: '#6b7280', fontFamily: 'monospace' }}>{t.product?.sku ?? '—'}</td>
+                        <td style={{ padding: '10px 16px' }}>
+                          <span style={{ background: '#fee2e2', color: '#dc2626', padding: '2px 8px', borderRadius: 8, fontSize: 12, fontWeight: 600 }}>
+                            {t.from_warehouse?.name ?? '—'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '10px 16px' }}>
+                          <span style={{ background: '#d1fae5', color: '#065f46', padding: '2px 8px', borderRadius: 8, fontSize: 12, fontWeight: 600 }}>
+                            {t.to_warehouse?.name ?? '—'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '10px 16px', fontWeight: 700 }}>{t.qty}</td>
+                        <td style={{ padding: '10px 16px', color: '#6b7280', fontSize: 13 }}>{t.user?.name ?? '—'}</td>
+                        <td style={{ padding: '10px 16px', color: '#6b7280', fontSize: 13 }}>{t.notes ?? '—'}</td>
+                        <td style={{ padding: '10px 16px', color: '#6b7280', fontSize: 12, whiteSpace: 'nowrap' }}>
+                          {new Date(t.created_at).toLocaleString(ar ? 'ar-EG' : 'en-GB')}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )
+        )}
+
+        {/* ── Tab: Movements ─────────────────────────────── */}
+        {tab === 'movements' && (
+          <div>
+            {/* Filters */}
+            <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+              <select
+                value={mvWarehouse}
+                onChange={e => setMvWarehouse(e.target.value)}
+                style={{ padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 13, minWidth: 180 }}
+              >
+                <option value="">{ar ? '-- كل المخازن --' : '-- All Warehouses --'}</option>
+                {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+              </select>
+              <select
+                value={mvType}
+                onChange={e => setMvType(e.target.value)}
+                style={{ padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 13, minWidth: 180 }}
+              >
+                <option value="">{ar ? '-- كل الأنواع --' : '-- All Types --'}</option>
+                <option value="purchase_in">{ar ? 'استلام مشتريات' : 'Purchase In'}</option>
+                <option value="sale_out">{ar ? 'خروج مبيعات' : 'Sale Out'}</option>
+                <option value="transfer_in">{ar ? 'تحويل وارد' : 'Transfer In'}</option>
+                <option value="transfer_out">{ar ? 'تحويل صادر' : 'Transfer Out'}</option>
+                <option value="adjustment">{ar ? 'تسوية' : 'Adjustment'}</option>
+                <option value="return_in">{ar ? 'مرتجع وارد' : 'Return In'}</option>
+                <option value="return_out">{ar ? 'مرتجع صادر' : 'Return Out'}</option>
+              </select>
+            </div>
+
+            {logsLoading ? (
+              <div style={{ textAlign: 'center', padding: 60 }}>⏳ {ar ? 'جاري التحميل...' : 'Loading...'}</div>
+            ) : (
+              <div style={{ background: '#fff', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,.08)' }}>
+                <div style={{ padding: '14px 20px', background: '#f8faff', borderBottom: '1px solid #e5e7eb' }}>
+                  <span style={{ fontWeight: 700, fontSize: 15 }}>📦 {ar ? 'حركات المخزون' : 'Stock Movements'}</span>
+                  <span style={{ marginInlineStart: 10, color: '#6b7280', fontSize: 13 }}>({movements.length})</span>
+                </div>
+                {movements.length === 0 ? (
+                  <div style={{ padding: '40px 20px', textAlign: 'center', color: '#9ca3af' }}>
+                    {ar ? 'لا توجد حركات' : 'No movements found'}
+                  </div>
+                ) : (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                    <thead>
+                      <tr style={{ background: '#f9fafb' }}>
+                        <th style={{ padding: '10px 16px', textAlign: 'start', color: '#6b7280', fontWeight: 600 }}>#</th>
+                        <th style={{ padding: '10px 16px', textAlign: 'start', color: '#6b7280', fontWeight: 600 }}>{ar ? 'المنتج' : 'Product'}</th>
+                        <th style={{ padding: '10px 16px', textAlign: 'start', color: '#6b7280', fontWeight: 600 }}>SKU</th>
+                        <th style={{ padding: '10px 16px', textAlign: 'start', color: '#6b7280', fontWeight: 600 }}>{ar ? 'المخزن' : 'Warehouse'}</th>
+                        <th style={{ padding: '10px 16px', textAlign: 'start', color: '#6b7280', fontWeight: 600 }}>{ar ? 'النوع' : 'Type'}</th>
+                        <th style={{ padding: '10px 16px', textAlign: 'start', color: '#6b7280', fontWeight: 600 }}>{ar ? 'الكمية' : 'Qty'}</th>
+                        <th style={{ padding: '10px 16px', textAlign: 'start', color: '#6b7280', fontWeight: 600 }}>{ar ? 'قبل' : 'Before'}</th>
+                        <th style={{ padding: '10px 16px', textAlign: 'start', color: '#6b7280', fontWeight: 600 }}>{ar ? 'بعد' : 'After'}</th>
+                        <th style={{ padding: '10px 16px', textAlign: 'start', color: '#6b7280', fontWeight: 600 }}>{ar ? 'المستخدم' : 'User'}</th>
+                        <th style={{ padding: '10px 16px', textAlign: 'start', color: '#6b7280', fontWeight: 600 }}>{ar ? 'ملاحظات' : 'Notes'}</th>
+                        <th style={{ padding: '10px 16px', textAlign: 'start', color: '#6b7280', fontWeight: 600 }}>{ar ? 'التاريخ' : 'Date'}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {movements.map(m => {
+                        const isIn = m.type.endsWith('_in') || m.type === 'adjustment'
+                        return (
+                          <tr key={m.id} style={{ borderTop: '1px solid #f3f4f6' }}>
+                            <td style={{ padding: '10px 16px', color: '#9ca3af', fontSize: 12 }}>{m.id}</td>
+                            <td style={{ padding: '10px 16px', fontWeight: 600 }}>{m.product?.name ?? '—'}</td>
+                            <td style={{ padding: '10px 16px', color: '#6b7280', fontFamily: 'monospace' }}>{m.product?.sku ?? '—'}</td>
+                            <td style={{ padding: '10px 16px' }}>{m.warehouse?.name ?? '—'}</td>
+                            <td style={{ padding: '10px 16px' }}>
+                              <span style={{
+                                background: isIn ? '#d1fae5' : '#fee2e2',
+                                color: isIn ? '#065f46' : '#dc2626',
+                                padding: '2px 8px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                              }}>
+                                {m.type}
+                              </span>
+                            </td>
+                            <td style={{ padding: '10px 16px', fontWeight: 700, color: isIn ? '#065f46' : '#dc2626' }}>
+                              {isIn ? '+' : '-'}{m.qty}
+                            </td>
+                            <td style={{ padding: '10px 16px', color: '#6b7280' }}>{m.qty_before ?? '—'}</td>
+                            <td style={{ padding: '10px 16px', color: '#6b7280' }}>{m.qty_after ?? '—'}</td>
+                            <td style={{ padding: '10px 16px', color: '#6b7280', fontSize: 13 }}>{m.user?.name ?? '—'}</td>
+                            <td style={{ padding: '10px 16px', color: '#6b7280', fontSize: 13 }}>{m.notes ?? '—'}</td>
+                            <td style={{ padding: '10px 16px', color: '#6b7280', fontSize: 12, whiteSpace: 'nowrap' }}>
+                              {new Date(m.created_at).toLocaleString(ar ? 'ar-EG' : 'en-GB')}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -404,4 +688,4 @@ function Spinner() {
       borderRadius: '50%', animation: 'spin .7s linear infinite',
     }} />
   )
-}
+} 

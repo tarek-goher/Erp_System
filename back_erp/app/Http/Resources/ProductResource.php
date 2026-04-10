@@ -35,6 +35,12 @@ class ProductResource extends JsonResource
                 'id'   => $this->warehouse->id,
                 'name' => $this->warehouse->name,
             ]),
+            'locations' => $this->whenLoaded('locations', fn() =>
+                $this->locations->map(fn($l) => [
+                    'warehouse_id' => $l->warehouse_id,
+                    'qty'          => (float) $l->qty,
+                ])->values()
+            ),
         ];
     }
 }

@@ -45,19 +45,32 @@ class WarehouseController extends BaseController
     }
 
     /** GET /api/warehouses/{warehouse} */
-    public function show(Warehouse $warehouse): JsonResponse
-    {
-        $this->abortIfNotOwned($warehouse);
+public function show(Warehouse $warehouse): JsonResponse
+{
+    $this->abortIfNotOwned($warehouse);
 
-        $stock = StockMovement::where('company_id', $this->companyId())
-            ->where('warehouse_id', $warehouse->id)
-            ->selectRaw('product_id, SUM(CASE WHEN type IN ("in","transfer_in","purchase") THEN qty ELSE -qty END) as balance')
-            ->groupBy('product_id')
-            ->with('product:id,name,sku')
-            ->get();
+    $locations = \App\Models\ProductLocation::where('warehouse_id', $warehouse->id)
+        ->where('company_id', $this->companyId())
+        ->where('qty', '>', 0)
+        ->get();
 
-        return $this->success(['warehouse' => $warehouse->load('manager:id,name'), 'stock' => $stock]);
-    }
+    $productIds = $locations->pluck('product_id')->toArray();
+
+    $products = \App\Models\Product::whereIn('id', $productIds)
+        ->get(['id', 'name', 'sku'])
+        ->keyBy('id');
+
+    $stock = $locations->map(fn($loc) => [
+        'product_id' => $loc->product_id,
+        'balance'    => (float) $loc->qty,
+        'product'    => $products->get($loc->product_id),
+    ]);
+
+    return $this->success([
+        'warehouse' => $warehouse,
+        'stock'     => $stock,
+    ]);
+}
 
     /** PUT /api/warehouses/{warehouse} */
     public function update(Request $request, Warehouse $warehouse): JsonResponse
