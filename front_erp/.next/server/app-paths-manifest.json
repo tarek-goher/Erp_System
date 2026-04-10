@@ -1,7 +1,0 @@
-{
-  "/appraisals/page": "app/appraisals/page.js",
-  "/budgets/page": "app/budgets/page.js",
-  "/inventory/page": "app/inventory/page.js",
-  "/accounting/page": "app/accounting/page.js",
-  "/fixed-assets/page": "app/fixed-assets/page.js"
-}
