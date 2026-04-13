@@ -17,6 +17,9 @@ class Sale extends Model
         'subtotal', 'tax', 'discount', 'total',
         'status', 'payment_method', 'notes',
         'invoice_number',
+         'due_date',        // ✅ ضيف
+         'tax_rate_id',
+         'valid_until',
     ];
 
     protected $casts = [
@@ -24,6 +27,8 @@ class Sale extends Model
         'tax'       => 'decimal:2',
         'discount'  => 'decimal:2',
         'total'     => 'decimal:2',
+        'due_date'  => 'date',
+        'valid_until' => 'date',
     ];
 
     // ── Relationships ────────────────────────────────
@@ -34,6 +39,17 @@ class Sale extends Model
     // ── Scopes ───────────────────────────────────────
     public function scopeCompleted($q)  { return $q->where('status', 'completed'); }
     public function scopeQuotations($q) { return $q->where('status', 'quotation'); }
+    // ------------------------------------------------------------------------------------
+    public function payments()
+{
+    return $this->hasMany(SalePayment::class);
+}
+
+// ✅ ضيف العلاقة دي لو محتاجها في Resource
+public function taxRate()
+{
+    return $this->belongsTo(TaxRate::class);
+}
 
     // ── Boot ─────────────────────────────────────────
     protected static function booted(): void

@@ -30,24 +30,25 @@ class StorePurchaseRequest extends FormRequest
             $this->merge(['expected_at' => $this->expected_date]);
         }
     }
-
-    public function rules(): array
-    {
-        return [
-            'supplier_id'        => 'required|exists:suppliers,id',
-            'items'              => 'required|array|min:1',
-            'items.*.product_id' => 'required|exists:products,id',
-            'items.*.quantity'   => 'required|numeric|min:0.001',
-            'items.*.unit_price' => 'required|numeric|min:0',
-            'tax'                => 'nullable|numeric|min:0',
-            'tax_rate_id'        => 'nullable|exists:tax_rates,id',
-            'discount'           => 'nullable|numeric|min:0',
-            'status'             => 'nullable|in:draft,pending,approved,ordered,received,cancelled',
-            'notes'              => 'nullable|string|max:1000',
-            'expected_date'      => 'nullable|date',
-            'expected_at'        => 'nullable|date', // ✅ مضاف
-        ];
-    }
+public function rules(): array
+{
+    return [
+        'supplier_id'            => 'required|exists:suppliers,id',
+        'items'                  => 'required|array|min:1',
+        'items.*.product_id'     => 'required|exists:products,id',
+        'items.*.quantity'       => 'required|numeric|min:0.001',
+        'items.*.unit_price'     => 'required|numeric|min:0',
+        'items.*.warehouse_id'   => 'nullable|exists:warehouses,id', // ✅
+        'items.*.discount'       => 'nullable|numeric|min:0',        // ✅
+        'tax'                    => 'nullable|numeric|min:0',
+        'tax_rate_id'            => 'nullable|exists:tax_rates,id',
+        'discount'               => 'nullable|numeric|min:0',
+        'status'                 => 'nullable|in:draft,pending,approved,ordered,received,cancelled',
+        'notes'                  => 'nullable|string|max:1000',
+        'expected_date'          => 'nullable|date',
+        'expected_at'            => 'nullable|date',
+    ];
+}
 
     public function messages(): array
     {

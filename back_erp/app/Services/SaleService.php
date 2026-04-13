@@ -7,89 +7,134 @@ use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\StockMovement;
+use App\Models\TaxRate;
 use Illuminate\Support\Facades\DB;
 
 /**
  * SaleService — business logic للمبيعات
  *
- * Fix #5: qty_before وqty_after في StockMovement كانت غلط.
- *  - في createSale: qty_after = $product->fresh()->qty كان بيعمل N+1 query لكل منتج.
- *    الحل: نحسب qty_after = qtyBefore - qty مباشرةً من القيم المعروفة.
- *  - في deleteSale: qty_before = $product->qty - $item->quantity كان بيحسب qty_before
- *    من القيمة بعد الـ increment مش قبله، فالنتيجة qty_before = qty_after دايماً.
- *    الحل: نحفظ $qtyBefore قبل increment، ثم qty_after = $product->qty.
+ * التصليحات المضافة:
+ *  - Fix #1: discount كان بيتعامل معاه كقيمة، والفرونت بيبعت نسبة مئوية.
+ *            الحل: تحويل النسبة لقيمة داخل السيرفس.
+ *  - Fix #2: tax كان بيتوقع قيمة مباشرة، والفرونت بيبعت tax_rate_id.
+ *            الحل: جلب الـ rate من TaxRate وحساب القيمة.
+ *  - Fix #3: due_date و tax_rate_id لم يكونا محفوظين في Sale::create.
+ *  - Fix #4: SaleItem لم يكن بيحفظ discount و warehouse_id.
+ *  - Fix #5: qty_before/qty_after في StockMovement (موجود من قبل).
+ *  - Fix #6: getStats() كانت بترجع fields مختلفة عن اللي الفرونت بيتوقعها.
  */
 class SaleService
 {
-    /**
-     * إنشاء فاتورة مبيعات مع خصم المخزون تلقائياً
-     */
+    // ══════════════════════════════════════════════════════════
+    // إنشاء فاتورة مبيعات
+    // ══════════════════════════════════════════════════════════
     public function createSale(array $data, ?int $companyId): Sale
     {
         return DB::transaction(function () use ($data, $companyId) {
+
+            // ── 1. حساب الـ subtotal من الأصناف ──────────────
             $subtotal = 0;
             foreach ($data['items'] as $item) {
-                $subtotal += ($item['qty'] ?? $item['quantity']) * ($item['unit_price'] ?? $item['price']);
+                $qty       = (float) ($item['qty']        ?? $item['quantity']  ?? 0);
+                $unitPrice = (float) ($item['unit_price'] ?? $item['price']     ?? 0);
+
+                // Fix #1: discount على مستوى السطر (نسبة مئوية → قيمة)
+                $lineDiscountPercent = (float) ($item['discount'] ?? 0);
+                $lineTotal           = $qty * $unitPrice;
+                $lineDiscountAmount  = ($lineTotal * $lineDiscountPercent) / 100;
+
+                $subtotal += $lineTotal - $lineDiscountAmount;
             }
 
-            $tax      = $data['tax']      ?? 0;
-            $discount = $data['discount'] ?? 0;
-            $total    = $subtotal + $tax - $discount;
+            // ── 2. خصم على مستوى الفاتورة (نسبة مئوية → قيمة) ─
+            // Fix #1: الفرونت بيبعت نسبة مئوية (مثلاً 10 يعني 10%)
+            $invoiceDiscountPercent = (float) ($data['discount'] ?? 0);
+            $invoiceDiscountAmount  = ($subtotal * $invoiceDiscountPercent) / 100;
+            $afterDiscount          = $subtotal - $invoiceDiscountAmount;
 
+            // ── 3. حساب الضريبة من tax_rate_id ───────────────
+            // Fix #2: الفرونت بيبعت tax_rate_id مش قيمة الضريبة
+            $taxAmount  = 0;
+            $taxRateId  = $data['tax_rate_id'] ?? null;
+            if ($taxRateId) {
+                $taxRate   = TaxRate::find($taxRateId);
+                $taxAmount = $taxRate ? ($afterDiscount * $taxRate->rate) / 100 : 0;
+            }
+
+            $total = $afterDiscount + $taxAmount;
+
+            // ── 4. إنشاء الفاتورة ─────────────────────────────
             $sale = Sale::create([
                 'company_id'     => $companyId,
                 'customer_id'    => $data['customer_id'],
-                // 'warehouse_id'   => $warehouseId ?? null,
                 'user_id'        => auth()->id(),
-                'subtotal'       => $subtotal,
-                'tax'            => $tax,
-                'discount'       => $discount,
-                'total'          => $total,
-                'status'         => $data['status'] ?? 'completed',
+                'subtotal'       => round($subtotal, 2),
+                'tax'            => round($taxAmount, 2),
+                // Fix #3: نحفظ القيمة (مش النسبة) في الـ DB
+                'discount'       => round($invoiceDiscountAmount, 2),
+                'total'          => round($total, 2),
+                'status'         => $data['status']         ?? 'draft',
                 'payment_method' => $data['payment_method'] ?? 'cash',
-                'notes'          => $data['notes'] ?? null,
+                'notes'          => $data['notes']          ?? null,
+                // Fix #3: حقول جديدة
+                'tax_rate_id'    => $taxRateId,
+                'due_date'       => $data['due_date']       ?? null,
             ]);
 
+            // ── 5. إنشاء أصناف الفاتورة + خصم المخزون ────────
             foreach ($data['items'] as $item) {
-                $qty = $item['qty'] ?? $item['quantity'];
-                $unitPrice = $item['unit_price'] ?? $item['price'];
+                $qty       = (float) ($item['qty']        ?? $item['quantity'] ?? 0);
+                $unitPrice = (float) ($item['unit_price'] ?? $item['price']    ?? 0);
 
+                // Fix #4: discount على مستوى السطر (نسبة → قيمة)
+                $lineDiscountPercent = (float) ($item['discount'] ?? 0);
+                $lineTotal           = $qty * $unitPrice;
+                $lineDiscountAmount  = ($lineTotal * $lineDiscountPercent) / 100;
+                $lineFinalTotal      = $lineTotal - $lineDiscountAmount;
+
+                // Fix #4: حفظ warehouse_id و discount في SaleItem
                 SaleItem::create([
-                    'sale_id'    => $sale->id,
-                    'product_id' => $item['product_id'],
-                    'quantity'   => $qty,
-                    'unit_price' => $unitPrice,
-                    'total'      => $qty * $unitPrice,
+                    'sale_id'      => $sale->id,
+                    'product_id'   => $item['product_id'],
+                    'warehouse_id' => $item['warehouse_id'] ?? null,
+                    'quantity'     => $qty,
+                    'unit_price'   => $unitPrice,
+                    // نحفظ قيمة الخصم (مش النسبة) في الـ DB
+                    'discount'     => round($lineDiscountAmount, 2),
+                    'total'        => round($lineFinalTotal, 2),
                 ]);
 
-             $product = Product::withoutGlobalScopes()->find($item['product_id']);
-if ($product) {
-    $warehouseId = $item['warehouse_id'] ?? $product->warehouse_id ?? null;
-    $qtyBefore = $product->qty;
+                // ── خصم المخزون ───────────────────────────────
+                $product = Product::withoutGlobalScopes()->find($item['product_id']);
+                if ($product) {
+                    $warehouseId = $item['warehouse_id'] ?? $product->warehouse_id ?? null;
+                    $qtyBefore   = (float) $product->qty;
 
-    // خصم من product_locations لو في مخزن محدد
-    if ($warehouseId) {
-        $location = \App\Models\ProductLocation::firstOrCreate(
-            ['product_id' => $item['product_id'], 'warehouse_id' => $warehouseId, 'company_id' => $companyId],
-            ['qty' => 0]
-        );
-        if ($location->qty < $qty) {
-            throw new \Exception("المخزون غير كافٍ في المخزن المحدد — المتاح: {$location->qty}، المطلوب: {$qty}");
-        }
-        $location->decrement('qty', $qty);
-    }
+                    if ($warehouseId) {
+                        $location = \App\Models\ProductLocation::firstOrCreate(
+                            [
+                                'product_id'   => $item['product_id'],
+                                'warehouse_id' => $warehouseId,
+                                'company_id'   => $companyId,
+                            ],
+                            ['qty' => 0]
+                        );
+                  if ($location->qty < $qty) {
+    throw new \App\Exceptions\InsufficientStockException($location->qty, $qty);
+}
+                        $location->decrement('qty', $qty);
+                    }
 
-    $product->decrement('qty', $qty);
+                    $product->decrement('qty', $qty);
 
                     StockMovement::create([
                         'company_id'     => $companyId,
                         'product_id'     => $item['product_id'],
-                           'warehouse_id'   => $warehouseId ?? null,
+                        'warehouse_id'   => $warehouseId ?? null,
                         'user_id'        => auth()->id(),
                         'type'           => 'out',
                         'qty'            => $qty,
                         'qty_before'     => $qtyBefore,
-                        // Fix #5a: بدل fresh()->qty نحسب مباشرة (بدون N+1 query)
                         'qty_after'      => $qtyBefore - $qty,
                         'reference_type' => Sale::class,
                         'reference_id'   => $sale->id,
@@ -99,22 +144,21 @@ if ($product) {
             }
 
             SaleCreated::dispatch($sale);
-
             \Illuminate\Support\Facades\Cache::forget("dashboard:summary:{$companyId}");
 
             return $sale->load('items.product', 'customer', 'user');
         });
     }
 
-    /**
-     * تعديل metadata الفاتورة
-     */
+    // ══════════════════════════════════════════════════════════
+    // تعديل metadata الفاتورة (status / notes / payment_method)
+    // ══════════════════════════════════════════════════════════
     public function updateSale(Sale $sale, array $data): Sale
     {
         return DB::transaction(function () use ($sale, $data) {
-            if (isset($data['discount'])) {
-                $data['total'] = $sale->subtotal + $sale->tax - $data['discount'];
-            }
+            // لو الـ status اتغير لـ confirmed → خصم المخزون لو لسه draft
+            // (في حالة الـ workflow: draft → confirmed → completed)
+            // الـ stock خصم وقت الإنشاء بغض النظر عن الـ status
 
             $sale->update($data);
 
@@ -122,40 +166,40 @@ if ($product) {
         });
     }
 
-    /**
-     * حذف فاتورة مع إرجاع المخزون
-     *
-     * Fix #5b: كان qty_before = $product->qty - $item->quantity بعد الـ increment
-     *           يعني qty_before = qty_after دايماً (فرق صفر في الـ audit trail).
-     *           الحل: نحفظ $qtyBefore قبل increment، ثم نحسب qty_after منه.
-     */
+    // ══════════════════════════════════════════════════════════
+    // حذف فاتورة مع إرجاع المخزون
+    // ══════════════════════════════════════════════════════════
     public function deleteSale(Sale $sale): void
     {
         DB::transaction(function () use ($sale) {
             foreach ($sale->items as $item) {
                 $product = Product::withoutGlobalScopes()->find($item->product_id);
                 if ($product) {
-                    // Fix #5b: نحفظ القيمة قبل الـ increment
-                 $qtyBefore = $product->qty;
-$warehouseId = $item->warehouse_id ?? $product->warehouse_id ?? null;
-if ($warehouseId) {
-    $location = \App\Models\ProductLocation::firstOrCreate(
-        ['product_id' => $item->product_id, 'warehouse_id' => $warehouseId, 'company_id' => $sale->company_id],
-        ['qty' => 0]
-    );
-    $location->increment('qty', $item->quantity);
-}
-$product->increment('qty', $item->quantity);
+                    $qtyBefore   = (float) $product->qty;
+                    $warehouseId = $item->warehouse_id ?? $product->warehouse_id ?? null;
+
+                    if ($warehouseId) {
+                        $location = \App\Models\ProductLocation::firstOrCreate(
+                            [
+                                'product_id'   => $item->product_id,
+                                'warehouse_id' => $warehouseId,
+                                'company_id'   => $sale->company_id,
+                            ],
+                            ['qty' => 0]
+                        );
+                        $location->increment('qty', $item->quantity);
+                    }
+
+                    $product->increment('qty', $item->quantity);
 
                     StockMovement::create([
                         'company_id'     => $sale->company_id,
                         'product_id'     => $item->product_id,
+                        'warehouse_id'   => $warehouseId ?? null,
                         'user_id'        => auth()->id(),
                         'type'           => 'in',
                         'qty'            => $item->quantity,
-                        // Fix: الآن qty_before صح (قبل الـ increment)
                         'qty_before'     => $qtyBefore,
-                        // Fix: qty_after = qty_before + qty المُرتجع
                         'qty_after'      => $qtyBefore + $item->quantity,
                         'reference_type' => Sale::class,
                         'reference_id'   => $sale->id,
@@ -168,36 +212,42 @@ $product->increment('qty', $item->quantity);
         });
     }
 
-    /**
-     * إحصائيات المبيعات للـ dashboard
-     */
-    public function getStats(?int $companyId): array
-    {
-        $today     = now()->toDateString();
-        $thisMonth = now()->startOfMonth()->toDateString();
+    // ══════════════════════════════════════════════════════════
+    // إحصائيات المبيعات
+    // Fix #6: الـ fields اتغيرت عشان تتوافق مع الفرونت
+    // ══════════════════════════════════════════════════════════
+   public function getStats(?int $companyId): array
+{
+    $base = Sale::withoutGlobalScopes()
+        ->where('company_id', $companyId)
+        ->whereNull('deleted_at');
 
-        return [
-            'today_revenue' => Sale::where('company_id', $companyId)
-                ->whereDate('created_at', $today)
-                ->where('status', 'completed')
-                ->sum('total'),
+    $totalAmount = (clone $base)
+        ->whereNotIn('status', ['cancelled', 'refunded'])
+        ->sum('total');
 
-            'month_revenue' => Sale::where('company_id', $companyId)
-                ->whereDate('created_at', '>=', $thisMonth)
-                ->where('status', 'completed')
-                ->sum('total'),
+    $paidAmount = (clone $base)
+        ->whereIn('status', ['completed', 'paid'])
+        ->sum('total');
 
-            'today_count'   => Sale::where('company_id', $companyId)
-                ->whereDate('created_at', $today)
-                ->count(),
+    return [
+        'total_sales'   => (clone $base)->count(),
+        'total_amount'  => (float) $totalAmount,
+        'paid_amount'   => (float) $paidAmount,
+        'unpaid_amount' => (float) max(0, $totalAmount - $paidAmount),
 
-            'month_count'   => Sale::where('company_id', $companyId)
-                ->whereDate('created_at', '>=', $thisMonth)
-                ->count(),
+        'today_revenue' => (float) (clone $base)
+            ->whereDate('created_at', now()->toDateString())
+            ->where('status', 'completed')
+            ->sum('total'),
 
-            'pending_count' => Sale::where('company_id', $companyId)
-                ->where('status', 'pending')
-                ->count(),
-        ];
-    }
+        'month_revenue' => (float) (clone $base)
+            ->whereDate('created_at', '>=', now()->startOfMonth()->toDateString())
+            ->where('status', 'completed')
+            ->sum('total'),
+
+        'pending_count' => (clone $base)->where('status', 'pending')->count(),
+        'draft_count'   => (clone $base)->where('status', 'draft')->count(),
+    ];
+}
 }

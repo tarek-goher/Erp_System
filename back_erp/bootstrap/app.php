@@ -21,15 +21,15 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
  $middleware->alias([
+    'auth'               => \App\Http\Middleware\Authenticate::class, // ✅ ضيف
     'permission'         => \App\Http\Middleware\CheckPermission::class,
     'super.admin'        => \App\Http\Middleware\CheckSuperAdmin::class,
     'check.super.admin'  => \App\Http\Middleware\CheckSuperAdmin::class,
     'company.tenant'     => \App\Http\Middleware\EnsureCompanyTenant::class,
     'audit.log'          => \App\Http\Middleware\AuditLog::class,
     'ip.whitelist'       => \App\Http\Middleware\IpWhitelist::class,
-    'company.active'     => \App\Http\Middleware\EnsureCompanyActive::class,  // ← أضف السطر ده
+    'company.active'     => \App\Http\Middleware\EnsureCompanyActive::class,
 ]);
-
         // ══════════════════════════════════════════════════════
         // CSRF Exception for API routes
         // الـ frontend بيستخدم Bearer Token مش cookies

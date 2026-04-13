@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Apr 11, 2026 at 01:47 AM
+-- Generation Time: Apr 13, 2026 at 05:54 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -57,10 +57,10 @@ INSERT INTO `accounts` (`id`, `company_id`, `code`, `name`, `name_en`, `type`, `
 (7, 2, '1101', 'النقدية بالصندوق', NULL, 'asset', NULL, 'debit', 0.00, 6, 1, '2026-04-08 19:45:54', '2026-04-08 19:45:54'),
 (8, 2, '1102', 'البنك', NULL, 'asset', NULL, 'debit', 0.00, 6, 1, '2026-04-08 19:45:54', '2026-04-08 19:45:54'),
 (9, 2, '1103', 'المدينون', NULL, 'asset', NULL, 'debit', 0.00, 6, 1, '2026-04-08 19:45:54', '2026-04-08 19:45:54'),
-(10, 2, '1200', 'المخزون', NULL, 'asset', NULL, 'debit', 0.00, 1, 1, '2026-04-08 19:45:54', '2026-04-08 19:45:54'),
+(10, 2, '1200', 'المخزون', NULL, 'asset', NULL, 'debit', 205000.00, 1, 1, '2026-04-08 19:45:54', '2026-04-11 20:26:19'),
 (11, 2, '1300', 'الأصول الثابتة', NULL, 'asset', NULL, 'debit', 0.00, 1, 1, '2026-04-08 19:45:54', '2026-04-08 19:45:54'),
 (12, 2, '2100', 'الخصوم المتداولة', NULL, 'liability', NULL, 'credit', 0.00, 2, 1, '2026-04-08 19:45:54', '2026-04-08 19:45:54'),
-(13, 2, '2101', 'الموردون', NULL, 'liability', NULL, 'credit', 0.00, 12, 1, '2026-04-08 19:45:54', '2026-04-08 19:45:54'),
+(13, 2, '2101', 'الموردون', NULL, 'liability', NULL, 'credit', 205000.00, 12, 1, '2026-04-08 19:45:54', '2026-04-11 20:26:19'),
 (14, 2, '2102', 'مصاريف مستحقة', NULL, 'liability', NULL, 'credit', 0.00, 12, 1, '2026-04-08 19:45:54', '2026-04-08 19:45:54'),
 (15, 2, '2103', 'ضريبة القيمة المضافة', NULL, 'liability', NULL, 'credit', 0.00, 12, 1, '2026-04-08 19:45:54', '2026-04-08 19:45:54'),
 (16, 2, '3001', 'رأس المال', NULL, 'equity', NULL, 'credit', 0.00, 3, 1, '2026-04-08 19:45:54', '2026-04-08 19:45:54'),
@@ -361,7 +361,8 @@ INSERT INTO `categories` (`id`, `company_id`, `parent_id`, `name`, `type`, `desc
 (2, 1, NULL, 'ezz', 'product', NULL, '2026-04-08 19:41:16', '2026-04-08 19:41:16'),
 (3, 2, NULL, 'elctronic', 'product', NULL, '2026-04-08 19:47:04', '2026-04-08 19:47:04'),
 (4, 2, NULL, 'saas', 'product', NULL, '2026-04-08 20:55:23', '2026-04-08 20:55:23'),
-(5, 2, NULL, 'apple', 'product', NULL, '2026-04-10 17:21:20', '2026-04-10 17:21:20');
+(5, 2, NULL, 'apple', 'product', NULL, '2026-04-10 17:21:20', '2026-04-10 17:21:20'),
+(6, 2, NULL, 'apple', 'product', NULL, '2026-04-11 20:25:28', '2026-04-11 20:25:28');
 
 -- --------------------------------------------------------
 
@@ -494,7 +495,8 @@ INSERT INTO `customers` (`id`, `company_id`, `name`, `email`, `phone`, `address`
 (2, 2, 'ezz', NULL, NULL, NULL, NULL, 0.00, 0.00, 0, NULL, 1, NULL, '2026-04-08 20:22:46', '2026-04-08 20:22:46'),
 (3, 2, 'saas', NULL, NULL, NULL, NULL, 0.00, 0.00, 0, NULL, 1, NULL, '2026-04-09 10:31:15', '2026-04-09 10:31:15'),
 (4, 2, 'tarek', NULL, NULL, NULL, NULL, 0.00, 0.00, 0, NULL, 1, NULL, '2026-04-09 18:20:42', '2026-04-09 18:20:42'),
-(5, 2, 'samer', NULL, NULL, NULL, NULL, 0.00, 0.00, 0, NULL, 1, NULL, '2026-04-09 19:06:08', '2026-04-09 19:06:08');
+(5, 2, 'samer', NULL, NULL, NULL, NULL, 0.00, 0.00, 0, NULL, 1, NULL, '2026-04-09 19:06:08', '2026-04-09 19:06:08'),
+(6, 2, 'mona', NULL, NULL, NULL, NULL, 0.00, 0.00, 0, NULL, 1, NULL, '2026-04-11 21:16:53', '2026-04-11 21:16:53');
 
 -- --------------------------------------------------------
 
@@ -715,7 +717,15 @@ INSERT INTO `jobs` (`id`, `queue`, `payload`, `attempts`, `reserved_at`, `availa
 (7, 'default', '{\"uuid\":\"570f29d3-dcaf-4cf7-8c4b-3625c3ef5b1f\",\"displayName\":\"App\\\\Listeners\\\\SendSaleNotification\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":null,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":null,\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"Illuminate\\\\Events\\\\CallQueuedListener\",\"command\":\"O:36:\\\"Illuminate\\\\Events\\\\CallQueuedListener\\\":26:{s:5:\\\"class\\\";s:34:\\\"App\\\\Listeners\\\\SendSaleNotification\\\";s:6:\\\"method\\\";s:6:\\\"handle\\\";s:4:\\\"data\\\";a:1:{i:0;O:22:\\\"App\\\\Events\\\\SaleCreated\\\":1:{s:4:\\\"sale\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:15:\\\"App\\\\Models\\\\Sale\\\";s:2:\\\"id\\\";i:8;s:9:\\\"relations\\\";a:0:{}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}}}s:5:\\\"tries\\\";N;s:13:\\\"maxExceptions\\\";N;s:7:\\\"backoff\\\";N;s:10:\\\"retryUntil\\\";N;s:7:\\\"timeout\\\";N;s:13:\\\"failOnTimeout\\\";b:0;s:17:\\\"shouldBeEncrypted\\\";b:0;s:14:\\\"shouldBeUnique\\\";b:0;s:29:\\\"shouldBeUniqueUntilProcessing\\\";b:0;s:8:\\\"uniqueId\\\";N;s:9:\\\"uniqueFor\\\";N;s:3:\\\"job\\\";N;s:10:\\\"connection\\\";N;s:5:\\\"queue\\\";N;s:12:\\\"messageGroup\\\";N;s:12:\\\"deduplicator\\\";N;s:5:\\\"delay\\\";N;s:11:\\\"afterCommit\\\";N;s:10:\\\"middleware\\\";a:0:{}s:7:\\\"chained\\\";a:0:{}s:15:\\\"chainConnection\\\";N;s:10:\\\"chainQueue\\\";N;s:19:\\\"chainCatchCallbacks\\\";N;}\",\"batchId\":null},\"createdAt\":1775766054,\"delay\":null}', 0, NULL, 1775766054, 1775766054),
 (8, 'default', '{\"uuid\":\"dcef70f3-63d9-4138-99df-c2b29af48c68\",\"displayName\":\"App\\\\Listeners\\\\SendSaleNotification\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":null,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":null,\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"Illuminate\\\\Events\\\\CallQueuedListener\",\"command\":\"O:36:\\\"Illuminate\\\\Events\\\\CallQueuedListener\\\":26:{s:5:\\\"class\\\";s:34:\\\"App\\\\Listeners\\\\SendSaleNotification\\\";s:6:\\\"method\\\";s:6:\\\"handle\\\";s:4:\\\"data\\\";a:1:{i:0;O:22:\\\"App\\\\Events\\\\SaleCreated\\\":1:{s:4:\\\"sale\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:15:\\\"App\\\\Models\\\\Sale\\\";s:2:\\\"id\\\";i:15;s:9:\\\"relations\\\";a:0:{}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}}}s:5:\\\"tries\\\";N;s:13:\\\"maxExceptions\\\";N;s:7:\\\"backoff\\\";N;s:10:\\\"retryUntil\\\";N;s:7:\\\"timeout\\\";N;s:13:\\\"failOnTimeout\\\";b:0;s:17:\\\"shouldBeEncrypted\\\";b:0;s:14:\\\"shouldBeUnique\\\";b:0;s:29:\\\"shouldBeUniqueUntilProcessing\\\";b:0;s:8:\\\"uniqueId\\\";N;s:9:\\\"uniqueFor\\\";N;s:3:\\\"job\\\";N;s:10:\\\"connection\\\";N;s:5:\\\"queue\\\";N;s:12:\\\"messageGroup\\\";N;s:12:\\\"deduplicator\\\";N;s:5:\\\"delay\\\";N;s:11:\\\"afterCommit\\\";N;s:10:\\\"middleware\\\";a:0:{}s:7:\\\"chained\\\";a:0:{}s:15:\\\"chainConnection\\\";N;s:10:\\\"chainQueue\\\";N;s:19:\\\"chainCatchCallbacks\\\";N;}\",\"batchId\":null},\"createdAt\":1775829918,\"delay\":null}', 0, NULL, 1775829918, 1775829918),
 (9, 'default', '{\"uuid\":\"043352f5-20bb-4634-b236-c79d8bd51302\",\"displayName\":\"App\\\\Jobs\\\\ProcessMonthlyPayrollJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":null,\"timeout\":300,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\ProcessMonthlyPayrollJob\",\"command\":\"O:33:\\\"App\\\\Jobs\\\\ProcessMonthlyPayrollJob\\\":3:{s:40:\\\"\\u0000App\\\\Jobs\\\\ProcessMonthlyPayrollJob\\u0000month\\\";i:5;s:39:\\\"\\u0000App\\\\Jobs\\\\ProcessMonthlyPayrollJob\\u0000year\\\";i:2026;s:44:\\\"\\u0000App\\\\Jobs\\\\ProcessMonthlyPayrollJob\\u0000companyId\\\";i:2;}\",\"batchId\":null},\"createdAt\":1775830812,\"delay\":null}', 0, NULL, 1775830812, 1775830812),
-(10, 'default', '{\"uuid\":\"abb49ba9-1551-479a-b2c1-e095815e47f6\",\"displayName\":\"App\\\\Jobs\\\\ProcessMonthlyPayrollJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":null,\"timeout\":300,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\ProcessMonthlyPayrollJob\",\"command\":\"O:33:\\\"App\\\\Jobs\\\\ProcessMonthlyPayrollJob\\\":3:{s:40:\\\"\\u0000App\\\\Jobs\\\\ProcessMonthlyPayrollJob\\u0000month\\\";i:4;s:39:\\\"\\u0000App\\\\Jobs\\\\ProcessMonthlyPayrollJob\\u0000year\\\";i:2026;s:44:\\\"\\u0000App\\\\Jobs\\\\ProcessMonthlyPayrollJob\\u0000companyId\\\";i:2;}\",\"batchId\":null},\"createdAt\":1775830816,\"delay\":null}', 0, NULL, 1775830816, 1775830816);
+(10, 'default', '{\"uuid\":\"abb49ba9-1551-479a-b2c1-e095815e47f6\",\"displayName\":\"App\\\\Jobs\\\\ProcessMonthlyPayrollJob\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":3,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":null,\"timeout\":300,\"retryUntil\":null,\"data\":{\"commandName\":\"App\\\\Jobs\\\\ProcessMonthlyPayrollJob\",\"command\":\"O:33:\\\"App\\\\Jobs\\\\ProcessMonthlyPayrollJob\\\":3:{s:40:\\\"\\u0000App\\\\Jobs\\\\ProcessMonthlyPayrollJob\\u0000month\\\";i:4;s:39:\\\"\\u0000App\\\\Jobs\\\\ProcessMonthlyPayrollJob\\u0000year\\\";i:2026;s:44:\\\"\\u0000App\\\\Jobs\\\\ProcessMonthlyPayrollJob\\u0000companyId\\\";i:2;}\",\"batchId\":null},\"createdAt\":1775830816,\"delay\":null}', 0, NULL, 1775830816, 1775830816),
+(11, 'default', '{\"uuid\":\"b846ecb0-aa3f-4544-a8c4-57fb7e13063a\",\"displayName\":\"App\\\\Listeners\\\\SendSaleNotification\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":null,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":null,\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"Illuminate\\\\Events\\\\CallQueuedListener\",\"command\":\"O:36:\\\"Illuminate\\\\Events\\\\CallQueuedListener\\\":26:{s:5:\\\"class\\\";s:34:\\\"App\\\\Listeners\\\\SendSaleNotification\\\";s:6:\\\"method\\\";s:6:\\\"handle\\\";s:4:\\\"data\\\";a:1:{i:0;O:22:\\\"App\\\\Events\\\\SaleCreated\\\":1:{s:4:\\\"sale\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:15:\\\"App\\\\Models\\\\Sale\\\";s:2:\\\"id\\\";i:17;s:9:\\\"relations\\\";a:0:{}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}}}s:5:\\\"tries\\\";N;s:13:\\\"maxExceptions\\\";N;s:7:\\\"backoff\\\";N;s:10:\\\"retryUntil\\\";N;s:7:\\\"timeout\\\";N;s:13:\\\"failOnTimeout\\\";b:0;s:17:\\\"shouldBeEncrypted\\\";b:0;s:14:\\\"shouldBeUnique\\\";b:0;s:29:\\\"shouldBeUniqueUntilProcessing\\\";b:0;s:8:\\\"uniqueId\\\";N;s:9:\\\"uniqueFor\\\";N;s:3:\\\"job\\\";N;s:10:\\\"connection\\\";N;s:5:\\\"queue\\\";N;s:12:\\\"messageGroup\\\";N;s:12:\\\"deduplicator\\\";N;s:5:\\\"delay\\\";N;s:11:\\\"afterCommit\\\";N;s:10:\\\"middleware\\\";a:0:{}s:7:\\\"chained\\\";a:0:{}s:15:\\\"chainConnection\\\";N;s:10:\\\"chainQueue\\\";N;s:19:\\\"chainCatchCallbacks\\\";N;}\",\"batchId\":null},\"createdAt\":1775926049,\"delay\":null}', 0, NULL, 1775926049, 1775926049),
+(12, 'default', '{\"uuid\":\"64921da3-4284-43cb-942e-67a474347367\",\"displayName\":\"App\\\\Listeners\\\\SendSaleNotification\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":null,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":null,\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"Illuminate\\\\Events\\\\CallQueuedListener\",\"command\":\"O:36:\\\"Illuminate\\\\Events\\\\CallQueuedListener\\\":26:{s:5:\\\"class\\\";s:34:\\\"App\\\\Listeners\\\\SendSaleNotification\\\";s:6:\\\"method\\\";s:6:\\\"handle\\\";s:4:\\\"data\\\";a:1:{i:0;O:22:\\\"App\\\\Events\\\\SaleCreated\\\":1:{s:4:\\\"sale\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:15:\\\"App\\\\Models\\\\Sale\\\";s:2:\\\"id\\\";i:18;s:9:\\\"relations\\\";a:0:{}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}}}s:5:\\\"tries\\\";N;s:13:\\\"maxExceptions\\\";N;s:7:\\\"backoff\\\";N;s:10:\\\"retryUntil\\\";N;s:7:\\\"timeout\\\";N;s:13:\\\"failOnTimeout\\\";b:0;s:17:\\\"shouldBeEncrypted\\\";b:0;s:14:\\\"shouldBeUnique\\\";b:0;s:29:\\\"shouldBeUniqueUntilProcessing\\\";b:0;s:8:\\\"uniqueId\\\";N;s:9:\\\"uniqueFor\\\";N;s:3:\\\"job\\\";N;s:10:\\\"connection\\\";N;s:5:\\\"queue\\\";N;s:12:\\\"messageGroup\\\";N;s:12:\\\"deduplicator\\\";N;s:5:\\\"delay\\\";N;s:11:\\\"afterCommit\\\";N;s:10:\\\"middleware\\\";a:0:{}s:7:\\\"chained\\\";a:0:{}s:15:\\\"chainConnection\\\";N;s:10:\\\"chainQueue\\\";N;s:19:\\\"chainCatchCallbacks\\\";N;}\",\"batchId\":null},\"createdAt\":1775928736,\"delay\":null}', 0, NULL, 1775928736, 1775928736),
+(13, 'default', '{\"uuid\":\"2ed3caef-89ac-4aab-87d0-9d6261d72827\",\"displayName\":\"App\\\\Listeners\\\\SendSaleNotification\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":null,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":null,\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"Illuminate\\\\Events\\\\CallQueuedListener\",\"command\":\"O:36:\\\"Illuminate\\\\Events\\\\CallQueuedListener\\\":26:{s:5:\\\"class\\\";s:34:\\\"App\\\\Listeners\\\\SendSaleNotification\\\";s:6:\\\"method\\\";s:6:\\\"handle\\\";s:4:\\\"data\\\";a:1:{i:0;O:22:\\\"App\\\\Events\\\\SaleCreated\\\":1:{s:4:\\\"sale\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:15:\\\"App\\\\Models\\\\Sale\\\";s:2:\\\"id\\\";i:23;s:9:\\\"relations\\\";a:0:{}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}}}s:5:\\\"tries\\\";N;s:13:\\\"maxExceptions\\\";N;s:7:\\\"backoff\\\";N;s:10:\\\"retryUntil\\\";N;s:7:\\\"timeout\\\";N;s:13:\\\"failOnTimeout\\\";b:0;s:17:\\\"shouldBeEncrypted\\\";b:0;s:14:\\\"shouldBeUnique\\\";b:0;s:29:\\\"shouldBeUniqueUntilProcessing\\\";b:0;s:8:\\\"uniqueId\\\";N;s:9:\\\"uniqueFor\\\";N;s:3:\\\"job\\\";N;s:10:\\\"connection\\\";N;s:5:\\\"queue\\\";N;s:12:\\\"messageGroup\\\";N;s:12:\\\"deduplicator\\\";N;s:5:\\\"delay\\\";N;s:11:\\\"afterCommit\\\";N;s:10:\\\"middleware\\\";a:0:{}s:7:\\\"chained\\\";a:0:{}s:15:\\\"chainConnection\\\";N;s:10:\\\"chainQueue\\\";N;s:19:\\\"chainCatchCallbacks\\\";N;}\",\"batchId\":null},\"createdAt\":1775949444,\"delay\":null}', 0, NULL, 1775949444, 1775949444),
+(14, 'default', '{\"uuid\":\"07d3eb64-9944-42d0-bcf8-4d612e10bb6f\",\"displayName\":\"App\\\\Listeners\\\\SendSaleNotification\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":null,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":null,\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"Illuminate\\\\Events\\\\CallQueuedListener\",\"command\":\"O:36:\\\"Illuminate\\\\Events\\\\CallQueuedListener\\\":26:{s:5:\\\"class\\\";s:34:\\\"App\\\\Listeners\\\\SendSaleNotification\\\";s:6:\\\"method\\\";s:6:\\\"handle\\\";s:4:\\\"data\\\";a:1:{i:0;O:22:\\\"App\\\\Events\\\\SaleCreated\\\":1:{s:4:\\\"sale\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:15:\\\"App\\\\Models\\\\Sale\\\";s:2:\\\"id\\\";i:24;s:9:\\\"relations\\\";a:0:{}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}}}s:5:\\\"tries\\\";N;s:13:\\\"maxExceptions\\\";N;s:7:\\\"backoff\\\";N;s:10:\\\"retryUntil\\\";N;s:7:\\\"timeout\\\";N;s:13:\\\"failOnTimeout\\\";b:0;s:17:\\\"shouldBeEncrypted\\\";b:0;s:14:\\\"shouldBeUnique\\\";b:0;s:29:\\\"shouldBeUniqueUntilProcessing\\\";b:0;s:8:\\\"uniqueId\\\";N;s:9:\\\"uniqueFor\\\";N;s:3:\\\"job\\\";N;s:10:\\\"connection\\\";N;s:5:\\\"queue\\\";N;s:12:\\\"messageGroup\\\";N;s:12:\\\"deduplicator\\\";N;s:5:\\\"delay\\\";N;s:11:\\\"afterCommit\\\";N;s:10:\\\"middleware\\\";a:0:{}s:7:\\\"chained\\\";a:0:{}s:15:\\\"chainConnection\\\";N;s:10:\\\"chainQueue\\\";N;s:19:\\\"chainCatchCallbacks\\\";N;}\",\"batchId\":null},\"createdAt\":1775952929,\"delay\":null}', 0, NULL, 1775952929, 1775952929),
+(15, 'default', '{\"uuid\":\"15ddb2b6-abea-4c2f-9326-7fe7de5a35c7\",\"displayName\":\"App\\\\Listeners\\\\SendSaleNotification\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":null,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":null,\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"Illuminate\\\\Events\\\\CallQueuedListener\",\"command\":\"O:36:\\\"Illuminate\\\\Events\\\\CallQueuedListener\\\":26:{s:5:\\\"class\\\";s:34:\\\"App\\\\Listeners\\\\SendSaleNotification\\\";s:6:\\\"method\\\";s:6:\\\"handle\\\";s:4:\\\"data\\\";a:1:{i:0;O:22:\\\"App\\\\Events\\\\SaleCreated\\\":1:{s:4:\\\"sale\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:15:\\\"App\\\\Models\\\\Sale\\\";s:2:\\\"id\\\";i:27;s:9:\\\"relations\\\";a:0:{}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}}}s:5:\\\"tries\\\";N;s:13:\\\"maxExceptions\\\";N;s:7:\\\"backoff\\\";N;s:10:\\\"retryUntil\\\";N;s:7:\\\"timeout\\\";N;s:13:\\\"failOnTimeout\\\";b:0;s:17:\\\"shouldBeEncrypted\\\";b:0;s:14:\\\"shouldBeUnique\\\";b:0;s:29:\\\"shouldBeUniqueUntilProcessing\\\";b:0;s:8:\\\"uniqueId\\\";N;s:9:\\\"uniqueFor\\\";N;s:3:\\\"job\\\";N;s:10:\\\"connection\\\";N;s:5:\\\"queue\\\";N;s:12:\\\"messageGroup\\\";N;s:12:\\\"deduplicator\\\";N;s:5:\\\"delay\\\";N;s:11:\\\"afterCommit\\\";N;s:10:\\\"middleware\\\";a:0:{}s:7:\\\"chained\\\";a:0:{}s:15:\\\"chainConnection\\\";N;s:10:\\\"chainQueue\\\";N;s:19:\\\"chainCatchCallbacks\\\";N;}\",\"batchId\":null},\"createdAt\":1775955065,\"delay\":null}', 0, NULL, 1775955065, 1775955065),
+(16, 'default', '{\"uuid\":\"91bd46cd-e17b-41c0-b904-49ebdaa41753\",\"displayName\":\"App\\\\Listeners\\\\SendSaleNotification\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":null,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":null,\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"Illuminate\\\\Events\\\\CallQueuedListener\",\"command\":\"O:36:\\\"Illuminate\\\\Events\\\\CallQueuedListener\\\":26:{s:5:\\\"class\\\";s:34:\\\"App\\\\Listeners\\\\SendSaleNotification\\\";s:6:\\\"method\\\";s:6:\\\"handle\\\";s:4:\\\"data\\\";a:1:{i:0;O:22:\\\"App\\\\Events\\\\SaleCreated\\\":1:{s:4:\\\"sale\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:15:\\\"App\\\\Models\\\\Sale\\\";s:2:\\\"id\\\";i:29;s:9:\\\"relations\\\";a:0:{}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}}}s:5:\\\"tries\\\";N;s:13:\\\"maxExceptions\\\";N;s:7:\\\"backoff\\\";N;s:10:\\\"retryUntil\\\";N;s:7:\\\"timeout\\\";N;s:13:\\\"failOnTimeout\\\";b:0;s:17:\\\"shouldBeEncrypted\\\";b:0;s:14:\\\"shouldBeUnique\\\";b:0;s:29:\\\"shouldBeUniqueUntilProcessing\\\";b:0;s:8:\\\"uniqueId\\\";N;s:9:\\\"uniqueFor\\\";N;s:3:\\\"job\\\";N;s:10:\\\"connection\\\";N;s:5:\\\"queue\\\";N;s:12:\\\"messageGroup\\\";N;s:12:\\\"deduplicator\\\";N;s:5:\\\"delay\\\";N;s:11:\\\"afterCommit\\\";N;s:10:\\\"middleware\\\";a:0:{}s:7:\\\"chained\\\";a:0:{}s:15:\\\"chainConnection\\\";N;s:10:\\\"chainQueue\\\";N;s:19:\\\"chainCatchCallbacks\\\";N;}\",\"batchId\":null},\"createdAt\":1775999353,\"delay\":null}', 0, NULL, 1775999353, 1775999353),
+(17, 'default', '{\"uuid\":\"06e32e2d-c861-4f5f-96a3-cb0b0293b359\",\"displayName\":\"App\\\\Listeners\\\\SendSaleNotification\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":null,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":null,\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"Illuminate\\\\Events\\\\CallQueuedListener\",\"command\":\"O:36:\\\"Illuminate\\\\Events\\\\CallQueuedListener\\\":26:{s:5:\\\"class\\\";s:34:\\\"App\\\\Listeners\\\\SendSaleNotification\\\";s:6:\\\"method\\\";s:6:\\\"handle\\\";s:4:\\\"data\\\";a:1:{i:0;O:22:\\\"App\\\\Events\\\\SaleCreated\\\":1:{s:4:\\\"sale\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:15:\\\"App\\\\Models\\\\Sale\\\";s:2:\\\"id\\\";i:30;s:9:\\\"relations\\\";a:0:{}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}}}s:5:\\\"tries\\\";N;s:13:\\\"maxExceptions\\\";N;s:7:\\\"backoff\\\";N;s:10:\\\"retryUntil\\\";N;s:7:\\\"timeout\\\";N;s:13:\\\"failOnTimeout\\\";b:0;s:17:\\\"shouldBeEncrypted\\\";b:0;s:14:\\\"shouldBeUnique\\\";b:0;s:29:\\\"shouldBeUniqueUntilProcessing\\\";b:0;s:8:\\\"uniqueId\\\";N;s:9:\\\"uniqueFor\\\";N;s:3:\\\"job\\\";N;s:10:\\\"connection\\\";N;s:5:\\\"queue\\\";N;s:12:\\\"messageGroup\\\";N;s:12:\\\"deduplicator\\\";N;s:5:\\\"delay\\\";N;s:11:\\\"afterCommit\\\";N;s:10:\\\"middleware\\\";a:0:{}s:7:\\\"chained\\\";a:0:{}s:15:\\\"chainConnection\\\";N;s:10:\\\"chainQueue\\\";N;s:19:\\\"chainCatchCallbacks\\\";N;}\",\"batchId\":null},\"createdAt\":1776001175,\"delay\":null}', 0, NULL, 1776001175, 1776001175),
+(18, 'default', '{\"uuid\":\"6ec262d5-abb5-4896-98b8-25f3ea056ad6\",\"displayName\":\"App\\\\Listeners\\\\SendSaleNotification\",\"job\":\"Illuminate\\\\Queue\\\\CallQueuedHandler@call\",\"maxTries\":null,\"maxExceptions\":null,\"failOnTimeout\":false,\"backoff\":null,\"timeout\":null,\"retryUntil\":null,\"data\":{\"commandName\":\"Illuminate\\\\Events\\\\CallQueuedListener\",\"command\":\"O:36:\\\"Illuminate\\\\Events\\\\CallQueuedListener\\\":26:{s:5:\\\"class\\\";s:34:\\\"App\\\\Listeners\\\\SendSaleNotification\\\";s:6:\\\"method\\\";s:6:\\\"handle\\\";s:4:\\\"data\\\";a:1:{i:0;O:22:\\\"App\\\\Events\\\\SaleCreated\\\":1:{s:4:\\\"sale\\\";O:45:\\\"Illuminate\\\\Contracts\\\\Database\\\\ModelIdentifier\\\":5:{s:5:\\\"class\\\";s:15:\\\"App\\\\Models\\\\Sale\\\";s:2:\\\"id\\\";i:31;s:9:\\\"relations\\\";a:0:{}s:10:\\\"connection\\\";s:5:\\\"mysql\\\";s:15:\\\"collectionClass\\\";N;}}}s:5:\\\"tries\\\";N;s:13:\\\"maxExceptions\\\";N;s:7:\\\"backoff\\\";N;s:10:\\\"retryUntil\\\";N;s:7:\\\"timeout\\\";N;s:13:\\\"failOnTimeout\\\";b:0;s:17:\\\"shouldBeEncrypted\\\";b:0;s:14:\\\"shouldBeUnique\\\";b:0;s:29:\\\"shouldBeUniqueUntilProcessing\\\";b:0;s:8:\\\"uniqueId\\\";N;s:9:\\\"uniqueFor\\\";N;s:3:\\\"job\\\";N;s:10:\\\"connection\\\";N;s:5:\\\"queue\\\";N;s:12:\\\"messageGroup\\\";N;s:12:\\\"deduplicator\\\";N;s:5:\\\"delay\\\";N;s:11:\\\"afterCommit\\\";N;s:10:\\\"middleware\\\";a:0:{}s:7:\\\"chained\\\";a:0:{}s:15:\\\"chainConnection\\\";N;s:10:\\\"chainQueue\\\";N;s:19:\\\"chainCatchCallbacks\\\";N;}\",\"batchId\":null},\"createdAt\":1776002464,\"delay\":null}', 0, NULL, 1776002464, 1776002464);
 
 -- --------------------------------------------------------
 
@@ -776,6 +786,15 @@ CREATE TABLE `journal_entries` (
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `journal_entries`
+--
+
+INSERT INTO `journal_entries` (`id`, `company_id`, `ref`, `date`, `description`, `status`, `type`, `user_id`, `reference_type`, `reference_id`, `created_at`, `updated_at`) VALUES
+(1, 2, 'AUTO-PUR-8', '2026-04-11', 'مشتريات - أمر ', 'posted', 'auto', 7, 'App\\Models\\Purchase', 8, '2026-04-11 19:39:02', '2026-04-11 19:39:02'),
+(2, 2, 'AUTO-PUR-7', '2026-04-11', 'مشتريات - أمر ', 'posted', 'auto', 7, 'App\\Models\\Purchase', 7, '2026-04-11 19:39:12', '2026-04-11 19:39:12'),
+(3, 2, 'AUTO-PUR-9', '2026-04-11', 'مشتريات - أمر ', 'posted', 'auto', 7, 'App\\Models\\Purchase', 9, '2026-04-11 20:26:19', '2026-04-11 20:26:19');
+
 -- --------------------------------------------------------
 
 --
@@ -790,6 +809,18 @@ CREATE TABLE `journal_entry_lines` (
   `credit` decimal(14,2) NOT NULL DEFAULT 0.00,
   `description` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `journal_entry_lines`
+--
+
+INSERT INTO `journal_entry_lines` (`id`, `journal_entry_id`, `account_id`, `debit`, `credit`, `description`) VALUES
+(1, 1, 10, 25000.00, 0.00, 'مخزون مشتريات'),
+(2, 1, 13, 0.00, 25000.00, 'ذمم موردين'),
+(3, 2, 10, 20000.00, 0.00, 'مخزون مشتريات'),
+(4, 2, 13, 0.00, 20000.00, 'ذمم موردين'),
+(5, 3, 10, 160000.00, 0.00, 'مخزون مشتريات'),
+(6, 3, 13, 0.00, 160000.00, 'ذمم موردين');
 
 -- --------------------------------------------------------
 
@@ -971,7 +1002,16 @@ INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES
 (45, '2026_04_10_000002_create_helpdesk_workflows_table', 1),
 (46, '2026_04_08_231549_update_purchases_status_enum', 2),
 (47, '2026_04_10_194555_update_stock_movements_type_column', 3),
-(48, '2026_04_10_203303_add_warehouse_id_to_sale_items_table', 4);
+(48, '2026_04_10_203303_add_warehouse_id_to_sale_items_table', 4),
+(49, '2026_04_11_171819_add_due_date_tax_rate_to_sales_table', 5),
+(50, '2026_04_11_184932_add_warehouse_discount_to_purchase_items_table', 6),
+(51, '2026_04_11_202213_fix_purchase_items_add_warehouse_discount', 7),
+(52, '2026_04_11_232302_update_sales_status_enum', 8),
+(53, '2026_04_13_001833_add_quotation_statuses_to_sales_table', 9),
+(54, '2026_04_13_002616_add_rating_to_suppliers_table', 10),
+(55, '2026_04_13_012757_add_extra_columns_to_suppliers_table', 11),
+(56, '2026_04_13_014544_add_country_to_suppliers_table', 12),
+(57, '2026_04_13_020656_create_supplier_ledger_table', 13);
 
 -- --------------------------------------------------------
 
@@ -1163,7 +1203,7 @@ INSERT INTO `personal_access_tokens` (`id`, `tokenable_type`, `tokenable_id`, `n
 (24, 'App\\Models\\User', 7, 'api-token', '3388d8bae9b38aaffe97d9a74016f9bbb74e159218c42cc99df1540c301db9d0', '[\"*\"]', '2026-04-09 18:02:30', NULL, '2026-04-09 17:39:26', '2026-04-09 18:02:30'),
 (25, 'App\\Models\\User', 7, 'api-token', '26059774aaf3dda90fb6283668d595546b9d2324f563d7d1ae5b7de571089ebe', '[\"*\"]', '2026-04-09 17:48:30', NULL, '2026-04-09 17:47:38', '2026-04-09 17:48:30'),
 (26, 'App\\Models\\User', 7, 'api-token', '7c21643c621995c37ccb0ac0cbc439142570c5fe9eabd1c65d6694cc17cfb068', '[\"*\"]', '2026-04-09 18:04:08', NULL, '2026-04-09 17:48:47', '2026-04-09 18:04:08'),
-(27, 'App\\Models\\User', 7, 'api-token', '892530b2687c24bd41caf143e219885822d88be3b82fc80f0a53dbab12286c8e', '[\"*\"]', '2026-04-09 19:20:37', NULL, '2026-04-09 18:02:46', '2026-04-09 19:20:37'),
+(27, 'App\\Models\\User', 7, 'api-token', '892530b2687c24bd41caf143e219885822d88be3b82fc80f0a53dbab12286c8e', '[\"*\"]', '2026-04-11 16:24:52', NULL, '2026-04-09 18:02:46', '2026-04-11 16:24:52'),
 (28, 'App\\Models\\User', 7, 'api-token', 'cfae721e3bf903b692047b3204d68c2c2987f2b61bec75ddfe9159eb73c2e3bc', '[\"*\"]', '2026-04-09 18:09:53', NULL, '2026-04-09 18:06:39', '2026-04-09 18:09:53'),
 (32, 'App\\Models\\User', 7, 'api-token', '5e0f817e81e8fbe2bc4e8dc86994dadc65669eea5efbab4c25ae119324675072', '[\"*\"]', '2026-04-09 18:51:20', NULL, '2026-04-09 18:26:55', '2026-04-09 18:51:20'),
 (33, 'App\\Models\\User', 7, 'api-token', 'c3e6f735ed64ba34fd90cb6f6f21ca32977a51dec70d39254d4ca61c4ee6a4f9', '[\"*\"]', '2026-04-09 19:15:52', NULL, '2026-04-09 18:51:40', '2026-04-09 19:15:52'),
@@ -1188,7 +1228,38 @@ INSERT INTO `personal_access_tokens` (`id`, `tokenable_type`, `tokenable_id`, `n
 (57, 'App\\Models\\User', 7, 'api-token', 'd3e03ad8260ed1603b2f9798cc6f940238c8a75692581c308fd80b3894a9b294', '[\"*\"]', '2026-04-10 21:26:52', NULL, '2026-04-10 21:23:19', '2026-04-10 21:26:52'),
 (58, 'App\\Models\\User', 7, 'api-token', 'cfbe6086f2b10ab70824c597966085eac5f10dc476cc84c08b76e9c11c303e02', '[\"*\"]', '2026-04-10 21:34:36', NULL, '2026-04-10 21:27:18', '2026-04-10 21:34:36'),
 (59, 'App\\Models\\User', 7, 'api-token', 'ea449b65cc9a1323091915f07a42c72b0c2deb1ad5e03b7c0bd14ade1be1a091', '[\"*\"]', '2026-04-10 21:35:45', NULL, '2026-04-10 21:34:52', '2026-04-10 21:35:45'),
-(60, 'App\\Models\\User', 7, 'api-token', '5eab69e2815f8cd64023e732fe53cb15488c5812785b0d940d7cf4db1e32b439', '[\"*\"]', '2026-04-10 21:46:14', NULL, '2026-04-10 21:39:01', '2026-04-10 21:46:14');
+(60, 'App\\Models\\User', 7, 'api-token', '5eab69e2815f8cd64023e732fe53cb15488c5812785b0d940d7cf4db1e32b439', '[\"*\"]', '2026-04-10 21:46:14', NULL, '2026-04-10 21:39:01', '2026-04-10 21:46:14'),
+(61, 'App\\Models\\User', 7, 'api-token', '35f60bf4b853d7181fde56fc177df4008284bbacb903a38127fe7981ba37c3a6', '[\"*\"]', '2026-04-11 15:30:11', NULL, '2026-04-11 14:46:27', '2026-04-11 15:30:11'),
+(62, 'App\\Models\\User', 7, 'api-token', '51c7eb8001c25f61d397b36e7ab37182e47cd5332fa566af79cf9a75dc062940', '[\"*\"]', '2026-04-11 15:30:36', NULL, '2026-04-11 15:30:29', '2026-04-11 15:30:36'),
+(63, 'App\\Models\\User', 7, 'api-token', 'c31053f08a1cffc6ca65a9676c994f4bba93934e04b36de5d394549804f7f023', '[\"*\"]', '2026-04-11 15:42:36', NULL, '2026-04-11 15:30:35', '2026-04-11 15:42:36'),
+(64, 'App\\Models\\User', 7, 'api-token', 'e19ff7262f523c6490ec26be5498a9168e1f8802662919b8a59433094d2d1dc6', '[\"*\"]', '2026-04-11 15:43:06', NULL, '2026-04-11 15:42:57', '2026-04-11 15:43:06'),
+(65, 'App\\Models\\User', 7, 'api-token', 'dc79729f737bd29e85fabbcd5e707b4956cd786656bfb576717b78699e81e4e0', '[\"*\"]', '2026-04-11 15:48:01', NULL, '2026-04-11 15:43:04', '2026-04-11 15:48:01'),
+(66, 'App\\Models\\User', 7, 'api-token', '4b87ca8f1fbf427c4a975ddc5ad1505eb3760c96dec5bccc674dc2e924e602dc', '[\"*\"]', '2026-04-11 15:58:46', NULL, '2026-04-11 15:58:39', '2026-04-11 15:58:46'),
+(67, 'App\\Models\\User', 7, 'api-token', 'b43456669dbaaa4da1ade56e194488d08e125e16527785b8fbae1a6d98470d37', '[\"*\"]', '2026-04-11 16:25:05', NULL, '2026-04-11 15:58:45', '2026-04-11 16:25:05'),
+(68, 'App\\Models\\User', 7, 'api-token', '1e4163004d1665e5fcfeb1b7570361f23946b01d78d0542ebe17e2243f3bbcb5', '[\"*\"]', '2026-04-11 16:28:28', NULL, '2026-04-11 16:25:35', '2026-04-11 16:28:28'),
+(70, 'App\\Models\\User', 7, 'api-token', '8db83ad5129e92fb83debebc7c4923594e10f0656973d2442ef6caeb8d1b6e94', '[\"*\"]', '2026-04-11 17:57:05', NULL, '2026-04-11 17:56:22', '2026-04-11 17:57:05'),
+(71, 'App\\Models\\User', 7, 'api-token', '899f75e45e2f78c873f04d3625d1377b2d9c60979858036ff1c3af86c23689d4', '[\"*\"]', '2026-04-11 18:49:52', NULL, '2026-04-11 18:26:50', '2026-04-11 18:49:52'),
+(72, 'App\\Models\\User', 7, 'api-token', '65f95ba5bc9b4b57e74eca132b4184502820dc3816bff9d7bcc07fdacb6d558e', '[\"*\"]', '2026-04-11 18:54:32', NULL, '2026-04-11 18:50:15', '2026-04-11 18:54:32'),
+(73, 'App\\Models\\User', 7, 'api-token', '333d2505dc469ad2c85b0bedd6ac63da7c756e6dc313d5d1fcfab4ff6daed376', '[\"*\"]', '2026-04-11 18:55:11', NULL, '2026-04-11 18:54:50', '2026-04-11 18:55:11'),
+(74, 'App\\Models\\User', 7, 'api-token', '206cdc1763ac3a65665e29a002807b66ff62342ee8c2d30a309fa4792d7fb999', '[\"*\"]', '2026-04-11 19:01:04', NULL, '2026-04-11 19:00:56', '2026-04-11 19:01:04'),
+(75, 'App\\Models\\User', 7, 'api-token', '20e742c4938b2b885797a43649a44f5db02cfdad868e6657bfa1ccaab50bfc64', '[\"*\"]', '2026-04-11 19:01:19', NULL, '2026-04-11 19:01:02', '2026-04-11 19:01:19'),
+(76, 'App\\Models\\User', 7, 'api-token', '6908c422040f8e298a7f7b4c79dfd87ecd493824dad76e11fec36033c8c3be24', '[\"*\"]', '2026-04-11 19:13:09', NULL, '2026-04-11 19:12:52', '2026-04-11 19:13:09'),
+(77, 'App\\Models\\User', 7, 'api-token', '0524f691b5fe741abf6ad99a5220923d9bde50558970095e008500fffae8dab2', '[\"*\"]', '2026-04-11 19:47:41', NULL, '2026-04-11 19:36:08', '2026-04-11 19:47:41'),
+(78, 'App\\Models\\User', 7, 'api-token', '38db8e09d0b74f95994147118e2557cd452f9111604c44511afb3927ef867ca8', '[\"*\"]', '2026-04-11 20:09:55', NULL, '2026-04-11 19:49:59', '2026-04-11 20:09:55'),
+(80, 'App\\Models\\User', 7, 'api-token', '37950d2467c89fcc3cfb4525baae17fb14fefe1e07dc4be21d2f26aafcccc3f8', '[\"*\"]', '2026-04-11 20:18:55', NULL, '2026-04-11 20:18:45', '2026-04-11 20:18:55'),
+(81, 'App\\Models\\User', 7, 'api-token', 'c5132d0dafb5753f2544d1856d8e0d74ab4164e5f2cf834ce99c1cf2ffbf0566', '[\"*\"]', '2026-04-11 21:14:51', NULL, '2026-04-11 20:19:19', '2026-04-11 21:14:51'),
+(82, 'App\\Models\\User', 7, 'api-token', '782cf68568c36a78e66c083a650f99fd96e8129d78eec2cb5ca2d9e30175313c', '[\"*\"]', '2026-04-11 21:15:17', NULL, '2026-04-11 21:15:09', '2026-04-11 21:15:17'),
+(83, 'App\\Models\\User', 7, 'api-token', 'd24a67f2a32dd4da16882880048519cf742476f1f24931ac13d1dad32055cf54', '[\"*\"]', '2026-04-11 21:18:05', NULL, '2026-04-11 21:15:15', '2026-04-11 21:18:05'),
+(84, 'App\\Models\\User', 7, 'api-token', 'e97ab2479165e67345024abc4401d02fc774df5bb1fe2dd1efdf15f2864f21d6', '[\"*\"]', '2026-04-11 22:10:15', NULL, '2026-04-11 21:26:09', '2026-04-11 22:10:15'),
+(85, 'App\\Models\\User', 7, 'api-token', 'ddb98798a989eec3f9c67e57422c6da88dd7311cb3a717a6cae83463254cba06', '[\"*\"]', '2026-04-11 22:10:35', NULL, '2026-04-11 22:10:28', '2026-04-11 22:10:35'),
+(86, 'App\\Models\\User', 7, 'api-token', '266629f4bcba223cf8c42fafa094862264bfe26a65945a807bc925135b765eeb', '[\"*\"]', '2026-04-12 11:37:56', NULL, '2026-04-11 22:10:36', '2026-04-12 11:37:56'),
+(87, 'App\\Models\\User', 7, 'api-token', 'd0f5f55fdb2c9d21f7ee1ded3e49df80772de8883edd4aa5f6429423b37a2171', '[\"*\"]', '2026-04-12 22:03:47', NULL, '2026-04-12 11:38:19', '2026-04-12 22:03:47'),
+(88, 'App\\Models\\User', 7, 'api-token', '1f604a58bd53c23f9eb3aa94082f713251c1a4542d70206a56c51ae74d4d9838', '[\"*\"]', '2026-04-12 22:27:00', NULL, '2026-04-12 22:04:43', '2026-04-12 22:27:00'),
+(89, 'App\\Models\\User', 7, 'api-token', '34e289fabaf6cd48d54268f3eb5749d8057f9adc512c2031a5da1cd719fd1605', '[\"*\"]', '2026-04-12 22:52:32', NULL, '2026-04-12 22:27:09', '2026-04-12 22:52:32'),
+(90, 'App\\Models\\User', 7, 'api-token', 'ac0bd71ad3139ad0ec607b83e13c4dd8fb2dddcb56d2fdcbe6b6c8109b60bc17', '[\"*\"]', '2026-04-12 23:28:59', NULL, '2026-04-12 22:53:32', '2026-04-12 23:28:59'),
+(91, 'App\\Models\\User', 7, 'api-token', '8c67f65d4299526bafa1ec63b91523e59e167e9ada6e93fbc3183df700e9c5f9', '[\"*\"]', '2026-04-12 23:38:36', NULL, '2026-04-12 23:29:45', '2026-04-12 23:38:36'),
+(92, 'App\\Models\\User', 7, 'api-token', '60b9e94a0d02dc9d6783743016b68f1c4f15dbd237886abe78d267ae0071b33e', '[\"*\"]', '2026-04-13 00:31:08', NULL, '2026-04-12 23:39:30', '2026-04-13 00:31:08'),
+(93, 'App\\Models\\User', 7, 'api-token', '659ca7f64d3a06328590b0558569ff88816a8075e4f3e125e6db11221398566b', '[\"*\"]', '2026-04-13 00:58:31', NULL, '2026-04-13 00:31:22', '2026-04-13 00:58:31');
 
 -- --------------------------------------------------------
 
@@ -1271,7 +1342,9 @@ INSERT INTO `products` (`id`, `company_id`, `category_id`, `warehouse_id`, `name
 (2, 1, 1, NULL, 'saas', NULL, '123', NULL, 'piece', 1000.00, 500.00, 0.00, 100.000, 0.000, 0.00, 'saas', NULL, NULL, 1, '2026-04-08 19:29:00', '2026-04-08 19:19:44', '2026-04-08 19:29:00'),
 (3, 1, 1, NULL, 'ezz', NULL, '2020', NULL, 'piece', 100.00, 50.00, 0.00, 100.000, 0.000, 0.00, 'ss', NULL, NULL, 1, NULL, '2026-04-08 19:38:11', '2026-04-08 19:38:11'),
 (4, 1, 2, NULL, 'saas', NULL, '3030', NULL, 'piece', 1000.00, 500.00, 0.00, 300.000, 0.000, 0.00, '101sas', NULL, NULL, 1, NULL, '2026-04-08 19:41:37', '2026-04-08 19:44:24'),
-(13, 2, 3, 5, 'lap top', NULL, 'SKU-MNTIGOBV', NULL, 'piece', 7500.00, 5000.00, 0.00, 200.000, 100.000, 0.00, 'lap top used', NULL, NULL, 1, NULL, '2026-04-10 21:02:14', '2026-04-10 21:16:44');
+(13, 2, 3, 5, 'lap top', NULL, 'SKU-MNTIGOBV', NULL, 'piece', 7500.00, 5000.00, 0.00, 75.000, 100.000, 0.00, 'lap top used', NULL, NULL, 1, NULL, '2026-04-10 21:02:14', '2026-04-12 21:55:42'),
+(14, 2, 6, NULL, 'apple', NULL, 'SKU-69DACA5B06190', NULL, 'piece', 0.00, 400.00, 0.00, 400.000, 0.000, 0.00, NULL, NULL, NULL, 1, NULL, '2026-04-11 20:25:31', '2026-04-11 20:26:19'),
+(15, 2, 6, 6, 'apple', NULL, 'SKU-MNUWTD3Q', NULL, 'piece', 800.00, 400.00, 0.00, 403.000, 0.000, 0.00, NULL, NULL, NULL, 1, NULL, '2026-04-11 20:31:47', '2026-04-11 20:31:47');
 
 -- --------------------------------------------------------
 
@@ -1294,8 +1367,10 @@ CREATE TABLE `product_locations` (
 --
 
 INSERT INTO `product_locations` (`id`, `company_id`, `product_id`, `warehouse_id`, `qty`, `created_at`, `updated_at`) VALUES
-(8, 2, 13, 5, 150.000, '2026-04-10 21:14:16', '2026-04-10 21:39:45'),
-(9, 2, 13, 6, 50.000, '2026-04-10 21:14:16', '2026-04-10 21:39:45');
+(8, 2, 13, 5, 55.000, '2026-04-10 21:14:16', '2026-04-12 14:47:42'),
+(9, 2, 13, 6, 25.000, '2026-04-10 21:14:16', '2026-04-12 14:48:18'),
+(10, 2, 14, 6, 200.000, '2026-04-11 20:30:07', '2026-04-11 20:30:29'),
+(11, 2, 14, 5, 200.000, '2026-04-11 20:30:29', '2026-04-11 20:30:29');
 
 -- --------------------------------------------------------
 
@@ -1397,8 +1472,12 @@ CREATE TABLE `purchases` (
 INSERT INTO `purchases` (`id`, `order_number`, `company_id`, `supplier_id`, `user_id`, `po_number`, `subtotal`, `tax_amount`, `tax`, `discount`, `total`, `status`, `expected_at`, `received_at`, `notes`, `deleted_at`, `created_at`, `updated_at`) VALUES
 (1, NULL, 2, 1, 7, 'PO-20260408-0001', 250000.00, 0.00, 0.00, 0.00, 250000.00, 'approved', NULL, NULL, 'saas', '2026-04-09 18:13:21', '2026-04-08 21:17:41', '2026-04-09 18:13:21'),
 (2, NULL, 2, 2, 7, 'PO-20260409-0002', 5000.00, 0.00, 0.00, 0.00, 5000.00, 'approved', NULL, NULL, 'goher', '2026-04-10 19:01:53', '2026-04-09 10:41:50', '2026-04-10 19:01:53'),
-(3, NULL, 2, 3, 7, 'PO-20260409-0003', 12500000.00, 0.00, 0.00, 0.00, 12500000.00, 'approved', '2026-04-10', NULL, 'saas', NULL, '2026-04-09 11:32:40', '2026-04-10 19:01:42'),
-(4, NULL, 2, 3, 7, 'PO-20260410-0004', 100000.00, 0.00, 0.00, 0.00, 100000.00, 'approved', '2026-04-11', NULL, 'tarek', NULL, '2026-04-10 19:02:37', '2026-04-10 19:02:37');
+(3, NULL, 2, 3, 7, 'PO-20260409-0003', 12500000.00, 0.00, 0.00, 0.00, 12500000.00, 'approved', '2026-04-10', NULL, 'saas', '2026-04-11 17:44:29', '2026-04-09 11:32:40', '2026-04-11 17:44:29'),
+(4, NULL, 2, 3, 7, 'PO-20260410-0004', 275000.00, 0.00, 0.00, 0.00, 275000.00, 'approved', '2026-04-11', NULL, 'tarek', NULL, '2026-04-10 19:02:37', '2026-04-11 19:56:14'),
+(7, NULL, 2, 4, 7, 'PO-20260411-0005', 20000.00, 0.00, 0.00, 0.00, 20000.00, 'received', '2026-04-11', NULL, 'سشس', NULL, '2026-04-11 18:28:43', '2026-04-11 19:39:12'),
+(8, NULL, 2, 5, 7, 'PO-20260411-0006', 25000.00, 0.00, 0.00, 0.00, 25000.00, 'received', '2026-04-10', NULL, 'تم الموافقه', NULL, '2026-04-11 19:37:15', '2026-04-11 19:39:02'),
+(9, NULL, 2, 5, 7, 'PO-20260411-0007', 160000.00, 0.00, 0.00, 0.00, 160000.00, 'received', '2026-04-12', NULL, NULL, NULL, '2026-04-11 20:25:49', '2026-04-11 20:26:19'),
+(10, NULL, 2, 5, 7, 'PO-20260412-0008', 5000.00, 0.00, 0.00, 0.00, 5000.00, 'approved', '2026-04-13', NULL, NULL, NULL, '2026-04-12 13:20:45', '2026-04-12 13:20:45');
 
 -- --------------------------------------------------------
 
@@ -1444,18 +1523,23 @@ CREATE TABLE `purchase_items` (
   `name` varchar(255) DEFAULT NULL,
   `quantity` decimal(12,3) NOT NULL,
   `unit_price` decimal(12,2) NOT NULL,
+  `discount` decimal(15,2) NOT NULL DEFAULT 0.00,
   `total` decimal(12,2) NOT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
-  `updated_at` timestamp NULL DEFAULT NULL
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `warehouse_id` bigint(20) UNSIGNED DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `purchase_items`
 --
 
-INSERT INTO `purchase_items` (`id`, `purchase_id`, `product_id`, `name`, `quantity`, `unit_price`, `total`, `created_at`, `updated_at`) VALUES
-(5, 3, NULL, NULL, 2500.000, 5000.00, 12500000.00, '2026-04-10 19:01:42', '2026-04-10 19:01:42'),
-(6, 4, NULL, NULL, 500.000, 200.00, 100000.00, '2026-04-10 19:02:37', '2026-04-10 19:02:37');
+INSERT INTO `purchase_items` (`id`, `purchase_id`, `product_id`, `name`, `quantity`, `unit_price`, `discount`, `total`, `created_at`, `updated_at`, `warehouse_id`) VALUES
+(8, 7, 13, NULL, 4.000, 5000.00, 0.00, 20000.00, '2026-04-11 18:43:11', '2026-04-11 18:43:11', NULL),
+(9, 8, 13, NULL, 5.000, 5000.00, 0.00, 25000.00, '2026-04-11 19:37:15', '2026-04-11 19:37:15', NULL),
+(10, 4, 13, NULL, 55.000, 5000.00, 0.00, 275000.00, '2026-04-11 19:56:14', '2026-04-11 19:56:14', 6),
+(11, 9, 14, NULL, 400.000, 400.00, 0.00, 160000.00, '2026-04-11 20:25:49', '2026-04-11 20:25:49', NULL),
+(12, 10, 13, NULL, 1.000, 5000.00, 0.00, 5000.00, '2026-04-12 13:20:46', '2026-04-12 13:20:46', 6);
 
 -- --------------------------------------------------------
 
@@ -1567,13 +1651,15 @@ CREATE TABLE `sales` (
   `discount` decimal(12,2) NOT NULL DEFAULT 0.00,
   `total` decimal(12,2) NOT NULL DEFAULT 0.00,
   `paid_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
-  `status` enum('draft','quotation','pending','completed','cancelled') NOT NULL DEFAULT 'completed',
+  `status` enum('draft','pending','confirmed','completed','cancelled','refunded','quotation','sent') NOT NULL DEFAULT 'draft',
   `sale_type` enum('invoice','quotation') NOT NULL DEFAULT 'invoice',
   `payment_method` varchar(255) NOT NULL DEFAULT 'cash',
   `payment_terms` varchar(255) DEFAULT NULL,
   `valid_until` date DEFAULT NULL,
   `converted_from_id` bigint(20) UNSIGNED DEFAULT NULL,
   `notes` text DEFAULT NULL,
+  `due_date` date DEFAULT NULL,
+  `tax_rate_id` bigint(20) UNSIGNED DEFAULT NULL,
   `sale_date` date DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
@@ -1584,18 +1670,28 @@ CREATE TABLE `sales` (
 -- Dumping data for table `sales`
 --
 
-INSERT INTO `sales` (`id`, `company_id`, `customer_id`, `user_id`, `invoice_number`, `subtotal`, `tax`, `discount`, `total`, `paid_amount`, `status`, `sale_type`, `payment_method`, `payment_terms`, `valid_until`, `converted_from_id`, `notes`, `sale_date`, `deleted_at`, `created_at`, `updated_at`) VALUES
-(5, 2, 2, 7, 'INV-20260408-0001', 375000.00, 0.00, 0.00, 375000.00, 0.00, 'completed', 'invoice', 'card', NULL, NULL, NULL, 'saas', NULL, '2026-04-10 12:05:24', '2026-04-08 20:54:39', '2026-04-10 12:05:24'),
-(6, 2, 3, 7, 'INV-20260409-0001', 375000.00, 0.00, 0.00, 375000.00, 0.00, 'completed', 'invoice', 'cash', NULL, NULL, NULL, NULL, NULL, '2026-04-09 10:40:59', '2026-04-09 10:31:30', '2026-04-09 10:40:59'),
-(7, 2, 3, 7, 'INV-20260409-0002', 7500.00, 0.00, 0.00, 7500.00, 0.00, 'pending', 'invoice', 'cash', NULL, NULL, NULL, NULL, NULL, '2026-04-09 18:20:31', '2026-04-09 18:20:06', '2026-04-09 18:20:31'),
-(8, 2, 4, 7, 'INV-20260409-0003', 75000000.00, 0.00, 0.00, 75000000.00, 0.00, 'completed', 'invoice', 'cash', NULL, NULL, NULL, NULL, NULL, '2026-04-10 12:05:27', '2026-04-09 18:20:54', '2026-04-10 12:05:27'),
-(10, 2, 4, 7, 'INV-20260409-0004', 7500.00, 0.00, 0.00, 7500.00, 0.00, 'completed', 'invoice', 'cash', NULL, NULL, NULL, 'saas', NULL, '2026-04-10 12:05:31', '2026-04-09 18:34:08', '2026-04-10 12:05:31'),
-(11, 2, NULL, 7, 'INV-20260409-0005', 100.00, 0.00, 0.00, 100.00, 0.00, 'completed', 'invoice', 'cash', NULL, NULL, NULL, NULL, NULL, NULL, '2026-04-09 19:02:48', '2026-04-09 19:05:44'),
-(12, 2, 5, 7, 'INV-20260409-0006', 1000.00, 0.00, 0.00, 1000.00, 0.00, 'completed', 'invoice', 'cash', NULL, NULL, NULL, 'samer', NULL, '2026-04-10 19:00:52', '2026-04-09 19:06:38', '2026-04-10 19:00:52'),
-(13, 2, 5, 7, 'INV-20260409-0007', 400.00, 0.00, 0.00, 400.00, 0.00, 'completed', 'invoice', 'cash', NULL, NULL, NULL, NULL, NULL, NULL, '2026-04-09 19:08:48', '2026-04-09 19:43:55'),
-(14, 2, 3, 7, 'INV-20260409-0008', 100.00, 0.00, 0.00, 100.00, 0.00, 'completed', 'invoice', 'cash', NULL, NULL, NULL, NULL, NULL, NULL, '2026-04-09 19:11:05', '2026-04-09 19:39:31'),
-(15, 2, 4, 7, 'INV-20260410-0001', 7800.00, 0.00, 0.00, 7800.00, 0.00, 'completed', 'invoice', 'card', NULL, NULL, NULL, NULL, NULL, NULL, '2026-04-10 12:05:18', '2026-04-10 12:05:18'),
-(16, 2, 4, 7, 'INV-20260410-0002', 7500.00, 0.00, 0.00, 7500.00, 0.00, 'completed', 'invoice', 'cash', NULL, NULL, NULL, 'saas', NULL, NULL, '2026-04-10 12:06:05', '2026-04-10 12:06:22');
+INSERT INTO `sales` (`id`, `company_id`, `customer_id`, `user_id`, `invoice_number`, `subtotal`, `tax`, `discount`, `total`, `paid_amount`, `status`, `sale_type`, `payment_method`, `payment_terms`, `valid_until`, `converted_from_id`, `notes`, `due_date`, `tax_rate_id`, `sale_date`, `deleted_at`, `created_at`, `updated_at`) VALUES
+(5, 2, 2, 7, 'INV-20260408-0001', 375000.00, 0.00, 0.00, 375000.00, 0.00, 'completed', 'invoice', 'card', NULL, NULL, NULL, 'saas', NULL, NULL, NULL, '2026-04-10 12:05:24', '2026-04-08 20:54:39', '2026-04-10 12:05:24'),
+(6, 2, 3, 7, 'INV-20260409-0001', 375000.00, 0.00, 0.00, 375000.00, 0.00, 'completed', 'invoice', 'cash', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-04-09 10:40:59', '2026-04-09 10:31:30', '2026-04-09 10:40:59'),
+(7, 2, 3, 7, 'INV-20260409-0002', 7500.00, 0.00, 0.00, 7500.00, 0.00, 'pending', 'invoice', 'cash', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-04-09 18:20:31', '2026-04-09 18:20:06', '2026-04-09 18:20:31'),
+(8, 2, 4, 7, 'INV-20260409-0003', 75000000.00, 0.00, 0.00, 75000000.00, 0.00, 'completed', 'invoice', 'cash', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-04-10 12:05:27', '2026-04-09 18:20:54', '2026-04-10 12:05:27'),
+(10, 2, 4, 7, 'INV-20260409-0004', 7500.00, 0.00, 0.00, 7500.00, 0.00, 'completed', 'invoice', 'cash', NULL, NULL, NULL, 'saas', NULL, NULL, NULL, '2026-04-10 12:05:31', '2026-04-09 18:34:08', '2026-04-10 12:05:31'),
+(11, 2, NULL, 7, 'INV-20260409-0005', 100.00, 0.00, 0.00, 100.00, 0.00, 'completed', 'invoice', 'cash', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-04-09 19:02:48', '2026-04-09 19:05:44'),
+(12, 2, 5, 7, 'INV-20260409-0006', 1000.00, 0.00, 0.00, 1000.00, 0.00, 'completed', 'invoice', 'cash', NULL, NULL, NULL, 'samer', NULL, NULL, NULL, '2026-04-10 19:00:52', '2026-04-09 19:06:38', '2026-04-10 19:00:52'),
+(13, 2, 5, 7, 'INV-20260409-0007', 400.00, 0.00, 0.00, 400.00, 0.00, 'completed', 'invoice', 'cash', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-04-09 19:08:48', '2026-04-09 19:43:55'),
+(14, 2, 3, 7, 'INV-20260409-0008', 100.00, 0.00, 0.00, 100.00, 0.00, 'completed', 'invoice', 'cash', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-04-09 19:11:05', '2026-04-09 19:39:31'),
+(15, 2, 4, 7, 'INV-20260410-0001', 7800.00, 0.00, 0.00, 7800.00, 0.00, 'completed', 'invoice', 'card', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-04-10 12:05:18', '2026-04-10 12:05:18'),
+(16, 2, 4, 7, 'INV-20260410-0002', 7500.00, 0.00, 0.00, 7500.00, 0.00, 'completed', 'invoice', 'cash', NULL, NULL, NULL, 'saas', NULL, NULL, NULL, NULL, '2026-04-10 12:06:05', '2026-04-10 12:06:22'),
+(17, 2, 4, 7, 'INV-20260411-0001', 37500.00, 0.00, 0.00, 37500.00, 0.00, 'completed', 'invoice', 'cash', NULL, NULL, NULL, 'saas', NULL, NULL, NULL, NULL, '2026-04-11 14:47:29', '2026-04-11 14:47:29'),
+(18, 2, 5, 7, 'INV-20260411-0002', 37500.00, 0.00, 1875.00, 35625.00, 0.00, 'completed', 'invoice', 'card', NULL, NULL, NULL, NULL, '2026-04-17', NULL, NULL, NULL, '2026-04-11 15:32:16', '2026-04-11 21:26:38'),
+(23, 2, 4, 7, 'INV-20260411-0003', 37500.00, 0.00, 750.00, 36750.00, 0.00, 'completed', 'invoice', 'card', NULL, NULL, NULL, 'ok', '2026-04-13', NULL, NULL, NULL, '2026-04-11 21:17:24', '2026-04-11 22:14:59'),
+(24, 2, 6, 7, 'INV-20260412-0001', 37500.00, 0.00, 753.75, 36746.25, 0.00, 'completed', 'invoice', 'card', NULL, NULL, NULL, NULL, '2026-04-13', NULL, NULL, NULL, '2026-04-11 22:15:29', '2026-04-11 22:15:49'),
+(27, 2, 6, 7, 'INV-20260412-0002', 750000.00, 0.00, 0.00, 750000.00, 0.00, 'completed', 'invoice', 'card', NULL, NULL, NULL, NULL, '2026-04-12', NULL, NULL, NULL, '2026-04-11 22:51:05', '2026-04-11 22:51:16'),
+(29, 2, 4, 7, 'INV-20260412-0003', 37500.00, 0.00, 7.50, 37492.50, 0.00, 'refunded', 'invoice', 'card', NULL, NULL, NULL, NULL, '2026-04-13', NULL, NULL, NULL, '2026-04-12 11:09:13', '2026-04-12 11:10:06'),
+(30, 2, 1, 7, 'INV-20260412-0004', 7500.00, 0.00, 0.00, 7500.00, 0.00, 'cancelled', 'invoice', 'cash', NULL, NULL, NULL, NULL, '2026-04-14', NULL, NULL, NULL, '2026-04-12 11:39:35', '2026-04-12 11:39:35'),
+(31, 2, 3, 7, 'INV-20260412-0005', 7500.00, 0.00, 0.00, 7500.00, 0.00, 'completed', 'invoice', 'cash', NULL, NULL, NULL, 'تم', '2026-04-14', NULL, NULL, NULL, '2026-04-12 12:01:04', '2026-04-12 12:01:04'),
+(32, 2, 5, 7, 'INV-20260412-0006', 37500.00, 0.00, 0.00, 37500.00, 0.00, 'completed', 'invoice', 'cash', NULL, NULL, NULL, 'تم', NULL, NULL, NULL, NULL, '2026-04-12 21:54:57', '2026-04-12 21:55:42'),
+(33, 2, 4, 7, 'INV-20260412-0007', 7500.00, 0.00, 0.00, 7500.00, 0.00, 'completed', 'invoice', 'cash', NULL, '2026-04-15', NULL, 'jl', NULL, NULL, NULL, NULL, '2026-04-12 21:59:29', '2026-04-13 00:29:01');
 
 -- --------------------------------------------------------
 
@@ -1628,7 +1724,17 @@ INSERT INTO `sale_items` (`id`, `sale_id`, `product_id`, `warehouse_id`, `name`,
 (14, 15, NULL, NULL, NULL, 1.000, 7500.00, 0.00, 7500.00, '2026-04-10 12:05:18', '2026-04-10 12:05:18'),
 (15, 15, NULL, NULL, NULL, 1.000, 200.00, 0.00, 200.00, '2026-04-10 12:05:18', '2026-04-10 12:05:18'),
 (16, 15, NULL, NULL, NULL, 1.000, 100.00, 0.00, 100.00, '2026-04-10 12:05:18', '2026-04-10 12:05:18'),
-(17, 16, NULL, NULL, NULL, 1.000, 7500.00, 0.00, 7500.00, '2026-04-10 12:06:05', '2026-04-10 12:06:05');
+(17, 16, NULL, NULL, NULL, 1.000, 7500.00, 0.00, 7500.00, '2026-04-10 12:06:05', '2026-04-10 12:06:05'),
+(18, 17, 13, NULL, NULL, 5.000, 7500.00, 0.00, 37500.00, '2026-04-11 14:47:29', '2026-04-11 14:47:29'),
+(19, 18, 13, NULL, NULL, 5.000, 7500.00, 0.00, 37500.00, '2026-04-11 15:32:16', '2026-04-11 15:32:16'),
+(24, 23, 13, 6, NULL, 5.000, 7500.00, 0.00, 37500.00, '2026-04-11 21:17:24', '2026-04-11 21:17:24'),
+(25, 24, 13, 6, NULL, 5.000, 7500.00, 0.00, 37500.00, '2026-04-11 22:15:29', '2026-04-11 22:15:29'),
+(28, 27, 13, NULL, NULL, 100.000, 7500.00, 0.00, 750000.00, '2026-04-11 22:51:05', '2026-04-11 22:51:05'),
+(30, 29, 13, 6, NULL, 5.000, 7500.00, 0.00, 37500.00, '2026-04-12 11:09:13', '2026-04-12 11:09:13'),
+(31, 30, 13, 6, NULL, 1.000, 7500.00, 0.00, 7500.00, '2026-04-12 11:39:35', '2026-04-12 11:39:35'),
+(32, 31, 13, 6, NULL, 1.000, 7500.00, 0.00, 7500.00, '2026-04-12 12:01:04', '2026-04-12 12:01:04'),
+(33, 32, 13, NULL, NULL, 5.000, 7500.00, 0.00, 37500.00, '2026-04-12 21:54:57', '2026-04-12 21:54:57'),
+(34, 33, 13, NULL, NULL, 1.000, 7500.00, 0.00, 7500.00, '2026-04-12 21:59:29', '2026-04-12 21:59:29');
 
 -- --------------------------------------------------------
 
@@ -1648,6 +1754,15 @@ CREATE TABLE `sale_payments` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `sale_payments`
+--
+
+INSERT INTO `sale_payments` (`id`, `company_id`, `sale_id`, `user_id`, `amount`, `payment_method`, `reference`, `notes`, `created_at`, `updated_at`) VALUES
+(1, 2, 18, 7, 35625.00, 'card', '123456', 'za', '2026-04-11 15:33:03', '2026-04-11 15:33:03'),
+(2, 2, 31, 7, 7500.00, 'cash', NULL, NULL, '2026-04-12 12:11:18', '2026-04-12 12:11:18'),
+(3, 2, 33, 7, 7500.00, 'cash', NULL, NULL, '2026-04-13 00:29:01', '2026-04-13 00:29:01');
 
 -- --------------------------------------------------------
 
@@ -1762,7 +1877,26 @@ INSERT INTO `stock_movements` (`id`, `company_id`, `product_id`, `warehouse_id`,
 (40, 2, 13, 6, 7, 'transfer_out', 100.000, 200.000, 100.000, 0.00, NULL, NULL, 'used', '2026-04-10 21:31:36', '2026-04-10 21:31:36'),
 (41, 2, 13, 5, 7, 'transfer_in', 100.000, 0.000, 100.000, 0.00, NULL, NULL, 'used', '2026-04-10 21:31:36', '2026-04-10 21:31:36'),
 (42, 2, 13, 6, 7, 'transfer_out', 50.000, 100.000, 50.000, 0.00, NULL, NULL, 'used', '2026-04-10 21:39:45', '2026-04-10 21:39:45'),
-(43, 2, 13, 5, 7, 'transfer_in', 50.000, 100.000, 150.000, 0.00, NULL, NULL, 'used', '2026-04-10 21:39:45', '2026-04-10 21:39:45');
+(43, 2, 13, 5, 7, 'transfer_in', 50.000, 100.000, 150.000, 0.00, NULL, NULL, 'used', '2026-04-10 21:39:45', '2026-04-10 21:39:45'),
+(44, 2, 13, 5, 7, 'out', 5.000, 200.000, 195.000, 0.00, 'App\\Models\\Sale', 17, 'فاتورة INV-20260411-0001', '2026-04-11 14:47:29', '2026-04-11 14:47:29'),
+(45, 2, 13, 5, 7, 'out', 5.000, 195.000, 190.000, 0.00, 'App\\Models\\Sale', 18, 'فاتورة INV-20260411-0002', '2026-04-11 15:32:16', '2026-04-11 15:32:16'),
+(46, 2, 13, 5, 7, 'in', 5.000, 190.000, 195.000, 0.00, 'App\\Models\\Purchase', 8, NULL, '2026-04-11 19:39:02', '2026-04-11 19:39:02'),
+(47, 2, 13, 5, 7, 'in', 4.000, 195.000, 199.000, 0.00, 'App\\Models\\Purchase', 7, NULL, '2026-04-11 19:39:12', '2026-04-11 19:39:12'),
+(48, 2, 14, NULL, 7, 'in', 400.000, 0.000, 400.000, 0.00, 'App\\Models\\Purchase', 9, NULL, '2026-04-11 20:26:19', '2026-04-11 20:26:19'),
+(49, 2, 14, 6, 7, 'adjustment', 0.000, 0.000, 400.000, 0.00, NULL, NULL, NULL, '2026-04-11 20:30:07', '2026-04-11 20:30:07'),
+(50, 2, 14, 6, 7, 'transfer_out', 200.000, 400.000, 200.000, 0.00, NULL, NULL, NULL, '2026-04-11 20:30:29', '2026-04-11 20:30:29'),
+(51, 2, 14, 5, 7, 'transfer_in', 200.000, 0.000, 200.000, 0.00, NULL, NULL, NULL, '2026-04-11 20:30:29', '2026-04-11 20:30:29'),
+(52, 2, 13, 6, 7, 'transfer_out', 5.001, 50.000, 44.999, 0.00, NULL, NULL, NULL, '2026-04-11 20:50:14', '2026-04-11 20:50:14'),
+(53, 2, 13, 5, 7, 'transfer_in', 5.001, 149.000, 154.001, 0.00, NULL, NULL, NULL, '2026-04-11 20:50:14', '2026-04-11 20:50:14'),
+(54, 2, 13, 6, 7, 'out', 5.000, 199.000, 194.000, 0.00, 'App\\Models\\Sale', 23, 'فاتورة INV-20260411-0003', '2026-04-11 21:17:24', '2026-04-11 21:17:24'),
+(55, 2, 13, 6, 7, 'out', 5.000, 194.000, 189.000, 0.00, 'App\\Models\\Sale', 24, 'فاتورة INV-20260412-0001', '2026-04-11 22:15:29', '2026-04-11 22:15:29'),
+(56, 2, 13, 5, 7, 'out', 100.000, 189.000, 89.000, 0.00, 'App\\Models\\Sale', 27, 'فاتورة INV-20260412-0002', '2026-04-11 22:51:05', '2026-04-11 22:51:05'),
+(57, 2, 13, 6, 7, 'out', 5.000, 89.000, 84.000, 0.00, 'App\\Models\\Sale', 29, 'فاتورة INV-20260412-0003', '2026-04-12 11:09:13', '2026-04-12 11:09:13'),
+(58, 2, 13, 6, 7, 'out', 1.000, 84.000, 83.000, 0.00, 'App\\Models\\Sale', 30, 'فاتورة INV-20260412-0004', '2026-04-12 11:39:35', '2026-04-12 11:39:35'),
+(59, 2, 13, 6, 7, 'out', 1.000, 83.000, 82.000, 0.00, 'App\\Models\\Sale', 31, 'فاتورة INV-20260412-0005', '2026-04-12 12:01:04', '2026-04-12 12:01:04'),
+(60, 2, 13, 6, 7, 'transfer_out', 0.999, 27.999, 27.000, 0.00, NULL, NULL, NULL, '2026-04-12 14:47:42', '2026-04-12 14:47:42'),
+(61, 2, 13, 5, 7, 'transfer_in', 0.999, 54.001, 55.000, 0.00, NULL, NULL, NULL, '2026-04-12 14:47:42', '2026-04-12 14:47:42'),
+(62, 2, 13, 6, 7, 'out', 2.000, 27.000, 25.000, 0.00, NULL, NULL, NULL, '2026-04-12 14:48:18', '2026-04-12 14:48:18');
 
 -- --------------------------------------------------------
 
@@ -1794,7 +1928,10 @@ INSERT INTO `stock_transfers` (`id`, `company_id`, `ref`, `from_warehouse_id`, `
 (2, 2, 'TRF-69D987870CB0E', 6, 5, 13, 200.000, 'completed', 7, NULL, '2026-04-10 21:28:07', '2026-04-10 21:28:07'),
 (3, 2, 'TRF-69D9879CBBB44', 5, 6, 13, 200.000, 'completed', 7, NULL, '2026-04-10 21:28:28', '2026-04-10 21:28:28'),
 (4, 2, 'TRF-69D988588581F', 6, 5, 13, 100.000, 'completed', 7, 'used', '2026-04-10 21:31:36', '2026-04-10 21:31:36'),
-(5, 2, 'TRF-69D98A41844A7', 6, 5, 13, 50.000, 'completed', 7, 'used', '2026-04-10 21:39:45', '2026-04-10 21:39:45');
+(5, 2, 'TRF-69D98A41844A7', 6, 5, 13, 50.000, 'completed', 7, 'used', '2026-04-10 21:39:45', '2026-04-10 21:39:45'),
+(6, 2, 'TRF-69DACB859E094', 6, 5, 14, 200.000, 'completed', 7, NULL, '2026-04-11 20:30:29', '2026-04-11 20:30:29'),
+(7, 2, 'TRF-69DAD0261F50E', 6, 5, 13, 5.001, 'completed', 7, NULL, '2026-04-11 20:50:14', '2026-04-11 20:50:14'),
+(8, 2, 'TRF-69DBCCAE60AB4', 6, 5, 13, 0.999, 'completed', 7, NULL, '2026-04-12 14:47:42', '2026-04-12 14:47:42');
 
 -- --------------------------------------------------------
 
@@ -1830,28 +1967,76 @@ CREATE TABLE `suppliers` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `company_id` bigint(20) UNSIGNED NOT NULL,
   `name` varchar(255) NOT NULL,
+  `code` varchar(50) DEFAULT NULL,
+  `type` enum('company','individual') NOT NULL DEFAULT 'company',
+  `status` enum('active','suspended','blocked') NOT NULL DEFAULT 'active',
   `email` varchar(255) DEFAULT NULL,
   `phone` varchar(255) DEFAULT NULL,
   `address` text DEFAULT NULL,
+  `country` varchar(100) DEFAULT NULL,
+  `city` varchar(100) DEFAULT NULL,
+  `street` varchar(255) DEFAULT NULL,
+  `contact_person` varchar(150) DEFAULT NULL,
+  `contact_phone` varchar(20) DEFAULT NULL,
   `tax_number` varchar(255) DEFAULT NULL,
   `payment_terms` varchar(255) DEFAULT NULL,
+  `payment_method` enum('cash','bank_transfer','deferred') NOT NULL DEFAULT 'cash',
+  `bank_name` varchar(150) DEFAULT NULL,
+  `bank_account` varchar(100) DEFAULT NULL,
+  `products_notes` text DEFAULT NULL,
   `balance` decimal(12,2) NOT NULL DEFAULT 0.00,
   `notes` text DEFAULT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT 1,
   `deleted_at` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
-  `updated_at` timestamp NULL DEFAULT NULL
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `rating` tinyint(4) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `suppliers`
 --
 
-INSERT INTO `suppliers` (`id`, `company_id`, `name`, `email`, `phone`, `address`, `tax_number`, `payment_terms`, `balance`, `notes`, `is_active`, `deleted_at`, `created_at`, `updated_at`) VALUES
-(1, 2, 'ezz', NULL, NULL, NULL, NULL, NULL, 0.00, NULL, 1, '2026-04-10 12:08:26', '2026-04-08 20:21:52', '2026-04-10 12:08:26'),
-(2, 2, 'goher', NULL, NULL, NULL, NULL, NULL, 0.00, NULL, 1, '2026-04-10 12:08:30', '2026-04-09 10:41:33', '2026-04-10 12:08:30'),
-(3, 2, 'tarek', NULL, NULL, NULL, NULL, NULL, 0.00, NULL, 1, NULL, '2026-04-09 14:33:08', '2026-04-09 14:33:08'),
-(4, 2, 'mohamed', 'g@gmail.com', '10101010', '1fdfd52', NULL, 'cash', 0.00, 'saas', 1, NULL, '2026-04-10 12:08:10', '2026-04-10 12:08:20');
+INSERT INTO `suppliers` (`id`, `company_id`, `name`, `code`, `type`, `status`, `email`, `phone`, `address`, `country`, `city`, `street`, `contact_person`, `contact_phone`, `tax_number`, `payment_terms`, `payment_method`, `bank_name`, `bank_account`, `products_notes`, `balance`, `notes`, `is_active`, `deleted_at`, `created_at`, `updated_at`, `rating`) VALUES
+(1, 2, 'ezz', NULL, 'company', 'active', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'cash', NULL, NULL, NULL, 0.00, NULL, 1, '2026-04-10 12:08:26', '2026-04-08 20:21:52', '2026-04-10 12:08:26', 0),
+(2, 2, 'goher', NULL, 'company', 'active', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'cash', NULL, NULL, NULL, 0.00, NULL, 1, '2026-04-10 12:08:30', '2026-04-09 10:41:33', '2026-04-10 12:08:30', 0),
+(3, 2, 'tarek', NULL, 'company', 'active', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'cash', NULL, NULL, NULL, 0.00, NULL, 1, '2026-04-12 21:36:47', '2026-04-09 14:33:08', '2026-04-12 21:36:47', 0),
+(4, 2, 'mohamed', NULL, 'company', 'active', 'g@gmail.com', '10101010', '1fdfd52', NULL, NULL, NULL, NULL, NULL, NULL, 'cash', 'cash', NULL, NULL, NULL, 0.00, 'saas', 1, NULL, '2026-04-10 12:08:10', '2026-04-12 22:40:43', 5),
+(5, 2, 'sameh', NULL, 'company', 'active', 'taroka430@gmail.com', '01146109626', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'cash', NULL, NULL, NULL, 0.00, NULL, 1, '2026-04-12 22:29:32', '2026-04-11 19:36:45', '2026-04-12 22:29:32', 0),
+(6, 2, 'فشق', NULL, 'company', 'active', NULL, '0123123123', 'ب2ب1ث', NULL, NULL, NULL, NULL, NULL, NULL, 'cash', 'cash', NULL, NULL, NULL, 0.00, NULL, 1, '2026-04-12 22:42:24', '2026-04-12 22:42:20', '2026-04-12 22:42:24', 4),
+(7, 2, 'tarek', NULL, 'individual', 'active', 'taroka40@gmail.com', '01146109626', NULL, 'tarek', 'tarek', 'cairo', 'tarek', '01146109626', NULL, 'immediate', 'cash', NULL, NULL, 'lap top', 0.00, 'tarek', 1, NULL, '2026-04-12 23:47:04', '2026-04-12 23:48:28', 5),
+(8, 2, 'goher', 'SUP-0008', 'individual', 'active', 'taroka330@gmail.com', '01146109626', NULL, 'egypt', 'cairo', '5 new cairo', 'goher', '01146109626', NULL, 'net_30', 'cash', NULL, NULL, 'done', 0.00, 'done', 1, NULL, '2026-04-12 23:58:00', '2026-04-12 23:58:00', 3),
+(9, 2, 'mody', 'SUP-0009', 'company', 'suspended', 'taroka@gmail.com', '01146109626', NULL, 'mody', 'mody', 'mody', 'mody', '01146109626', NULL, 'net_90', 'deferred', NULL, NULL, 'lap', 0.00, '01146109626', 1, NULL, '2026-04-12 23:59:47', '2026-04-12 23:59:47', 1);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `supplier_ledger`
+--
+
+CREATE TABLE `supplier_ledger` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `supplier_id` bigint(20) UNSIGNED NOT NULL,
+  `company_id` bigint(20) UNSIGNED NOT NULL,
+  `type` enum('invoice','payment','return','adjustment') NOT NULL,
+  `amount` decimal(15,2) NOT NULL,
+  `direction` enum('debit','credit') NOT NULL,
+  `balance_after` decimal(15,2) NOT NULL DEFAULT 0.00,
+  `reference` varchar(255) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `created_by` bigint(20) UNSIGNED DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `supplier_ledger`
+--
+
+INSERT INTO `supplier_ledger` (`id`, `supplier_id`, `company_id`, `type`, `amount`, `direction`, `balance_after`, `reference`, `notes`, `created_by`, `created_at`, `updated_at`) VALUES
+(1, 9, 2, 'payment', 2000.00, 'credit', -2000.00, '123123', NULL, 7, '2026-04-13 00:52:02', '2026-04-13 00:52:02'),
+(2, 9, 2, 'adjustment', 20000.00, 'debit', 18000.00, NULL, 'df', 7, '2026-04-13 00:52:27', '2026-04-13 00:52:27'),
+(3, 9, 2, 'adjustment', 2000.00, 'credit', 16000.00, NULL, 'fd', 7, '2026-04-13 00:52:35', '2026-04-13 00:52:35');
 
 -- --------------------------------------------------------
 
@@ -1974,7 +2159,7 @@ INSERT INTO `users` (`id`, `company_id`, `name`, `email`, `phone`, `email_verifi
 (4, 1, 'محمد مخازن', 'mohamad@codesphere.io', NULL, NULL, '$2y$12$tqQnnd6zFE2X2liTMFH23u/xdA1jNd9uHhwZjktPyL8A4x.UU8uS2', 1, NULL, 0, NULL, '2026-04-08 17:38:08', '2026-04-08 17:38:08', NULL, 0),
 (5, 1, 'سارة كاشير', 'sara@codesphere.io', NULL, NULL, '$2y$12$xF.VruNQfVdvms3I888ig.ykdSmwvJESvMftszsawUUu/ZPx3qBBC', 1, NULL, 0, NULL, '2026-04-08 17:38:08', '2026-04-08 17:38:08', NULL, 0),
 (6, 1, 'خالد مبيعات', 'khaled@codesphere.io', NULL, NULL, '$2y$12$J810AgIVdOva/tL3TLKzb.JI3kU26xFKiUIHoXgVnN5381vUjcff2', 1, NULL, 0, NULL, '2026-04-08 17:38:09', '2026-04-08 17:38:09', NULL, 0),
-(7, 2, 'ezz', 'goher@gmail.com', '101010101010', NULL, '$2y$12$UTKCF3/DoHz3LNA/Y2jv3uuqKtDxaQG5NOpTKZ2aLNPu/v2QalQeS', 1, '2026-04-10 21:39:01', 0, NULL, '2026-04-08 19:45:55', '2026-04-10 21:39:01', NULL, 0),
+(7, 2, 'ezz', 'goher@gmail.com', '101010101010', NULL, '$2y$12$UTKCF3/DoHz3LNA/Y2jv3uuqKtDxaQG5NOpTKZ2aLNPu/v2QalQeS', 1, '2026-04-13 00:31:22', 0, NULL, '2026-04-08 19:45:55', '2026-04-13 00:31:22', NULL, 0),
 (8, 2, 'aziz', 'aziz@a.com', 'goher@gmail.com', NULL, '$2y$12$hvWW4UtHWvnzYFAzPoxfDez/4KHIXT7y9aUvD0HeK/TcdTbTp7cke', 1, '2026-04-09 19:22:11', 0, NULL, '2026-04-09 19:21:42', '2026-04-09 19:22:11', NULL, 0);
 
 -- --------------------------------------------------------
@@ -2583,7 +2768,8 @@ ALTER TABLE `purchase_invoices`
 ALTER TABLE `purchase_items`
   ADD PRIMARY KEY (`id`),
   ADD KEY `idx_purchase_items_purchase` (`purchase_id`),
-  ADD KEY `idx_purchase_items_product` (`product_id`);
+  ADD KEY `idx_purchase_items_product` (`product_id`),
+  ADD KEY `purchase_items_warehouse_id_foreign` (`warehouse_id`);
 
 --
 -- Indexes for table `roles`
@@ -2703,6 +2889,15 @@ ALTER TABLE `suppliers`
   ADD PRIMARY KEY (`id`),
   ADD KEY `idx_suppliers_company_active` (`company_id`,`is_active`),
   ADD KEY `suppliers_company_id_index` (`company_id`);
+
+--
+-- Indexes for table `supplier_ledger`
+--
+ALTER TABLE `supplier_ledger`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `supplier_ledger_supplier_id_foreign` (`supplier_id`),
+  ADD KEY `supplier_ledger_company_id_foreign` (`company_id`),
+  ADD KEY `supplier_ledger_created_by_foreign` (`created_by`);
 
 --
 -- Indexes for table `support_tickets`
@@ -2871,7 +3066,7 @@ ALTER TABLE `canned_responses`
 -- AUTO_INCREMENT for table `categories`
 --
 ALTER TABLE `categories`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `companies`
@@ -2901,7 +3096,7 @@ ALTER TABLE `currencies`
 -- AUTO_INCREMENT for table `customers`
 --
 ALTER TABLE `customers`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `employees`
@@ -2961,7 +3156,7 @@ ALTER TABLE `ip_whitelist_entries`
 -- AUTO_INCREMENT for table `jobs`
 --
 ALTER TABLE `jobs`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT for table `job_positions`
@@ -2973,13 +3168,13 @@ ALTER TABLE `job_positions`
 -- AUTO_INCREMENT for table `journal_entries`
 --
 ALTER TABLE `journal_entries`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `journal_entry_lines`
 --
 ALTER TABLE `journal_entry_lines`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `knowledge_articles`
@@ -3021,7 +3216,7 @@ ALTER TABLE `marketing_contact_lists`
 -- AUTO_INCREMENT for table `migrations`
 --
 ALTER TABLE `migrations`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=49;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=58;
 
 --
 -- AUTO_INCREMENT for table `payment_gateway_configs`
@@ -3051,7 +3246,7 @@ ALTER TABLE `permissions`
 -- AUTO_INCREMENT for table `personal_access_tokens`
 --
 ALTER TABLE `personal_access_tokens`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=61;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=94;
 
 --
 -- AUTO_INCREMENT for table `pipeline_stages`
@@ -3069,13 +3264,13 @@ ALTER TABLE `pos_shifts`
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `product_locations`
 --
 ALTER TABLE `product_locations`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `product_lots`
@@ -3099,7 +3294,7 @@ ALTER TABLE `project_tasks`
 -- AUTO_INCREMENT for table `purchases`
 --
 ALTER TABLE `purchases`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `purchase_invoices`
@@ -3111,7 +3306,7 @@ ALTER TABLE `purchase_invoices`
 -- AUTO_INCREMENT for table `purchase_items`
 --
 ALTER TABLE `purchase_items`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `roles`
@@ -3123,19 +3318,19 @@ ALTER TABLE `roles`
 -- AUTO_INCREMENT for table `sales`
 --
 ALTER TABLE `sales`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=34;
 
 --
 -- AUTO_INCREMENT for table `sale_items`
 --
 ALTER TABLE `sale_items`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=35;
 
 --
 -- AUTO_INCREMENT for table `sale_payments`
 --
 ALTER TABLE `sale_payments`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `sla_policies`
@@ -3159,13 +3354,13 @@ ALTER TABLE `sms_logs`
 -- AUTO_INCREMENT for table `stock_movements`
 --
 ALTER TABLE `stock_movements`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=44;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=63;
 
 --
 -- AUTO_INCREMENT for table `stock_transfers`
 --
 ALTER TABLE `stock_transfers`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `subscriptions`
@@ -3177,7 +3372,13 @@ ALTER TABLE `subscriptions`
 -- AUTO_INCREMENT for table `suppliers`
 --
 ALTER TABLE `suppliers`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+
+--
+-- AUTO_INCREMENT for table `supplier_ledger`
+--
+ALTER TABLE `supplier_ledger`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `support_tickets`
@@ -3563,7 +3764,8 @@ ALTER TABLE `purchase_invoices`
 --
 ALTER TABLE `purchase_items`
   ADD CONSTRAINT `purchase_items_product_id_foreign` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE SET NULL,
-  ADD CONSTRAINT `purchase_items_purchase_id_foreign` FOREIGN KEY (`purchase_id`) REFERENCES `purchases` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `purchase_items_purchase_id_foreign` FOREIGN KEY (`purchase_id`) REFERENCES `purchases` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `purchase_items_warehouse_id_foreign` FOREIGN KEY (`warehouse_id`) REFERENCES `warehouses` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `role_has_permissions`
@@ -3645,6 +3847,14 @@ ALTER TABLE `subscriptions`
 --
 ALTER TABLE `suppliers`
   ADD CONSTRAINT `suppliers_company_id_foreign` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `supplier_ledger`
+--
+ALTER TABLE `supplier_ledger`
+  ADD CONSTRAINT `supplier_ledger_company_id_foreign` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `supplier_ledger_created_by_foreign` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`),
+  ADD CONSTRAINT `supplier_ledger_supplier_id_foreign` FOREIGN KEY (`supplier_id`) REFERENCES `suppliers` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `support_tickets`

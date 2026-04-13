@@ -124,16 +124,25 @@ Route::middleware(['auth:sanctum', 'company.active', 'throttle:120,1'])->group(f
     });
 
     // ── Quotations ───────────────────────────────────────────
-    Route::apiResource('quotations', QuotationController::class);
-    Route::post('quotations/{sale}/convert', [QuotationController::class, 'convertToSale']);
+// ── Quotations ───────────────────────────────────────────
+Route::prefix('quotations')->controller(QuotationController::class)->group(function () {
+    Route::get('/',           'index');
+    Route::post('/',          'store');
+    Route::get('{sale}',      'show');
+    Route::put('{sale}',      'update');
+    Route::delete('{sale}',   'destroy');
+});
+Route::post('quotations/{sale}/convert', [QuotationController::class, 'convertToSale']);
 
     // ── Purchases ────────────────────────────────────────────
     Route::prefix('purchases')->controller(PurchaseController::class)->group(function () {
+        Route::get('stats',   'stats');
         Route::get('/',       'index');
         Route::post('/',      'store');
         Route::get('{id}',    'show');
         Route::put('{id}',    'update');
         Route::delete('{id}', 'destroy');
+        Route::patch('{id}/receive', 'receive');
     });
     Route::apiResource('purchase-invoices', PurchaseInvoiceController::class);
 
@@ -165,12 +174,15 @@ Route::middleware(['auth:sanctum', 'company.active', 'throttle:120,1'])->group(f
 
     // ── Suppliers ────────────────────────────────────────────
     Route::apiResource('suppliers', SupplierController::class);
+    Route::post('suppliers/{supplier}/attachments', [SupplierController::class, 'storeAttachments']);
+    Route::post('suppliers/{supplier}/ledger',      [SupplierController::class, 'storeLedger']); // ← أضف ده
+
 
     // ── Inventory & Warehouses ───────────────────────────────
     Route::post('stock-movements/transfer', [StockMovementController::class, 'transfer']);
     Route::get('stock-transfers', [StockMovementController::class, 'transfers']);
 Route::apiResource('stock-movements', StockMovementController::class);
-      Route::post('warehouses/transfer',    [WarehouseController::class, 'transfer']);
+    //   Route::post('warehouses/transfer',    [WarehouseController::class, 'transfer']);
     Route::apiResource('warehouses',      WarehouseController::class);
   
 

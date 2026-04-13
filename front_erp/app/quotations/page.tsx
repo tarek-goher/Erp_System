@@ -13,7 +13,7 @@ import { useI18n } from '../../lib/i18n'
 type QuotItem = {
   id: number
   invoice_number: string
-  customer?: { id: number; name: string }
+  customer?: { id: number; name: string; phone?: string; email?: string }
   total: number
   status: string
   notes?: string
@@ -34,6 +34,152 @@ type LineItem = {
 }
 
 const EMPTY_LINE: LineItem = { product_id: '', name: '', qty: 1, price: 0, discount: 0 }
+
+// ── Status Config ──────────────────────────────────────────
+const STATUS_CONFIG: Record<string, { labelAr: string; labelEn: string; bg: string; color: string }> = {
+  quotation:  { labelAr: 'عرض سعر',    labelEn: 'Quotation',  bg: '#eff6ff', color: '#1e40af' },
+  sent:       { labelAr: 'تم الإرسال', labelEn: 'Sent',       bg: '#e0f2fe', color: '#0369a1' },
+  confirmed:  { labelAr: 'مؤكد',       labelEn: 'Confirmed',  bg: '#d1fae5', color: '#065f46' },
+  cancelled:  { labelAr: 'ملغي',       labelEn: 'Cancelled',  bg: '#fef2f2', color: '#dc2626' },
+  converted:  { labelAr: 'محوّل',      labelEn: 'Converted',  bg: '#f3f4f6', color: '#374151' },
+}
+
+const getStatusCfg = (status: string, ar: boolean) => {
+  const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG['quotation']
+  return { ...cfg, label: ar ? cfg.labelAr : cfg.labelEn }
+}
+
+// ── Print Quotation ────────────────────────────────────────
+const printQuotation = async (q: QuotItem, ar: boolean) => {
+  // جيب اسم الشركة من localStorage
+  const user = JSON.parse(localStorage.getItem('erp_user') || '{}')
+  const companyName = user?.company?.name ?? (ar ? 'شركتنا' : 'Our Company')
+
+  // جيب التفاصيل الكاملة مع الأصناف
+  const res = await api.get(`/quotations/${q.id}`)
+  const full = (res.data?.data ?? res.data ?? q) as QuotItem
+
+  const fmt = (n: number) =>
+    new Intl.NumberFormat(ar ? 'ar-EG' : 'en-US', { minimumFractionDigits: 2 }).format(n ?? 0)
+
+  const cfg = getStatusCfg(full.status, ar)
+
+  const itemsHtml = full.items && full.items.length > 0
+    ? full.items.map((item: any, idx: number) => {
+        const name     = item.product?.name ?? item.name ?? '—'
+        const qty      = item.quantity ?? item.qty ?? 0
+        const price    = Number(item.unit_price ?? item.price ?? 0)
+        const discount = Number(item.discount ?? 0)
+        const net      = qty * price - discount
+        return `
+          <tr>
+            <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;">${idx + 1}</td>
+            <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;font-weight:600;">${name}</td>
+            <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;text-align:center;">${qty}</td>
+            <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;text-align:right;">${fmt(price)}</td>
+            <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;text-align:right;">${fmt(discount)}</td>
+            <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;color:#1a56db;">${fmt(net)}</td>
+          </tr>`
+      }).join('')
+    : `<tr><td colspan="6" style="padding:20px;text-align:center;color:#9ca3af;">${ar ? 'لا توجد عناصر' : 'No items'}</td></tr>`
+
+  const html = `
+    <!DOCTYPE html>
+    <html dir="${ar ? 'rtl' : 'ltr'}" lang="${ar ? 'ar' : 'en'}">
+    <head>
+      <meta charset="UTF-8"/>
+      <title>${ar ? 'عرض سعر' : 'Quotation'} - ${full.invoice_number}</title>
+      <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: ${ar ? "'Segoe UI', Tahoma, Arial" : "'Segoe UI', Arial"}, sans-serif; color: #111; background: #fff; padding: 32px; }
+        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; padding-bottom: 20px; border-bottom: 2px solid #e5e7eb; }
+        .company { font-size: 22px; font-weight: 800; color: #1a56db; }
+        .doc-title { font-size: 18px; font-weight: 700; color: #374151; margin-top: 4px; }
+        .badge { display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; background: ${cfg.bg}; color: ${cfg.color}; }
+        .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 28px; }
+        .meta-box { background: #f9fafb; border-radius: 10px; padding: 16px 20px; }
+        .meta-label { font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+        .meta-value { font-size: 15px; font-weight: 700; color: #111; }
+        .meta-sub { font-size: 12px; color: #6b7280; margin-top: 2px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        thead tr { background: #1a56db; color: #fff; }
+        thead th { padding: 12px 14px; font-size: 12px; font-weight: 700; text-align: ${ar ? 'right' : 'left'}; }
+        thead th:nth-child(3) { text-align: center; }
+        thead th:nth-child(4), thead th:nth-child(5), thead th:nth-child(6) { text-align: right; }
+        tbody tr:nth-child(even) { background: #f9fafb; }
+        .total-row { background: #eff6ff; font-weight: 700; font-size: 16px; color: #1a56db; }
+        .total-row td { padding: 14px; border-top: 2px solid #1a56db; }
+        .notes { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 14px 18px; margin-top: 20px; }
+        .notes-label { font-size: 12px; font-weight: 700; color: #92400e; margin-bottom: 6px; }
+        .notes-text { font-size: 13px; color: #78350f; line-height: 1.6; }
+        .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #e5e7eb; text-align: center; color: #9ca3af; font-size: 11px; }
+        @media print { body { padding: 16px; } }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div>
+          <div class="company">🏢 ${companyName}</div>
+          <div class="doc-title">${ar ? 'عرض سعر' : 'Quotation'}</div>
+        </div>
+        <div style="text-align:${ar ? 'left' : 'right'}">
+          <div style="font-size:20px;font-weight:800;color:#374151;">#${full.invoice_number}</div>
+          <div style="margin-top:6px"><span class="badge">${cfg.label}</span></div>
+        </div>
+      </div>
+
+      <div class="meta-grid">
+        <div class="meta-box">
+          <div class="meta-label">${ar ? 'العميل' : 'Customer'}</div>
+          <div class="meta-value">${full.customer?.name ?? (ar ? 'عميل نقدي' : 'Walk-in')}</div>
+          ${full.customer?.phone ? `<div class="meta-sub">📞 ${full.customer.phone}</div>` : ''}
+          ${full.customer?.email ? `<div class="meta-sub">✉️ ${full.customer.email}</div>` : ''}
+        </div>
+        <div class="meta-box">
+          <div class="meta-label">${ar ? 'تفاصيل العرض' : 'Quotation Details'}</div>
+          <div class="meta-value">${new Date(full.created_at).toLocaleDateString(ar ? 'ar-EG' : 'en-GB')}</div>
+          ${full.valid_until ? `<div class="meta-sub">${ar ? 'صالح حتى:' : 'Valid Until:'} ${new Date(full.valid_until).toLocaleDateString(ar ? 'ar-EG' : 'en-GB')}</div>` : ''}
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width:40px">#</th>
+            <th>${ar ? 'المنتج / الخدمة' : 'Product / Service'}</th>
+            <th style="width:80px">${ar ? 'كمية' : 'Qty'}</th>
+            <th style="width:110px">${ar ? 'السعر' : 'Price'}</th>
+            <th style="width:110px">${ar ? 'خصم' : 'Discount'}</th>
+            <th style="width:120px">${ar ? 'الصافي' : 'Net'}</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemsHtml}
+          <tr class="total-row">
+            <td colspan="5" style="text-align:${ar ? 'left' : 'right'};padding:14px;">${ar ? 'الإجمالي الكلي' : 'Grand Total'}</td>
+            <td style="text-align:right;padding:14px;">${fmt(full.total)}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      ${full.notes ? `
+        <div class="notes">
+          <div class="notes-label">📝 ${ar ? 'ملاحظات / الشروط والأحكام' : 'Notes / Terms & Conditions'}</div>
+          <div class="notes-text">${full.notes.replace(/\n/g, '<br/>')}</div>
+        </div>
+      ` : ''}
+
+      <div class="footer">
+        ${ar ? 'تم إنشاء هذا العرض بتاريخ' : 'Generated on'} ${new Date().toLocaleString(ar ? 'ar-EG' : 'en-GB')}
+      </div>
+
+      <script>window.onload = () => { window.print(); }<\/script>
+    </body>
+    </html>`
+
+  const win = window.open('', '_blank')
+  if (win) { win.document.write(html); win.document.close() }
+}
 
 // ── Autocomplete Component ─────────────────────────────────
 function Autocomplete({
@@ -134,6 +280,11 @@ export default function QuotationsPage() {
   const [errors,     setErrors]     = useState<Record<string, string>>({})
   const [toast,      setToast]      = useState<{ msg: string; ok: boolean } | null>(null)
 
+  // ── Filters ──
+  const [filterStatus,    setFilterStatus]    = useState('')
+  const [filterDateFrom,  setFilterDateFrom]  = useState('')
+  const [filterDateTo,    setFilterDateTo]    = useState('')
+
   // form state
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [customerQuery,    setCustomerQuery]    = useState('')
@@ -160,7 +311,14 @@ export default function QuotationsPage() {
   // ── Fetch quotations ──
   const fetchQuotations = async () => {
     setLoading(true)
-    const p = new URLSearchParams({ page: String(page), per_page: '15', ...(search && { search }) })
+    const p = new URLSearchParams({
+      page:     String(page),
+      per_page: '15',
+      ...(search         && { search }),
+      ...(filterStatus   && { status: filterStatus }),
+      ...(filterDateFrom && { date_from: filterDateFrom }),
+      ...(filterDateTo   && { date_to:   filterDateTo }),
+    })
     const res = await api.get(`/quotations?${p}`)
     if (res.data) {
       setQuotations(res.data.data ?? res.data)
@@ -169,7 +327,17 @@ export default function QuotationsPage() {
     setLoading(false)
   }
 
-  useEffect(() => { fetchQuotations() }, [page, search])
+  useEffect(() => { fetchQuotations() }, [page, search, filterStatus, filterDateFrom, filterDateTo])
+
+  const resetFilters = () => {
+    setFilterStatus('')
+    setFilterDateFrom('')
+    setFilterDateTo('')
+    setSearch('')
+    setPage(1)
+  }
+
+  const hasActiveFilters = filterStatus || filterDateFrom || filterDateTo || search
 
   // ── Autocomplete fetch functions ──
   const fetchCustomers = async (q: string): Promise<Customer[]> => {
@@ -207,7 +375,7 @@ export default function QuotationsPage() {
 
   const removeLine = (i: number) => setLines(p => p.filter((_, idx) => idx !== i))
 
-  const lineNet   = (l: LineItem) => l.qty * l.price - (l.discount ?? 0)
+  const lineNet    = (l: LineItem) => l.qty * l.price - (l.discount ?? 0)
   const grandTotal = () => lines.reduce((s, l) => s + lineNet(l), 0)
 
   // ── Reset form ──
@@ -245,10 +413,8 @@ export default function QuotationsPage() {
   }
 
   // ── Validate ──
-const validate = () => {
+  const validate = () => {
     const e: Record<string, string> = {}
-    
-    // لو تعديل، مش محتاج validate على الـ items
     if (!editing) {
       if (!lines.length || lines.every(l => !l.product_id)) {
         e.items = ar ? 'أضف عنصراً واحداً على الأقل' : 'Add at least one item'
@@ -258,10 +424,9 @@ const validate = () => {
         if (l.qty <= 0)    e[`qty_${i}`]  = ar ? 'كمية غير صحيحة' : 'Invalid qty'
       })
     }
-    
     setErrors(e)
     return !Object.keys(e).length
-}
+  }
 
   // ── Submit ──
   const handleSubmit = async (e: FormEvent) => {
@@ -315,6 +480,14 @@ const validate = () => {
     fetchQuotations()
   }
 
+  // ── Change Status ──
+  const handleChangeStatus = async (id: number, newStatus: string) => {
+    const res = await api.put(`/quotations/${id}`, { status: newStatus })
+    if (res.error) { flash(res.error, false); return }
+    flash(ar ? 'تم تغيير الحالة ✓' : 'Status updated ✓')
+    fetchQuotations()
+  }
+
   // ── Add Customer inline ──
   const handleAddCustomer = async () => {
     if (!newCust.name.trim()) return
@@ -351,6 +524,8 @@ const validate = () => {
   const fmt = (n: number) =>
     new Intl.NumberFormat(ar ? 'ar-EG' : 'en-US', { minimumFractionDigits: 2 }).format(n ?? 0)
 
+  const canEdit = (status: string) => ['quotation', 'sent'].includes(status)
+
   // ══════════════════════════════════════════════════════════
   // RENDER
   // ══════════════════════════════════════════════════════════
@@ -386,18 +561,123 @@ const validate = () => {
           </button>
         </div>
 
-        {/* Search */}
-        <input
-          type="text"
-          placeholder={ar ? 'بحث برقم العرض أو اسم العميل...' : 'Search by number or customer...'}
-          value={search}
-          onChange={e => { setSearch(e.target.value); setPage(1) }}
-          style={{
-            width: '100%', padding: '10px 14px', marginBottom: 20,
-            border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14,
-            boxSizing: 'border-box' as any,
-          }}
-        />
+        {/* ── Filters Bar ─────────────────────────────────── */}
+        <div style={{
+          background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10,
+          padding: '16px 20px', marginBottom: 16,
+          display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end',
+        }}>
+          {/* Search */}
+          <div style={{ flex: '2 1 200px' }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 5, textTransform: 'uppercase' }}>
+              {ar ? 'بحث' : 'Search'}
+            </label>
+            <input
+              type="text"
+              placeholder={ar ? 'رقم العرض أو اسم العميل...' : 'Number or customer...'}
+              value={search}
+              onChange={e => { setSearch(e.target.value); setPage(1) }}
+              style={{
+                width: '100%', padding: '9px 12px',
+                border: '1px solid #d1d5db', borderRadius: 7, fontSize: 13,
+                boxSizing: 'border-box' as any,
+              }}
+            />
+          </div>
+
+          {/* Status Filter */}
+          <div style={{ flex: '1 1 150px' }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 5, textTransform: 'uppercase' }}>
+              {ar ? 'الحالة' : 'Status'}
+            </label>
+            <select
+              value={filterStatus}
+              onChange={e => { setFilterStatus(e.target.value); setPage(1) }}
+              style={{
+                width: '100%', padding: '9px 12px',
+                border: '1px solid #d1d5db', borderRadius: 7, fontSize: 13,
+                background: '#fff', cursor: 'pointer',
+              }}
+            >
+              <option value="">{ar ? 'كل الحالات' : 'All Statuses'}</option>
+              <option value="quotation">{ar ? 'عرض سعر' : 'Quotation'}</option>
+              <option value="sent">{ar ? 'تم الإرسال' : 'Sent'}</option>
+              <option value="confirmed">{ar ? 'مؤكد' : 'Confirmed'}</option>
+              <option value="cancelled">{ar ? 'ملغي' : 'Cancelled'}</option>
+              <option value="converted">{ar ? 'محوّل' : 'Converted'}</option>
+            </select>
+          </div>
+
+          {/* Date From */}
+          <div style={{ flex: '1 1 140px' }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 5, textTransform: 'uppercase' }}>
+              {ar ? 'من تاريخ' : 'Date From'}
+            </label>
+            <input
+              type="date"
+              value={filterDateFrom}
+              onChange={e => { setFilterDateFrom(e.target.value); setPage(1) }}
+              style={{
+                width: '100%', padding: '9px 12px',
+                border: '1px solid #d1d5db', borderRadius: 7, fontSize: 13,
+                boxSizing: 'border-box' as any,
+              }}
+            />
+          </div>
+
+          {/* Date To */}
+          <div style={{ flex: '1 1 140px' }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 5, textTransform: 'uppercase' }}>
+              {ar ? 'إلى تاريخ' : 'Date To'}
+            </label>
+            <input
+              type="date"
+              value={filterDateTo}
+              onChange={e => { setFilterDateTo(e.target.value); setPage(1) }}
+              style={{
+                width: '100%', padding: '9px 12px',
+                border: '1px solid #d1d5db', borderRadius: 7, fontSize: 13,
+                boxSizing: 'border-box' as any,
+              }}
+            />
+          </div>
+
+          {/* Reset */}
+          {hasActiveFilters && (
+            <button
+              onClick={resetFilters}
+              style={{
+                padding: '9px 16px', border: '1px solid #fca5a5', borderRadius: 7,
+                background: '#fef2f2', color: '#dc2626', cursor: 'pointer',
+                fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap',
+              }}
+            >
+              ✕ {ar ? 'مسح الفلاتر' : 'Clear Filters'}
+            </button>
+          )}
+        </div>
+
+        {/* Active filter chips */}
+        {hasActiveFilters && (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+            {filterStatus && (
+              <span style={{ background: '#eff6ff', color: '#1e40af', padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
+                {ar ? 'الحالة: ' : 'Status: '}
+                {ar ? STATUS_CONFIG[filterStatus]?.labelAr : STATUS_CONFIG[filterStatus]?.labelEn}
+              </span>
+            )}
+            {filterDateFrom && (
+              <span style={{ background: '#f0fdf4', color: '#166534', padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
+                {ar ? 'من: ' : 'From: '}{filterDateFrom}
+              </span>
+            )}
+            {filterDateTo && (
+              <span style={{ background: '#f0fdf4', color: '#166534', padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
+                {ar ? 'إلى: ' : 'To: '}{filterDateTo}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Table */}
         {loading ? (
@@ -409,8 +689,13 @@ const validate = () => {
           <div style={{ textAlign: 'center', padding: 80, background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,.08)' }}>
             <div style={{ fontSize: 48 }}>📄</div>
             <div style={{ marginTop: 10, color: '#6b7280' }}>
-              {ar ? 'لا توجد عروض أسعار بعد' : 'No quotations yet'}
+              {ar ? 'لا توجد عروض أسعار' : 'No quotations found'}
             </div>
+            {hasActiveFilters && (
+              <button onClick={resetFilters} style={{ marginTop: 12, background: '#1a56db', color: '#fff', border: 'none', borderRadius: 7, padding: '8px 20px', cursor: 'pointer', fontWeight: 600 }}>
+                {ar ? 'مسح الفلاتر' : 'Clear Filters'}
+              </button>
+            )}
           </div>
         ) : (
           <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,.08)', overflow: 'hidden' }}>
@@ -418,66 +703,149 @@ const validate = () => {
               <thead>
                 <tr style={{ background: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
                   {[
-                    ar ? 'رقم العرض'      : 'Number',
-                    ar ? 'العميل'         : 'Customer',
-                    ar ? 'الإجمالي'       : 'Total',
-                    ar ? 'صالح حتى'       : 'Valid Until',
-                    ar ? 'التاريخ'        : 'Date',
-                    ar ? 'الحالة'         : 'Status',
-                    ar ? 'إجراءات'        : 'Actions',
+                    ar ? 'رقم العرض'  : 'Number',
+                    ar ? 'العميل'     : 'Customer',
+                    ar ? 'الإجمالي'   : 'Total',
+                    ar ? 'صالح حتى'   : 'Valid Until',
+                    ar ? 'التاريخ'    : 'Date',
+                    ar ? 'الحالة'     : 'Status',
+                    ar ? 'إجراءات'    : 'Actions',
                   ].map(h => (
                     <th key={h} style={{ padding: '12px 16px', textAlign: ar ? 'right' : 'left', fontWeight: 700, fontSize: 13, color: '#374151' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {quotations.map(q => (
-                  <tr key={q.id} style={{ borderBottom: '1px solid #f3f4f6' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#fafafa')}
-                    onMouseLeave={e => (e.currentTarget.style.background = '#fff')}
-                  >
-                    <td style={{ padding: '13px 16px', fontWeight: 700, color: '#1a56db' }}>{q.invoice_number}</td>
-                    <td style={{ padding: '13px 16px' }}>{q.customer?.name ?? (ar ? 'عميل نقدي' : 'Walk-in')}</td>
-                    <td style={{ padding: '13px 16px', fontWeight: 600 }}>{fmt(q.total)}</td>
-                    <td style={{ padding: '13px 16px', color: '#6b7280', fontSize: 13 }}>
-                      {q.valid_until ? new Date(q.valid_until).toLocaleDateString() : '—'}
-                    </td>
-                    <td style={{ padding: '13px 16px', color: '#6b7280', fontSize: 13 }}>
-                      {new Date(q.created_at).toLocaleDateString()}
-                    </td>
-                    <td style={{ padding: '13px 16px' }}>
-                      <span style={{
-                        background: q.status === 'quotation' ? '#eff6ff' : '#d1fae5',
-                        color:      q.status === 'quotation' ? '#1e40af' : '#065f46',
-                        padding: '3px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600,
-                      }}>
-                        {q.status === 'quotation' ? (ar ? 'عرض سعر' : 'Quotation') : (ar ? 'محوّل' : 'Converted')}
-                      </span>
-                    </td>
-                    <td style={{ padding: '13px 16px' }}>
-                      {q.status === 'quotation' ? (
-                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                          <button onClick={() => openEdit(q)} style={{
-                            background: '#f3f4f6', border: 'none', borderRadius: 6,
-                            padding: '6px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 600,
-                          }}>✏️ {ar ? 'تعديل' : 'Edit'}</button>
-                          <button onClick={() => handleConvert(q)} disabled={converting === q.id} style={{
-                            background: '#d1fae5', color: '#065f46', border: 'none',
-                            borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                {quotations.map(q => {
+                  const cfg = getStatusCfg(q.status, ar)
+                  return (
+                    <tr key={q.id} style={{ borderBottom: '1px solid #f3f4f6' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = '#fafafa')}
+                      onMouseLeave={e => (e.currentTarget.style.background = '#fff')}
+                    >
+                      {/* Number */}
+                      <td style={{ padding: '13px 16px', fontWeight: 700, color: '#1a56db', whiteSpace: 'nowrap' }}>
+                        {q.invoice_number}
+                      </td>
+
+                      {/* Customer — enhanced */}
+                      <td style={{ padding: '13px 16px', minWidth: 160 }}>
+                        {q.customer ? (
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: 14, color: '#111827' }}>
+                              👤 {q.customer.name}
+                            </div>
+                            {q.customer.phone && (
+                              <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>
+                                📞 {q.customer.phone}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div style={{ color: '#9ca3af', fontSize: 13, fontStyle: 'italic' }}>
+                            {ar ? '— عميل نقدي —' : '— Walk-in —'}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Total */}
+                      <td style={{ padding: '13px 16px', fontWeight: 700, fontSize: 15, color: '#111827', whiteSpace: 'nowrap' }}>
+                        {fmt(q.total)}
+                      </td>
+
+                      {/* Valid Until */}
+                      <td style={{ padding: '13px 16px', color: '#6b7280', fontSize: 13 }}>
+                        {q.valid_until ? (
+                          <span style={{
+                            color: new Date(q.valid_until) < new Date() ? '#dc2626' : '#6b7280',
+                            fontWeight: new Date(q.valid_until) < new Date() ? 600 : 400,
                           }}>
-                            {converting === q.id ? '⏳' : '🔄'} {ar ? 'تحويل' : 'Convert'}
+                            {new Date(q.valid_until).toLocaleDateString()}
+                            {new Date(q.valid_until) < new Date() && (ar ? ' ⚠️ منتهي' : ' ⚠️ Expired')}
+                          </span>
+                        ) : '—'}
+                      </td>
+
+                      {/* Date */}
+                      <td style={{ padding: '13px 16px', color: '#6b7280', fontSize: 13 }}>
+                        {new Date(q.created_at).toLocaleDateString()}
+                      </td>
+
+                      {/* Status badge */}
+                      <td style={{ padding: '13px 16px' }}>
+                        <span style={{
+                          background: cfg.bg, color: cfg.color,
+                          padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700,
+                          whiteSpace: 'nowrap',
+                        }}>
+                          {cfg.label}
+                        </span>
+                      </td>
+
+                      {/* Actions */}
+                      <td style={{ padding: '13px 16px' }}>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+
+                          {/* Print — always available */}
+                          <button
+                            onClick={() => printQuotation(q, ar)}
+                            title={ar ? 'طباعة' : 'Print'}
+                            style={{
+                              background: '#f3f4f6', border: 'none', borderRadius: 6,
+                              padding: '6px 11px', cursor: 'pointer', fontSize: 13,
+                            }}
+                          >
+                            🖨️
                           </button>
-                          <button onClick={() => handleDelete(q)} style={{
-                            background: '#fef2f2', color: '#dc2626', border: 'none',
-                            borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 600,
-                          }}>🗑️</button>
+
+                          {canEdit(q.status) && (
+                            <>
+                              <button onClick={() => openEdit(q)} style={{
+                                background: '#f3f4f6', border: 'none', borderRadius: 6,
+                                padding: '6px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                              }}>✏️ {ar ? 'تعديل' : 'Edit'}</button>
+
+                              <select
+                                value={q.status}
+                                onChange={e => handleChangeStatus(q.id, e.target.value)}
+                                style={{ fontSize: 12, borderRadius: 6, border: '1px solid #d1d5db', padding: '5px 8px', cursor: 'pointer' }}
+                              >
+                                <option value="quotation">{ar ? 'عرض سعر' : 'Quotation'}</option>
+                                <option value="sent">{ar ? 'تم الإرسال' : 'Sent'}</option>
+                                <option value="confirmed">{ar ? 'مؤكد' : 'Confirmed'}</option>
+                                <option value="cancelled">{ar ? 'ملغي' : 'Cancelled'}</option>
+                              </select>
+
+                              <button onClick={() => handleConvert(q)} disabled={converting === q.id} style={{
+                                background: '#d1fae5', color: '#065f46', border: 'none',
+                                borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                              }}>
+                                {converting === q.id ? '⏳' : '🔄'} {ar ? 'تحويل' : 'Convert'}
+                              </button>
+
+                              <button onClick={() => handleDelete(q)} style={{
+                                background: '#fef2f2', color: '#dc2626', border: 'none',
+                                borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                              }}>🗑️</button>
+                            </>
+                          )}
+
+                          {!canEdit(q.status) && q.status !== 'converted' && (
+                            <span style={{ color: '#9ca3af', fontSize: 12, padding: '6px 0' }}>
+                              {cfg.label}
+                            </span>
+                          )}
+
+                          {q.status === 'converted' && (
+                            <span style={{ color: '#9ca3af', fontSize: 12, padding: '6px 0' }}>
+                              {ar ? 'تم التحويل' : 'Converted'}
+                            </span>
+                          )}
                         </div>
-                      ) : (
-                        <span style={{ color: '#9ca3af', fontSize: 12 }}>{ar ? 'تم التحويل' : 'Converted'}</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -513,7 +881,7 @@ const validate = () => {
               <form onSubmit={handleSubmit}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
 
-                  {/* العميل */}
+                  {/* Customer */}
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                       <label style={{ fontWeight: 600, fontSize: 13 }}>{ar ? 'العميل' : 'Customer'}</label>
@@ -538,7 +906,7 @@ const validate = () => {
                     />
                   </div>
 
-                  {/* صالح حتى */}
+                  {/* Valid Until */}
                   <div>
                     <label style={{ display: 'block', fontWeight: 600, fontSize: 13, marginBottom: 6 }}>
                       {ar ? 'صالح حتى' : 'Valid Until'}
@@ -548,7 +916,7 @@ const validate = () => {
                   </div>
                 </div>
 
-                {/* Items */}
+                {/* Items — only on create */}
                 {!editing && (
                   <div style={{ marginBottom: 16 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
@@ -561,7 +929,6 @@ const validate = () => {
 
                     {errors.items && <p style={{ color: '#ef4444', fontSize: 12, margin: '0 0 8px' }}>{errors.items}</p>}
 
-                    {/* Header */}
                     <div style={{ display: 'grid', gridTemplateColumns: '2.5fr 80px 100px 90px auto', gap: 8, marginBottom: 4 }}>
                       {[ar ? 'المنتج' : 'Product', ar ? 'كمية' : 'Qty', ar ? 'سعر' : 'Price', ar ? 'خصم' : 'Discount', ''].map((h, i) => (
                         <div key={i} style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', padding: '0 2px' }}>{h}</div>
@@ -570,7 +937,6 @@ const validate = () => {
 
                     {lines.map((line, i) => (
                       <div key={i} style={{ display: 'grid', gridTemplateColumns: '2.5fr 80px 100px 90px auto', gap: 8, marginBottom: 8, alignItems: 'start' }}>
-                        {/* Product autocomplete */}
                         <div>
                           <Autocomplete
                             placeholder={ar ? 'ابحث عن منتج...' : 'Search product...'}

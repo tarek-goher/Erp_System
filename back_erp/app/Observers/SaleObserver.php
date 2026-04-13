@@ -20,7 +20,8 @@ class SaleObserver
 {
     public function updated(Sale $sale): void
     {
-        if ($sale->isDirty('status') && $sale->status === 'paid') {
+        if ($sale->isDirty('status') && in_array($sale->status, ['paid', 'completed'])) {
+
             $this->createSaleJournal($sale);
         }
 
@@ -31,12 +32,17 @@ class SaleObserver
 
     private function createSaleJournal(Sale $sale): void
     {
-        DB::transaction(function () use ($sale) {
+     $exists = JournalEntry::where('ref', 'AUTO-SALE-' . $sale->id)->exists();
+    if ($exists) return;
+
+    DB::transaction(function () use ($sale) {
             $cashAccount    = Account::where('company_id', $sale->company_id)->where('code', '1101')->first();
             $revenueAccount = Account::where('company_id', $sale->company_id)->where('code', '4001')->first();
             $taxAccount     = Account::where('company_id', $sale->company_id)->where('code', '2103')->first();
 
-            if (!$cashAccount || !$revenueAccount) return;
+            if (!$cashAccount || !$revenueAccount) {
+    throw new \Exception('Missing required accounts for company ' . $sale->company_id);
+}
 
             $entry = JournalEntry::create([
                 'company_id'     => $sale->company_id,
@@ -85,6 +91,8 @@ class SaleObserver
 
     private function reverseSaleJournal(Sale $sale): void
     {
+        $exists = JournalEntry::where('ref', 'REV-SALE-' . $sale->id)->exists();
+if ($exists) return;
         $original = JournalEntry::where('reference_type', Sale::class)
             ->where('reference_id', $sale->id)
             ->where('company_id', $sale->company_id)

@@ -40,11 +40,13 @@ class SaleController extends BaseController
         return $this->created(new SaleResource($sale));
     }
 
-    public function show(Sale $sale): JsonResponse
-    {
-        $this->authorize('view', $sale);
-        return $this->success(new SaleResource($sale->load('items.product', 'customer', 'user')));
-    }
+ public function show(Sale $sale): JsonResponse
+{
+    $this->authorize('view', $sale);
+    return $this->success(new SaleResource(
+        $sale->load('items.product', 'items.warehouse', 'customer', 'user') // ← ضيف items.warehouse
+    ));
+}
 
     /**
      * PUT /api/sales/{sale}
@@ -54,17 +56,17 @@ class SaleController extends BaseController
      * لو الفاتورة "completed" ومش في حالة pending/quotation، الحذف والتعديل
      * الجذري بيتعمل عن طريق delete + store من الـ frontend.
      */
-    public function update(UpdateSaleRequest $request, Sale $sale): JsonResponse
-    {
-        $this->authorize('update', $sale);
-
-        $updated = $this->saleService->updateSale($sale, $request->validated());
-
-        return $this->success(
-            new SaleResource($updated->load('items.product', 'customer', 'user')),
-            'تم تحديث الفاتورة.'
-        );
-    }
+public function update(UpdateSaleRequest $request, Sale $sale): JsonResponse
+{
+    $this->authorize('update', $sale);
+    $updated = $this->saleService->updateSale($sale, $request->validated());
+    return $this->success(
+        new SaleResource(
+            $updated->load('items.product', 'items.warehouse', 'customer', 'user') // ← ضيف items.warehouse
+        ),
+        'تم تحديث الفاتورة.'
+    );
+}
 
     public function destroy(Sale $sale): JsonResponse
     {
@@ -181,8 +183,8 @@ class SaleController extends BaseController
         foreach ($items as $item) {
             $itemsHtml .= '<tr>
                 <td style="padding:8px;border-bottom:1px solid #eee;">' . e($item->product?->name ?? 'منتج') . '</td>
-                <td style="padding:8px;border-bottom:1px solid #eee;text-align:center;">' . $item->qty . '</td>
-                <td style="padding:8px;border-bottom:1px solid #eee;text-align:right;">' . number_format($item->price, 2) . '</td>
+                <td style="padding:8px;border-bottom:1px solid #eee;text-align:center;">' . $item->quantity . '</td>
+                <td style="padding:8px;border-bottom:1px solid #eee;text-align:right;">' . number_format($item->unit_price, 2) . '</td>
                 <td style="padding:8px;border-bottom:1px solid #eee;text-align:right;">' . number_format($item->total, 2) . '</td>
             </tr>';
         }
