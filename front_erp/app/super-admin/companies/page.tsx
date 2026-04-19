@@ -1,9 +1,58 @@
 'use client'
-import { useState, useEffect, useRef, ChangeEvent } from 'react'
+import { useState, useEffect, useRef, ChangeEvent, ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { useAuth } from '../../../lib/auth'
 import { api, extractArray } from '../../../lib/api'
 import { useToast } from '../../../hooks/useToast'
-import { StatCard, Modal, SearchInput, Badge, EmptyState, ToastContainer, ConfirmDialog } from '../../../components/ui'
+import { StatCard, SearchInput, Badge, EmptyState, ToastContainer, ConfirmDialog } from '../../../components/ui'
+
+// Local modal to avoid z-index issues with the shared Modal component
+function InlineModal({ open, onClose, title, children, footer }: {
+  open: boolean; onClose: () => void; title: string; children: ReactNode; footer?: ReactNode
+}) {
+  useEffect(() => {
+    if (open) document.body.style.overflow = 'hidden'
+    else document.body.style.overflow = ''
+    return () => { document.body.style.overflow = '' }
+  }, [open])
+
+  if (!open) return null
+
+  const overlay: React.CSSProperties = {
+    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    zIndex: 99999, padding: '1rem',
+  }
+  const box: React.CSSProperties = {
+    background: 'var(--bg-card, #1e1e2e)', border: '1px solid var(--border, #333)',
+    borderRadius: 'var(--radius-lg, 12px)', width: '100%', maxWidth: 600,
+    maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
+  }
+  const header: React.CSSProperties = {
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    padding: '1.1rem 1.4rem', borderBottom: '1px solid var(--border, #333)',
+  }
+  const body: React.CSSProperties = { padding: '1.4rem', overflowY: 'auto', flex: 1 }
+  const foot: React.CSSProperties = {
+    padding: '1rem 1.4rem', borderTop: '1px solid var(--border, #333)',
+    display: 'flex', justifyContent: 'flex-end', gap: 8,
+  }
+
+  const modal = (
+    <div style={overlay} onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div style={box}>
+        <div style={header}>
+          <span style={{ fontWeight: 700, fontSize: '1rem' }}>{title}</span>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.3rem', color: 'var(--text-muted, #aaa)', lineHeight: 1 }}>×</button>
+        </div>
+        <div style={body}>{children}</div>
+        {footer && <div style={foot}>{footer}</div>}
+      </div>
+    </div>
+  )
+
+  return typeof window !== 'undefined' ? createPortal(modal, document.body) : null
+}
 
 const PLAN_COLORS: Record<string, string> = {
   starter: '#06B6D4', professional: '#7c3aed', enterprise: '#F59E0B',
@@ -21,7 +70,7 @@ type Company = {
   is_active: boolean; country: string; created_at: string; users_count?: number
 }
 
-const EMPTY_FORM = { company_name: '', name: '', email: '', phone: '', plan: 'starter', country: 'مصر', password: '' }
+const EMPTY_FORM = { company_name: '', name: '', email: '', phone: '', subscription_plan: 'starter', country: 'مصر', password: '' }
 
 export default function CompaniesPage() {
   const { token } = useAuth()
@@ -56,12 +105,22 @@ export default function CompaniesPage() {
     if (!form.company_name || !form.email || !form.name) {
       show('اسم الشركة، المسؤول، والإيميل مطلوبان', 'error'); return
     }
+    if (form.password && form.password.length < 8) {
+      show('كلمة المرور يجب أن تكون 8 أحرف على الأقل', 'error'); return
+    }
+    const pwd = (form.password && form.password.length >= 8) ? form.password : 'password123'
     setSaving(true)
-    const res = await api.post('/auth/register', {
-      ...form,
-      password: form.password || 'password123',
-      password_confirmation: form.password || 'password123',
-    })
+    const payload = {
+      company_name:          form.company_name,
+      name:                  form.name,
+      email:                 form.email,
+      phone:                 form.phone,
+      subscription_plan:     form.subscription_plan,
+      country:               form.country,
+      password:              pwd,
+      password_confirmation: pwd,
+    }
+    const res = await api.post('/auth/register', payload)
     setSaving(false)
     if (res.error) { show(res.error, 'error'); return }
     show(`تم إضافة الشركة ${form.company_name} والمدير ${form.name} ✅`)
@@ -203,7 +262,7 @@ export default function CompaniesPage() {
           </table>
         </div>
       )}
-      <Modal open={showAdd} onClose={() => setShowAdd(false)} title="إضافة شركة جديدة" size="md"
+      <InlineModal open={showAdd} onClose={() => setShowAdd(false)} title="إضافة شركة جديدة"
         footer={<><button className="btn btn-secondary" onClick={() => setShowAdd(false)}>إلغاء</button>
           <button className="btn btn-primary" onClick={handleAdd} disabled={saving}>{saving ? '⏳ جارٍ الحفظ...' : '✅ إضافة'}</button></>}>
         <div className="form-grid form-grid-2">
@@ -216,7 +275,7 @@ export default function CompaniesPage() {
           <div className="input-group"><label className="input-label">الهاتف</label>
             <input style={INP} value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} dir="ltr" /></div>
           <div className="input-group"><label className="input-label">الخطة</label>
-            <select style={INP} value={form.plan} onChange={e => setForm(p => ({ ...p, plan: e.target.value }))}>
+            <select style={INP} value={form.subscription_plan} onChange={e => setForm(p => ({ ...p, subscription_plan: e.target.value }))}>
               <option value="starter">STARTER</option><option value="professional">PROFESSIONAL</option><option value="enterprise">ENTERPRISE</option>
             </select></div>
           <div className="input-group"><label className="input-label">البلد</label>
@@ -226,8 +285,8 @@ export default function CompaniesPage() {
           <div className="input-group"><label className="input-label">باسورد المدير</label>
             <input style={INP} type="password" value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} placeholder="اتركه فارغاً → password123" dir="ltr" /></div>
         </div>
-      </Modal>
-      <Modal open={!!viewCompany} onClose={() => setViewCompany(null)} title={`تفاصيل: ${viewCompany?.name}`} size="md"
+      </InlineModal>
+      <InlineModal open={!!viewCompany} onClose={() => setViewCompany(null)} title={`تفاصيل: ${viewCompany?.name}`}
         footer={<button className="btn btn-secondary" onClick={() => setViewCompany(null)}>إغلاق</button>}>
         {viewCompany && (
           <div className="form-grid form-grid-2">
@@ -248,7 +307,7 @@ export default function CompaniesPage() {
             ))}
           </div>
         )}
-      </Modal>
+      </InlineModal>
       <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={handleDelete} title="حذف الشركة" message="هل أنت متأكد من حذف هذه الشركة؟" />
     </div>
   )
