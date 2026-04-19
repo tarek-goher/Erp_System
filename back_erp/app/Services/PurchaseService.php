@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Product;
+use App\Models\ProductLocation;
 use App\Models\Purchase;
 use App\Models\PurchaseItem;
 use App\Models\StockMovement;
@@ -68,7 +69,18 @@ class PurchaseService
                 if (($data['status'] ?? 'pending') === 'received') {
                     $product = Product::withoutGlobalScopes()->find($item['product_id']);
                     if ($product) {
-                        $qtyBefore = $product->qty;
+                        $qtyBefore   = $product->qty;
+                        $warehouseId = $item['warehouse_id'] ?? $product->warehouse_id ?? null;
+
+                        // إضافة لـ product_locations لو في مخزن محدد
+                        if ($warehouseId) {
+                            $location = ProductLocation::firstOrCreate(
+                                ['product_id' => $item['product_id'], 'warehouse_id' => $warehouseId, 'company_id' => $companyId],
+                                ['qty' => 0]
+                            );
+                            $location->increment('qty', $item['quantity']);
+                        }
+
                         $product->increment('qty', $item['quantity']);
 
                         if ($qtyBefore + $item['quantity'] > 0) {
@@ -80,6 +92,7 @@ class PurchaseService
                         StockMovement::create([
                             'company_id'     => $companyId,
                             'product_id'     => $item['product_id'],
+                            'warehouse_id'   => $warehouseId ?? null,
                             'user_id'        => auth()->id(),
                             'type'           => 'in',
                             'qty'            => $item['quantity'],
@@ -100,15 +113,28 @@ class PurchaseService
     {
         return DB::transaction(function () use ($purchase, $data) {
 
+            // ── rollback المخزون القديم لو كان received ──
             if ($purchase->status === 'received') {
                 foreach ($purchase->items as $item) {
                     $product = Product::withoutGlobalScopes()->find($item->product_id);
                     if ($product) {
-                        $qtyBefore = $product->qty;
+                        $qtyBefore   = $product->qty;
+                        $warehouseId = $item->warehouse_id ?? $product->warehouse_id ?? null;
+
+                        if ($warehouseId) {
+                            $location = ProductLocation::firstOrCreate(
+                                ['product_id' => $item->product_id, 'warehouse_id' => $warehouseId, 'company_id' => $purchase->company_id],
+                                ['qty' => 0]
+                            );
+                            $location->decrement('qty', $item->quantity);
+                        }
+
                         $product->decrement('qty', $item->quantity);
+
                         StockMovement::create([
                             'company_id'     => $purchase->company_id,
                             'product_id'     => $item->product_id,
+                            'warehouse_id'   => $warehouseId ?? null,
                             'user_id'        => auth()->id(),
                             'type'           => 'out',
                             'qty'            => $item->quantity,
@@ -132,27 +158,21 @@ class PurchaseService
             $tax   = $this->calcTax($subtotal, $data);
             $total = $subtotal + $tax;
 
-       $purchase->update([
-    'supplier_id' => $data['supplier_id'],
-    'subtotal'    => $subtotal,
-    'tax'         => $tax,
-    'total'       => $total,
-    'status'      => $data['status'] ?? $purchase->status,
-    'notes'       => $data['notes'] ?? null,
-    'expected_at' => $data['expected_at'] ?? null,
-]);
+            $purchase->update([
+                'supplier_id' => $data['supplier_id'],
+                'subtotal'    => $subtotal,
+                'tax'         => $tax,
+                'total'       => $total,
+                'status'      => $data['status'] ?? $purchase->status,
+                'notes'       => $data['notes'] ?? null,
+                'expected_at' => $data['expected_at'] ?? null,
+            ]);
 
-// ← أضف السطرين دول
-\Log::info('DEBUG', [
-    'purchase_id' => $purchase->id,
-    'in_db'       => \DB::table('purchases')->where('id', $purchase->id)->first(),
-]);
+            $purchase = Purchase::withoutGlobalScopes()->find($purchase->id);
 
-$purchase = Purchase::withoutGlobalScopes()->find($purchase->id);
-
-if (!$purchase) {
-    throw new \Exception('Purchase not found after update');
-}
+            if (!$purchase) {
+                throw new \Exception('Purchase not found after update');
+            }
 
             foreach ($data['items'] as $item) {
                 PurchaseItem::create([
@@ -166,7 +186,17 @@ if (!$purchase) {
                 if (($data['status'] ?? '') === 'received') {
                     $product = Product::withoutGlobalScopes()->find($item['product_id']);
                     if ($product) {
-                        $qtyBefore = $product->qty;
+                        $qtyBefore   = $product->qty;
+                        $warehouseId = $item['warehouse_id'] ?? $product->warehouse_id ?? null;
+
+                        if ($warehouseId) {
+                            $location = ProductLocation::firstOrCreate(
+                                ['product_id' => $item['product_id'], 'warehouse_id' => $warehouseId, 'company_id' => $purchase->company_id],
+                                ['qty' => 0]
+                            );
+                            $location->increment('qty', $item['quantity']);
+                        }
+
                         $product->increment('qty', $item['quantity']);
 
                         if ($qtyBefore + $item['quantity'] > 0) {
@@ -178,6 +208,7 @@ if (!$purchase) {
                         StockMovement::create([
                             'company_id'     => $purchase->company_id,
                             'product_id'     => $item['product_id'],
+                            'warehouse_id'   => $warehouseId ?? null,
                             'user_id'        => auth()->id(),
                             'type'           => 'in',
                             'qty'            => $item['quantity'],
@@ -201,11 +232,23 @@ if (!$purchase) {
                 foreach ($purchase->items as $item) {
                     $product = Product::withoutGlobalScopes()->find($item->product_id);
                     if ($product) {
-                        $qtyBefore = $product->qty;
+                        $qtyBefore   = $product->qty;
+                        $warehouseId = $item->warehouse_id ?? $product->warehouse_id ?? null;
+
+                        if ($warehouseId) {
+                            $location = ProductLocation::firstOrCreate(
+                                ['product_id' => $item->product_id, 'warehouse_id' => $warehouseId, 'company_id' => $purchase->company_id],
+                                ['qty' => 0]
+                            );
+                            $location->decrement('qty', $item->quantity);
+                        }
+
                         $product->decrement('qty', $item->quantity);
+
                         StockMovement::create([
                             'company_id'     => $purchase->company_id,
                             'product_id'     => $item->product_id,
+                            'warehouse_id'   => $warehouseId ?? null,
                             'user_id'        => auth()->id(),
                             'type'           => 'out',
                             'qty'            => $item->quantity,

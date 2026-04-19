@@ -69,7 +69,7 @@ Schema::create('payrolls', function (Blueprint $table) {
 Schema::create('accounts', function (Blueprint $table) {
     $table->id();
     $table->foreignId('company_id')->constrained()->cascadeOnDelete(); // أضف هذا
-    $table->string('code')->unique();
+    $table->string('code');
     $table->string('name');
     $table->string('name_en')->nullable();
     $table->enum('type', ['asset', 'liability', 'equity', 'revenue', 'expense']);
@@ -78,6 +78,8 @@ Schema::create('accounts', function (Blueprint $table) {
     $table->foreignId('parent_id')->nullable()->constrained('accounts')->nullOnDelete();
     $table->boolean('is_active')->default(true);
     $table->timestamps();
+
+    $table->unique(['company_id', 'code']);
 });
 
 Schema::create('journal_entries', function (Blueprint $table) {

@@ -167,9 +167,12 @@ Route::middleware(['auth:sanctum', 'company.active', 'throttle:120,1'])->group(f
     Route::apiResource('suppliers', SupplierController::class);
 
     // ── Inventory & Warehouses ───────────────────────────────
-    Route::apiResource('stock-movements', StockMovementController::class);
+    Route::post('stock-movements/transfer', [StockMovementController::class, 'transfer']);
+    Route::get('stock-transfers', [StockMovementController::class, 'transfers']);
+Route::apiResource('stock-movements', StockMovementController::class);
+      Route::post('warehouses/transfer',    [WarehouseController::class, 'transfer']);
     Route::apiResource('warehouses',      WarehouseController::class);
-    Route::post('warehouses/transfer',    [WarehouseController::class, 'transfer']);
+  
 
     // ── HR ───────────────────────────────────────────────────
     Route::apiResource('employees',     EmployeeController::class);

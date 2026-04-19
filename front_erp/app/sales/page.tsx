@@ -65,10 +65,11 @@ export default function SalesPage() {
   const [formLoading, setFormLoading] = useState(false)
   const [taxRates,    setTaxRates]    = useState<{id:number,name:string,rate:number}[]>([])
   const [products,    setProducts]    = useState<{id:number,name:string,price?:number,sell_price?:number}[]>([])
+  const [warehouses, setWarehouses] = useState<{id:number,name:string}[]>([])
 
   // أصناف الفاتورة
-  type SaleItem = { product_id: string; name: string; qty: number; unit_price: number }
-  const [saleItems, setSaleItems] = useState<SaleItem[]>([{ product_id: '', name: '', qty: 1, unit_price: 0 }])
+  type SaleItem = { product_id: string; name: string; qty: number; unit_price: number; warehouse_id: string }
+  const [saleItems, setSaleItems] = useState<SaleItem[]>([{ product_id: '', name: '', qty: 1, unit_price: 0, warehouse_id: '' }])
 
   // ─── إضافة عميل inline ───────────────────────────────
   const [showAddCustomer, setShowAddCustomer] = useState(false)
@@ -115,7 +116,11 @@ export default function SalesPage() {
     api.get<any>('/products?per_page=200').then(r => {
       if (r.data) setProducts(extractArray(r.data))
     })
+  api.get<any>('/warehouses').then(r => {
+      if (r.data) setWarehouses(r.data.data ?? r.data)
+    })
   }, [])
+
 
   // ══════════════════════════════════════════════════════
   // إضافة عميل جديد inline
@@ -142,7 +147,7 @@ export default function SalesPage() {
   }
 
   // ── أصناف الفاتورة helpers ────────────────────────────
-  const addSaleItem = () => setSaleItems(prev => [...prev, { product_id: '', name: '', qty: 1, unit_price: 0 }])
+ const addSaleItem = () => setSaleItems(prev => [...prev, { product_id: '', name: '', qty: 1, unit_price: 0, warehouse_id: '' }])
   const removeSaleItem = (idx: number) => setSaleItems(prev => prev.filter((_, i) => i !== idx))
   const updateSaleItem = (idx: number, field: string, val: any) => {
     setSaleItems(prev => {
@@ -179,7 +184,7 @@ export default function SalesPage() {
       notes:           form.notes,
       status:          form.status,
       payment_method:  form.payment_method || 'cash',
-      items:           validItems.map(i => ({ product_id: Number(i.product_id), qty: i.qty, unit_price: i.unit_price })),
+      items: validItems.map(i => ({ product_id: Number(i.product_id), qty: i.qty, unit_price: i.unit_price, warehouse_id: i.warehouse_id ? Number(i.warehouse_id) : undefined })),
       ...(form.tax_rate_id && { tax_rate_id: Number(form.tax_rate_id) }),
     })
     setFormLoading(false)
@@ -190,7 +195,7 @@ export default function SalesPage() {
     setModalOpen(false)
     setForm({ customer_id: '', notes: '', status: 'draft', tax_rate_id: '', payment_method: 'cash' })
     setShowAddCustomer(false)
-    setSaleItems([{ product_id: '', name: '', qty: 1, unit_price: 0 }])
+    setSaleItems([{ product_id: '', name: '', qty: 1, unit_price: 0, warehouse_id: '' }])
     fetchSales()
   }
 
@@ -482,10 +487,14 @@ export default function SalesPage() {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {saleItems.map((item, idx) => (
-                        <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 8, alignItems: 'center' }}>
+                        <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr auto', gap: 8, alignItems: 'center' }}>
                           <select className="input" value={item.product_id} onChange={e => updateSaleItem(idx, 'product_id', e.target.value)}>
                             <option value="">{lang === 'ar' ? 'اختر منتج' : 'Select Product'}</option>
                             {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          </select>
+                          <select className="input" value={item.warehouse_id} onChange={e => updateSaleItem(idx, 'warehouse_id', e.target.value)}>
+                            <option value="">{lang === 'ar' ? 'اختر مستودع' : 'Select Warehouse'}</option>
+                            {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
                           </select>
                           <input className="input" type="number" min="0.001" step="0.001" placeholder={lang === 'ar' ? 'الكمية' : 'Qty'} value={item.qty} onChange={e => updateSaleItem(idx, 'qty', Number(e.target.value))} />
                           <input className="input" type="number" min="0" step="0.01" placeholder={lang === 'ar' ? 'سعر البيع' : 'Unit Price'} value={item.unit_price} onChange={e => updateSaleItem(idx, 'unit_price', Number(e.target.value))} />

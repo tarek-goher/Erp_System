@@ -3,12 +3,23 @@ namespace App\Http\Controllers\API;
 use App\Models\Account;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 class AccountController extends BaseController
 {
     public function index(): JsonResponse { return $this->success(Account::paginate($this->perPage())); }
     public function store(Request $request): JsonResponse
     {
-        $data = $request->validate(['name'=>'required|string|max:200','code'=>'required|string|unique:accounts','type'=>'required|in:asset,liability,equity,revenue,expense','balance'=>'nullable|numeric','parent_id'=>'nullable|exists:accounts,id']);
+        $data = $request->validate([
+            'name' => 'required|string|max:200',
+            'code' => [
+                'required',
+                'string',
+                Rule::unique('accounts')->where(fn ($query) => $query->where('company_id', $this->companyId())),
+            ],
+            'type' => 'required|in:asset,liability,equity,revenue,expense',
+            'balance' => 'nullable|numeric',
+            'parent_id' => 'nullable|exists:accounts,id',
+        ]);
         return $this->created(Account::create($data));
     }
     public function show(Account $account): JsonResponse { return $this->success($account->load('children','journalEntries')); }
