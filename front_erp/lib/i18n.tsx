@@ -29,9 +29,11 @@ const translations: Record<string, Record<Lang, string>> = {
   // ─── قائمة التنقل ────────────────────────────────────
   dashboard:          { ar: 'لوحة التحكم',        en: 'Dashboard' },
   sales:              { ar: 'المبيعات',            en: 'Sales' },
+  returns:            { ar: 'المرتجعات',            en: 'Returns' },
   purchases:          { ar: 'المشتريات',           en: 'Purchases' },
   inventory:          { ar: 'المخزون',             en: 'Inventory' },
   accounting:         { ar: 'المحاسبة',            en: 'Accounting' },
+  general_ledger:     { ar: 'دفتر الأستاذ',       en: 'General Ledger' },
   hr:                 { ar: 'الموارد البشرية',     en: 'HR' },
   branches:           { ar: 'الفروع',               en: 'Branches' },
   crm:                { ar: 'إدارة العملاء',       en: 'CRM' },

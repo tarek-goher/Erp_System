@@ -12,13 +12,20 @@ class Supplier extends Model
     use HasFactory, SoftDeletes, BelongsToCompany;
 
     protected $fillable = [
-        'company_id', 'name', 'email', 'phone',
-        'address', 'tax_number', 'payment_terms',
-        'notes', 'is_active',
+        'company_id',
+        'name', 'code', 'type', 'status', 'rating',
+        'email', 'phone', 'country', 'city', 'street', 'address',
+        'contact_person', 'contact_phone',
+        'payment_method', 'payment_terms', 'bank_name', 'bank_account',
+        'tax_number', 'products_notes', 'notes', 'is_active',
     ];
 
-    protected $casts = ['is_active' => 'boolean'];
+    protected $casts = [
+        'is_active' => 'boolean',
+        'rating'    => 'integer',
+    ];
 
     public function purchases()        { return $this->hasMany(Purchase::class); }
     public function purchaseInvoices() { return $this->hasMany(PurchaseInvoice::class); }
+    public function ledger() { return $this->hasMany(SupplierLedger::class); }
 }

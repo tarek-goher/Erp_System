@@ -19,20 +19,26 @@ class PurchaseObserver
 
     private function createPurchaseJournal(Purchase $purchase): void
     {
+        // Duplicate guard — منع إنشاء JE مكررة
+        $exists = JournalEntry::where('ref', 'AUTO-PUR-' . $purchase->id)->exists();
+        if ($exists) return;
+
         DB::transaction(function () use ($purchase) {
             $inventoryAccount = Account::where('company_id', $purchase->company_id)->where('code', '1200')->first();
             $payableAccount   = Account::where('company_id', $purchase->company_id)->where('code', '2101')->first();
 
-            if (!$inventoryAccount || !$payableAccount) return;
+            if (!$inventoryAccount || !$payableAccount) {
+                throw new \Exception('Missing required accounts for company ' . $purchase->company_id);
+            }
 
             $entry = JournalEntry::create([
                 'company_id'     => $purchase->company_id,
                 'ref'            => 'AUTO-PUR-' . $purchase->id,
                 'date'           => now()->toDateString(),
-                'description'    => 'مشتريات - أمر ' . $purchase->ref,
+                'description'    => 'مشتريات - أمر ' . $purchase->po_number,
                 'type'           => 'auto',
                 'status'         => 'posted',
-                'user_id'        => auth()->id() ?? 1,
+                'user_id' => $purchase->user_id,
                 'reference_type' => Purchase::class,
                 'reference_id'   => $purchase->id,
             ]);

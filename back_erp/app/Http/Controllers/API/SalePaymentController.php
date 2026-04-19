@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API;
 
 use App\Models\Sale;
 use App\Models\SalePayment;
+use App\Models\JournalEntry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -86,19 +87,30 @@ class SalePaymentController extends BaseController
     }
 
     /** DELETE /api/sales/{sale}/payments/{payment} */
-    public function destroy(Sale $sale, SalePayment $payment): JsonResponse
-    {
-        abort_if($sale->company_id !== $this->companyId(), 403);
-        abort_if($payment->sale_id !== $sale->id, 404);
+public function destroy(Sale $sale, SalePayment $payment): JsonResponse
+{
+    abort_if($sale->company_id !== $this->companyId(), 403);
+    abort_if($payment->sale_id !== $sale->id, 404);
 
-        $payment->delete();
+    $wasCompleted = $sale->status === 'completed'; // ← سطر جديد
 
-        // أعد حساب الحالة
-        $totalPaid = SalePayment::where('sale_id', $sale->id)->sum('amount');
-        if ($totalPaid <= 0 && $sale->status !== 'cancelled') {
-            $sale->update(['status' => 'pending']);
-        }
+    $payment->delete();
 
-        return $this->success(null, 'تم حذف الدفعة.');
+    $totalPaid = SalePayment::where('sale_id', $sale->id)->sum('amount');
+
+    if ($totalPaid <= 0) {
+        $sale->update(['status' => 'pending']);
+    } elseif ($totalPaid < $sale->total && $sale->status === 'completed') {
+        $sale->update(['status' => 'pending']);
     }
+
+    // لو كانت completed → امسح الـ JE عشان يتعمل جديد لما تتدفع تاني
+    if ($wasCompleted && $sale->fresh()->status === 'pending') {
+        JournalEntry::where('ref', 'AUTO-SALE-' . $sale->id)
+            ->where('type', 'auto')
+            ->delete();
+    }
+
+    return $this->success(null, 'تم حذف الدفعة.');
+}
 }

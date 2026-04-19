@@ -20,19 +20,19 @@ class SaleController extends BaseController
     public function __construct(private SaleService $saleService) {}
 
     public function index(Request $request): JsonResponse
-    {
-        $sales = Sale::with('customer', 'user')
-            ->where('company_id', $this->companyId())
-            ->when($request->status,      fn($q) => $q->where('status', $request->status))
-            ->when($request->customer_id, fn($q) => $q->where('customer_id', $request->customer_id))
-            ->when($request->from,        fn($q) => $q->whereDate('created_at', '>=', $request->from))
-            ->when($request->to,          fn($q) => $q->whereDate('created_at', '<=', $request->to))
-            ->when($request->search,      fn($q) => $q->where('invoice_number', 'like', "%{$request->search}%"))
-            ->latest()
-            ->paginate($this->perPage());
+{
+    $sales = Sale::with('customer', 'user')
+        ->where('company_id', $this->companyId())
+        ->when($request->status,      fn($q) => $q->whereIn('status', explode(',', $request->status)))
+        ->when($request->customer_id, fn($q) => $q->where('customer_id', $request->customer_id))
+        ->when($request->from,        fn($q) => $q->whereDate('created_at', '>=', $request->from))
+        ->when($request->to,          fn($q) => $q->whereDate('created_at', '<=', $request->to))
+        ->when($request->search,      fn($q) => $q->where('invoice_number', 'like', "%{$request->search}%"))
+        ->latest()
+        ->paginate($this->perPage());
 
-        return $this->success(SaleResource::collection($sales)->response()->getData(true));
-    }
+    return $this->success(SaleResource::collection($sales)->response()->getData(true));
+}
 
     public function store(StoreSaleRequest $request): JsonResponse
     {
@@ -40,11 +40,13 @@ class SaleController extends BaseController
         return $this->created(new SaleResource($sale));
     }
 
-    public function show(Sale $sale): JsonResponse
-    {
-        $this->authorize('view', $sale);
-        return $this->success(new SaleResource($sale->load('items.product', 'customer', 'user')));
-    }
+ public function show(Sale $sale): JsonResponse
+{
+    $this->authorize('view', $sale);
+    return $this->success(new SaleResource(
+        $sale->load('items.product', 'items.warehouse', 'customer', 'user') // ← ضيف items.warehouse
+    ));
+}
 
     /**
      * PUT /api/sales/{sale}
@@ -54,17 +56,17 @@ class SaleController extends BaseController
      * لو الفاتورة "completed" ومش في حالة pending/quotation، الحذف والتعديل
      * الجذري بيتعمل عن طريق delete + store من الـ frontend.
      */
-    public function update(UpdateSaleRequest $request, Sale $sale): JsonResponse
-    {
-        $this->authorize('update', $sale);
-
-        $updated = $this->saleService->updateSale($sale, $request->validated());
-
-        return $this->success(
-            new SaleResource($updated->load('items.product', 'customer', 'user')),
-            'تم تحديث الفاتورة.'
-        );
-    }
+public function update(UpdateSaleRequest $request, Sale $sale): JsonResponse
+{
+    $this->authorize('update', $sale);
+    $updated = $this->saleService->updateSale($sale, $request->validated());
+    return $this->success(
+        new SaleResource(
+            $updated->load('items.product', 'items.warehouse', 'customer', 'user') // ← ضيف items.warehouse
+        ),
+        'تم تحديث الفاتورة.'
+    );
+}
 
     public function destroy(Sale $sale): JsonResponse
     {
@@ -181,8 +183,8 @@ class SaleController extends BaseController
         foreach ($items as $item) {
             $itemsHtml .= '<tr>
                 <td style="padding:8px;border-bottom:1px solid #eee;">' . e($item->product?->name ?? 'منتج') . '</td>
-                <td style="padding:8px;border-bottom:1px solid #eee;text-align:center;">' . $item->qty . '</td>
-                <td style="padding:8px;border-bottom:1px solid #eee;text-align:right;">' . number_format($item->price, 2) . '</td>
+                <td style="padding:8px;border-bottom:1px solid #eee;text-align:center;">' . $item->quantity . '</td>
+                <td style="padding:8px;border-bottom:1px solid #eee;text-align:right;">' . number_format($item->unit_price, 2) . '</td>
                 <td style="padding:8px;border-bottom:1px solid #eee;text-align:right;">' . number_format($item->total, 2) . '</td>
             </tr>';
         }

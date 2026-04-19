@@ -1,17 +1,8 @@
 'use client'
 
-// ══════════════════════════════════════════════════════════
-// app/payroll/page.tsx — صفحة الرواتب
-// API:
-//   GET  /api/payroll                  → قائمة الرواتب
-//   POST /api/payroll/generate         → توليد رواتب الشهر
-//   POST /api/payroll/{id}/pay         → تسجيل دفع راتب
-//   PUT  /api/payroll/{id}             → تعديل راتب
-// ══════════════════════════════════════════════════════════
-
-import { useState, useEffect, FormEvent } from 'react'
+import { useState, useEffect } from 'react'
 import ERPLayout from '../../components/layout/ERPLayout'
-import { api } from '../../lib/api'
+import { api, extractArray } from '../../lib/api'
 import { useI18n } from '../../lib/i18n'
 
 type PayrollItem = {
@@ -39,6 +30,8 @@ export default function PayrollPage() {
   const [loading,     setLoading]     = useState(true)
   const [generating,  setGenerating]  = useState(false)
   const [paying,      setPaying]      = useState<number | null>(null)
+  const [deleting,    setDeleting]    = useState<number | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<PayrollItem | null>(null)
   const [filterMonth, setFilterMonth] = useState(now.getMonth() + 1)
   const [filterYear,  setFilterYear]  = useState(now.getFullYear())
   const [filterStatus,setFilterStatus]= useState('')
@@ -51,6 +44,7 @@ export default function PayrollPage() {
     setTimeout(() => setToast(null), 4000)
   }
 
+  // ✅ تصحيح: استخدام extractArray بدلاً من التعامل اليدوي مع الـ response
   const fetchPayrolls = async () => {
     setLoading(true)
     const p = new URLSearchParams({
@@ -60,13 +54,14 @@ export default function PayrollPage() {
     })
     const res = await api.get(`/payroll?${p}`)
     if (res.data) {
-      const list: PayrollItem[] = res.data.data ?? res.data
-      setPayrolls(list)
-      setTotal(res.data.total ?? list.length)
+      // ✅ استخدام extractArray للتعامل الصحيح مع الـ pagination
+      const list: PayrollItem[] = extractArray(res.data)
+      setPayrolls(Array.isArray(list) ? list : [])
+      setTotal(list.length)
       setStats({
-        total_net:     list.reduce((s, p) => s + (p.net_salary ?? 0), 0),
-        paid_count:    list.filter(p => p.status === 'paid').length,
-        pending_count: list.filter(p => p.status === 'pending').length,
+        total_net:     list.reduce((s: number, p: PayrollItem) => s + (p.net_salary ?? 0), 0),
+        paid_count:    list.filter((p: PayrollItem) => p.status === 'paid').length,
+        pending_count: list.filter((p: PayrollItem) => p.status === 'pending').length,
       })
     }
     setLoading(false)
@@ -74,28 +69,21 @@ export default function PayrollPage() {
 
   useEffect(() => { fetchPayrolls() }, [filterMonth, filterYear, filterStatus])
 
-  // Generate Payroll
+  // ── Generate ─────────────────────────────────────────
   const handleGenerate = async () => {
     if (!confirm(
-      ar
-        ? `توليد رواتب شهر ${MONTHS_AR[filterMonth - 1]} ${filterYear}؟`
-        : `Generate payroll for ${MONTHS_EN[filterMonth - 1]} ${filterYear}?`
+      ar ? `توليد رواتب شهر ${MONTHS_AR[filterMonth - 1]} ${filterYear}؟`
+         : `Generate payroll for ${MONTHS_EN[filterMonth - 1]} ${filterYear}?`
     )) return
-
     setGenerating(true)
     const res = await api.post('/payroll/generate', { month: filterMonth, year: filterYear })
     setGenerating(false)
-
     if (res.error) { flash(res.error, false); return }
-    flash(
-      ar
-        ? `✅ تم توليد ${res.data?.count ?? ''} راتب بنجاح`
-        : `✅ Generated ${res.data?.count ?? ''} payroll records`
-    )
+    flash(ar ? `✅ تم توليد ${res.data?.count ?? ''} راتب بنجاح` : `✅ Generated ${res.data?.count ?? ''} payroll records`)
     fetchPayrolls()
   }
 
-  // Mark as Paid
+  // ── Mark as Paid ──────────────────────────────────────
   const handlePay = async (p: PayrollItem) => {
     if (!confirm(ar ? `تسجيل دفع راتب "${p.employee?.name}"؟` : `Mark "${p.employee?.name}" as paid?`)) return
     setPaying(p.id)
@@ -104,6 +92,23 @@ export default function PayrollPage() {
     if (res.error) { flash(res.error, false); return }
     flash(ar ? 'تم تسجيل الدفع ✓' : 'Marked as paid ✓')
     fetchPayrolls()
+  }
+
+  // ── Delete ────────────────────────────────────────────
+  const handleDelete = async () => {
+    if (!deleteConfirm) return
+    setDeleting(deleteConfirm.id)
+    const res = await api.delete(`/payroll/${deleteConfirm.id}`)
+    setDeleting(null)
+    setDeleteConfirm(null)
+    if (res.error) { flash(res.error, false); return }
+    flash(ar ? 'تم حذف سجل الراتب' : 'Payroll record deleted')
+    setPayrolls(prev => prev.filter(p => p.id !== deleteConfirm.id))
+    setStats(prev => ({
+      total_net: prev.total_net - (deleteConfirm.net_salary ?? 0),
+      paid_count: deleteConfirm.status === 'paid' ? prev.paid_count - 1 : prev.paid_count,
+      pending_count: deleteConfirm.status === 'pending' ? prev.pending_count - 1 : prev.pending_count,
+    }))
   }
 
   const fmt = (n: number) => new Intl.NumberFormat(ar ? 'ar-EG' : 'en-US').format(n ?? 0)
@@ -131,34 +136,23 @@ export default function PayrollPage() {
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700 }}>
-              {ar ? '💰 كشف الرواتب' : '💰 Payroll'}
-            </h1>
+            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700 }}>{ar ? '💰 كشف الرواتب' : '💰 Payroll'}</h1>
             <p style={{ margin: '4px 0 0', color: '#6b7280', fontSize: 14 }}>
-              {ar
-                ? `${MONTHS_AR[filterMonth - 1]} ${filterYear} — إجمالي ${total} موظف`
-                : `${MONTHS_EN[filterMonth - 1]} ${filterYear} — ${total} employees`}
+              {ar ? `${MONTHS_AR[filterMonth - 1]} ${filterYear} — إجمالي ${total} موظف`
+                  : `${MONTHS_EN[filterMonth - 1]} ${filterYear} — ${total} employees`}
             </p>
           </div>
-
-          <button
-            onClick={handleGenerate}
-            disabled={generating}
-            style={{
-              background: generating ? '#93c5fd' : '#1a56db', color: '#fff', border: 'none',
-              borderRadius: 8, padding: '11px 22px', cursor: generating ? 'not-allowed' : 'pointer',
-              fontWeight: 700, fontSize: 14,
-              display: 'flex', alignItems: 'center', gap: 8,
-            }}
-          >
+          <button onClick={handleGenerate} disabled={generating} style={{
+            background: generating ? '#93c5fd' : '#1a56db', color: '#fff', border: 'none',
+            borderRadius: 8, padding: '11px 22px', cursor: generating ? 'not-allowed' : 'pointer',
+            fontWeight: 700, fontSize: 14, display: 'flex', alignItems: 'center', gap: 8,
+          }}>
             {generating && <Spinner />}
-            {generating
-              ? (ar ? 'جاري التوليد...' : 'Generating...')
-              : (ar ? '⚡ توليد رواتب الشهر' : '⚡ Generate Payroll')}
+            {generating ? (ar ? 'جاري التوليد...' : 'Generating...') : (ar ? '⚡ توليد رواتب الشهر' : '⚡ Generate Payroll')}
           </button>
         </div>
 
-        {/* Stats Cards */}
+        {/* Stats */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14, marginBottom: 24 }}>
           {[
             { label: ar ? 'إجمالي الرواتب' : 'Total Net', value: fmt(stats.total_net) + ' ج.م', icon: '💵', color: '#1a56db' },
@@ -175,31 +169,16 @@ export default function PayrollPage() {
 
         {/* Filters */}
         <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
-          <select
-            value={filterMonth}
-            onChange={e => setFilterMonth(Number(e.target.value))}
-            style={{ padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}
-          >
-            {(ar ? MONTHS_AR : MONTHS_EN).map((m, i) => (
-              <option key={i} value={i + 1}>{m}</option>
-            ))}
+          <select value={filterMonth} onChange={e => setFilterMonth(Number(e.target.value))}
+            style={{ padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}>
+            {(ar ? MONTHS_AR : MONTHS_EN).map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
           </select>
-
-          <select
-            value={filterYear}
-            onChange={e => setFilterYear(Number(e.target.value))}
-            style={{ padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}
-          >
-            {[now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1].map(y => (
-              <option key={y} value={y}>{y}</option>
-            ))}
+          <select value={filterYear} onChange={e => setFilterYear(Number(e.target.value))}
+            style={{ padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}>
+            {[now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
-
-          <select
-            value={filterStatus}
-            onChange={e => setFilterStatus(e.target.value)}
-            style={{ padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}
-          >
+          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+            style={{ padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}>
             <option value="">{ar ? 'كل الحالات' : 'All statuses'}</option>
             <option value="pending">{ar ? 'معلق' : 'Pending'}</option>
             <option value="paid">{ar ? 'مدفوع' : 'Paid'}</option>
@@ -211,34 +190,30 @@ export default function PayrollPage() {
         {loading ? (
           <div style={{ textAlign: 'center', padding: 80 }}>
             <div style={{ fontSize: 36 }}>⏳</div>
-            <div style={{ marginTop: 12, color: '#6b7280', fontSize: 15 }}>
-              {ar ? 'جاري تحميل الرواتب...' : 'Loading payroll...'}
-            </div>
+            <div style={{ marginTop: 12, color: '#6b7280', fontSize: 15 }}>{ar ? 'جاري تحميل الرواتب...' : 'Loading payroll...'}</div>
           </div>
         ) : payrolls.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 80, background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,.08)' }}>
             <div style={{ fontSize: 48 }}>💼</div>
             <div style={{ marginTop: 12, color: '#6b7280', fontSize: 15 }}>
-              {ar
-                ? 'لا توجد رواتب لهذا الشهر — اضغط "توليد رواتب الشهر" للبدء'
-                : 'No payroll records — click "Generate Payroll" to start'}
+              {ar ? 'لا توجد رواتب لهذا الشهر — اضغط "توليد رواتب الشهر" للبدء' : 'No payroll records — click "Generate Payroll" to start'}
             </div>
           </div>
         ) : (
           <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,.08)', overflow: 'hidden' }}>
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 700 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 800 }}>
                 <thead>
                   <tr style={{ background: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
                     {[
-                      ar ? 'الموظف'        : 'Employee',
-                      ar ? 'القسم'         : 'Department',
-                      ar ? 'الراتب الأساسي': 'Basic',
-                      ar ? 'البدلات'       : 'Allowances',
-                      ar ? 'الخصومات'      : 'Deductions',
-                      ar ? 'الصافي'        : 'Net Salary',
-                      ar ? 'الحالة'        : 'Status',
-                      ar ? 'إجراء'         : 'Action',
+                      ar ? 'الموظف' : 'Employee',
+                      ar ? 'القسم' : 'Department',
+                      ar ? 'الراتب الأساسي' : 'Basic',
+                      ar ? 'البدلات' : 'Allowances',
+                      ar ? 'الخصومات' : 'Deductions',
+                      ar ? 'الصافي' : 'Net Salary',
+                      ar ? 'الحالة' : 'Status',
+                      ar ? 'إجراء' : 'Action',
                     ].map(h => (
                       <th key={h} style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, fontSize: 13, color: '#374151' }}>{h}</th>
                     ))}
@@ -249,45 +224,50 @@ export default function PayrollPage() {
                     const st = statusColor[p.status] ?? statusColor.pending
                     const isPaying = paying === p.id
                     return (
-                      <tr key={p.id} style={{ borderBottom: '1px solid #f3f4f6', transition: 'background .1s' }}>
-                        <td style={{ padding: '13px 16px', fontWeight: 600 }}>
-                          {p.employee?.name ?? '—'}
-                        </td>
-                        <td style={{ padding: '13px 16px', color: '#6b7280', fontSize: 13 }}>
-                          {p.employee?.department ?? '—'}
-                        </td>
+                      <tr key={p.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                        <td style={{ padding: '13px 16px', fontWeight: 600 }}>{p.employee?.name ?? '—'}</td>
+                        <td style={{ padding: '13px 16px', color: '#6b7280', fontSize: 13 }}>{p.employee?.department ?? '—'}</td>
                         <td style={{ padding: '13px 16px' }}>{fmt(p.basic_salary)}</td>
                         <td style={{ padding: '13px 16px', color: '#22c55e' }}>+{fmt(p.allowances)}</td>
                         <td style={{ padding: '13px 16px', color: '#ef4444' }}>-{fmt(p.deductions)}</td>
-                        <td style={{ padding: '13px 16px', fontWeight: 700, fontSize: 15, color: '#1a56db' }}>
-                          {fmt(p.net_salary)}
-                        </td>
+                        <td style={{ padding: '13px 16px', fontWeight: 700, fontSize: 15, color: '#1a56db' }}>{fmt(p.net_salary)}</td>
                         <td style={{ padding: '13px 16px' }}>
                           <span style={{ background: st.bg, color: st.color, padding: '3px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600 }}>
                             {st.label}
                           </span>
                         </td>
                         <td style={{ padding: '13px 16px' }}>
-                          {p.status === 'pending' && (
-                            <button
-                              onClick={() => handlePay(p)}
-                              disabled={isPaying}
-                              style={{
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            {/* ✅ زر الدفع */}
+                            {p.status === 'pending' && (
+                              <button onClick={() => handlePay(p)} disabled={isPaying} style={{
                                 background: isPaying ? '#93c5fd' : '#d1fae5', color: '#065f46',
-                                border: 'none', borderRadius: 7, padding: '6px 14px',
+                                border: 'none', borderRadius: 7, padding: '6px 12px',
                                 cursor: isPaying ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 12,
-                                display: 'flex', alignItems: 'center', gap: 6,
+                                display: 'flex', alignItems: 'center', gap: 4,
+                              }}>
+                                {isPaying && <Spinner small />}
+                                {isPaying ? '...' : (ar ? '💳 دفع' : '💳 Pay')}
+                              </button>
+                            )}
+                            {p.status === 'paid' && (
+                              <span style={{ color: '#6b7280', fontSize: 12 }}>
+                                {p.paid_at ? new Date(p.paid_at).toLocaleDateString() : '—'}
+                              </span>
+                            )}
+                            {/* ✅ زر الحذف */}
+                            <button
+                              onClick={() => setDeleteConfirm(p)}
+                              title={ar ? 'حذف' : 'Delete'}
+                              style={{
+                                background: '#fee2e2', color: '#991b1b',
+                                border: 'none', borderRadius: 7, padding: '6px 10px',
+                                cursor: 'pointer', fontWeight: 600, fontSize: 12,
                               }}
                             >
-                              {isPaying && <Spinner small />}
-                              {isPaying ? '...' : (ar ? '💳 دفع' : '💳 Pay')}
+                              🗑
                             </button>
-                          )}
-                          {p.status === 'paid' && (
-                            <span style={{ color: '#6b7280', fontSize: 12 }}>
-                              {p.paid_at ? new Date(p.paid_at).toLocaleDateString() : '—'}
-                            </span>
-                          )}
+                          </div>
                         </td>
                       </tr>
                     )
@@ -308,6 +288,51 @@ export default function PayrollPage() {
             </div>
           </div>
         )}
+
+        {/* ✅ Modal تأكيد الحذف */}
+        {deleteConfirm && (
+          <div style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+          }} onClick={() => setDeleteConfirm(null)}>
+            <div style={{
+              background: '#fff', borderRadius: 12, padding: '2rem', maxWidth: 400, width: '90%',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)', textAlign: 'center',
+            }} onClick={e => e.stopPropagation()}>
+              <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🗑️</div>
+              <h3 style={{ marginBottom: '0.5rem', fontSize: 18 }}>
+                {ar ? 'تأكيد الحذف' : 'Confirm Delete'}
+              </h3>
+              <p style={{ color: '#6b7280', fontSize: 14, marginBottom: '0.5rem' }}>
+                {ar
+                  ? `هل تريد حذف راتب "${deleteConfirm.employee?.name}" لشهر ${MONTHS_AR[deleteConfirm.month - 1]} ${deleteConfirm.year}؟`
+                  : `Delete payroll for "${deleteConfirm.employee?.name}" — ${MONTHS_EN[deleteConfirm.month - 1]} ${deleteConfirm.year}?`}
+              </p>
+              {deleteConfirm.status === 'paid' && (
+                <p style={{ color: '#ef4444', fontSize: 13, fontWeight: 600, marginBottom: '0.5rem' }}>
+                  ⚠️ {ar ? 'هذا الراتب تم دفعه مسبقاً!' : 'This payroll has already been paid!'}
+                </p>
+              )}
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: '1.5rem' }}>
+                <button onClick={() => setDeleteConfirm(null)} style={{
+                  padding: '10px 24px', borderRadius: 8, border: '1px solid #d1d5db',
+                  background: '#fff', cursor: 'pointer', fontWeight: 600,
+                }}>
+                  {ar ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button onClick={handleDelete} disabled={deleting !== null} style={{
+                  padding: '10px 24px', borderRadius: 8, border: 'none',
+                  background: '#ef4444', color: '#fff', cursor: 'pointer', fontWeight: 700,
+                  display: 'flex', alignItems: 'center', gap: 6,
+                }}>
+                  {deleting !== null && <Spinner small />}
+                  {ar ? 'حذف' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </ERPLayout>
   )

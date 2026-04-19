@@ -1,27 +1,50 @@
 <?php
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
-        Schema::create('appraisals', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('employee_id')->constrained()->cascadeOnDelete();
-            $table->string('period');
-            $table->float('score')->default(0);
-            $table->enum('rating', ['excellent','good','average','poor'])->default('average');
-            $table->string('reviewer')->nullable();
-            $table->text('notes')->nullable();
-            $table->softDeletes();
-            $table->timestamps();
+        Schema::table('appraisals', function (Blueprint $table) {
+            // إذا كانت الأعمدة موجودة، ما تضيفها
+            if (!Schema::hasColumn('appraisals', 'template_id')) {
+                $table->foreignId('template_id')->nullable()->constrained('appraisal_templates')->cascadeOnDelete();
+            }
+            if (!Schema::hasColumn('appraisals', 'criteria_scores')) {
+                $table->json('criteria_scores')->nullable();
+            }
+            if (!Schema::hasColumn('appraisals', 'linked_promotion')) {
+                $table->boolean('linked_promotion')->default(false);
+            }
+            if (!Schema::hasColumn('appraisals', 'linked_raise')) {
+                $table->decimal('linked_raise', 5, 2)->nullable();
+            }
+            if (!Schema::hasColumn('appraisals', 'approval_chain')) {
+                $table->json('approval_chain')->nullable();
+            }
         });
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
-        Schema::dropIfExists('appraisals');
+        Schema::table('appraisals', function (Blueprint $table) {
+            $table->dropForeignIdFor('appraisal_templates', 'template_id');
+            $table->dropColumn([
+                'template_id',
+                'criteria_scores',
+                'linked_promotion',
+                'linked_raise',
+                'approval_chain'
+            ]);
+        });
     }
 };

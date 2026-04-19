@@ -6,6 +6,7 @@ use App\Models\ProductLocation;
 use App\Models\StockMovement;
 use App\Models\StockTransfer;
 use App\Models\Product;
+use App\Models\Warehouse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +16,7 @@ class StockMovementController extends BaseController
     public function index(Request $request): JsonResponse
     {
         $movements = StockMovement::with('product', 'warehouse', 'user')
+            ->where('company_id', $this->companyId()) // ✅ company_id filter
             ->when($request->product_id,   fn($q) => $q->where('product_id',   $request->product_id))
             ->when($request->warehouse_id, fn($q) => $q->where('warehouse_id', $request->warehouse_id))
             ->when($request->type,         fn($q) => $q->where('type',         $request->type))
@@ -61,50 +63,91 @@ class StockMovementController extends BaseController
             'notes'             => 'nullable|string',
         ]);
 
-        DB::beginTransaction();
-        try {
-            $companyId = $this->companyId();
-            $product   = Product::findOrFail($data['product_id']);
-            $before    = $product->qty ?? 0;
+        $companyId = $this->companyId();
 
-            // ── التحقق من الرصيد الكلي ──
-            if ($before < $data['qty']) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'المخزون غير كافٍ — المتاح: ' . $before . '، المطلوب: ' . $data['qty'],
-                ], 422);
+        // ✅ FIX A: تحقق إن المخزنين بتاعين نفس الشركة — كان ناقص خالص
+        $fromWarehouse = Warehouse::where('id', $data['from_warehouse_id'])
+            ->where('company_id', $companyId)
+            ->first();
+
+        $toWarehouse = Warehouse::where('id', $data['to_warehouse_id'])
+            ->where('company_id', $companyId)
+            ->first();
+
+        if (!$fromWarehouse || !$toWarehouse) {
+            return $this->error('المخزن غير موجود أو لا تملك صلاحية الوصول إليه.', 403);
+        }
+
+        // ✅ FIX B: تحقق إن المنتج بتاع نفس الشركة
+        $product = Product::where('id', $data['product_id'])
+            ->where('company_id', $companyId)
+            ->first();
+
+        if (!$product) {
+            return $this->error('المنتج غير موجود.', 404);
+        }
+
+        return DB::transaction(function () use ($data, $companyId, $product, $fromWarehouse, $toWarehouse) {
+
+            // ── رصيد المخزن المصدر ──────────────────────────
+            // ✅ lockForUpdate: يمنع race conditions — لو جاء طلبين في نفس الوقت
+            // التاني هينتظر لحد ما الأول يخلص ويعمل commit
+            $fromLocation = ProductLocation::where([
+                    'product_id'   => $data['product_id'],
+                    'warehouse_id' => $data['from_warehouse_id'],
+                    'company_id'   => $companyId,
+                ])
+                ->lockForUpdate()
+                ->first();
+
+            if (!$fromLocation) {
+                $fromLocation = ProductLocation::create([
+                    'product_id'   => $data['product_id'],
+                    'warehouse_id' => $data['from_warehouse_id'],
+                    'company_id'   => $companyId,
+                    'qty'          => 0,
+                ]);
             }
 
-            // ── التحقق من رصيد المخزن المصدر ──
-            $fromLocation = ProductLocation::firstOrCreate(
-                ['product_id' => $data['product_id'], 'warehouse_id' => $data['from_warehouse_id'], 'company_id' => $companyId],
-                ['qty' => 0]
-            );
+            // ✅ FIX C: تحقق من رصيد المخزن المصدر بشكل صحيح
+            if ($fromLocation->qty < $data['qty']) {
+                return $this->error(
+                    "رصيد مخزن '{$fromWarehouse->name}' غير كافٍ — المتاح: {$fromLocation->qty}، المطلوب: {$data['qty']}",
+                    422
+                );
+            }
 
-       if ($fromLocation->qty < $data['qty']) {
-    if ($before < $data['qty']) {
-        return response()->json([
-            'success' => false,
-            'message' => 'المخزون غير كافٍ — المتاح: ' . $before . '، المطلوب: ' . $data['qty'],
-        ], 422);
-    }
-    $fromLocation->update(['qty' => $before]);
-}
-
-            // ── حفظ الأرصدة قبل التعديل ──
             $fromQtyBefore = (float) $fromLocation->qty;
 
-            $toLocation = ProductLocation::firstOrCreate(
-                ['product_id' => $data['product_id'], 'warehouse_id' => $data['to_warehouse_id'], 'company_id' => $companyId],
-                ['qty' => 0]
-            );
+            // ── رصيد المخزن الهدف ───────────────────────────
+            // ✅ lockForUpdate هنا كمان لمنع race condition على المخزن الهدف
+            $toLocation = ProductLocation::where([
+                    'product_id'   => $data['product_id'],
+                    'warehouse_id' => $data['to_warehouse_id'],
+                    'company_id'   => $companyId,
+                ])
+                ->lockForUpdate()
+                ->first();
+
+            if (!$toLocation) {
+                $toLocation = ProductLocation::create([
+                    'product_id'   => $data['product_id'],
+                    'warehouse_id' => $data['to_warehouse_id'],
+                    'company_id'   => $companyId,
+                    'qty'          => 0,
+                ]);
+            }
+
             $toQtyBefore = (float) $toLocation->qty;
 
-            // ── تحديث product_locations ──
+            // ── تحديث الأرصدة ───────────────────────────────
             $fromLocation->decrement('qty', $data['qty']);
-            $toLocation->increment('qty', $data['qty']);
+            $toLocation->increment('qty',   $data['qty']);
 
-            // ── سجل في StockTransfer ──
+            // ── مجموع qty الكلي مش بيتغير (نقل مش إضافة) ──
+            // لذلك مش محتاجين نحدث product->qty
+
+            // ── تسجيل في StockTransfer ──────────────────────
             $ref = 'TRF-' . strtoupper(uniqid());
             StockTransfer::create([
                 'company_id'        => $companyId,
@@ -118,7 +161,7 @@ class StockMovementController extends BaseController
                 'notes'             => $data['notes'] ?? null,
             ]);
 
-            // ── سجل حركتين للـ audit بأرصدة المخازن الصحيحة ──
+            // ── تسجيل حركتين للـ audit ──────────────────────
             StockMovement::create([
                 'company_id'   => $companyId,
                 'user_id'      => auth()->id(),
@@ -128,7 +171,7 @@ class StockMovementController extends BaseController
                 'qty'          => $data['qty'],
                 'qty_before'   => $fromQtyBefore,
                 'qty_after'    => $fromQtyBefore - $data['qty'],
-                'notes'        => $data['notes'] ?? null,
+                'notes'        => "نقل إلى: {$toWarehouse->name}" . ($data['notes'] ? " — {$data['notes']}" : ''),
             ]);
 
             StockMovement::create([
@@ -140,24 +183,23 @@ class StockMovementController extends BaseController
                 'qty'          => $data['qty'],
                 'qty_before'   => $toQtyBefore,
                 'qty_after'    => $toQtyBefore + $data['qty'],
-                'notes'        => $data['notes'] ?? null,
+                'notes'        => "نقل من: {$fromWarehouse->name}" . ($data['notes'] ? " — {$data['notes']}" : ''),
             ]);
 
-            DB::commit();
-            return $this->success(['ref' => $ref], 'تم التحويل بنجاح');
-
-        } catch (\Throwable $e) {
-            DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'خطأ: ' . $e->getMessage(),
-            ], 500);
-        }
+            return $this->success([
+                'ref'  => $ref,
+                'from' => $fromWarehouse->name,
+                'to'   => $toWarehouse->name,
+                'qty'  => $data['qty'],
+            ], 'تم التحويل بنجاح');
+        });
     }
 
     private function applyMovement(array $data, bool $returnResponse = true): JsonResponse|array
     {
-        $product = Product::findOrFail($data['product_id']);
+        // ✅ FIX 1: company scope — بدل findOrFail العادي
+        $product = Product::where('company_id', $this->companyId())
+            ->findOrFail($data['product_id']);
         $before  = $product->qty ?? 0;
 
         if ($data['type'] === 'adjustment') {
@@ -179,17 +221,31 @@ class StockMovementController extends BaseController
             }
         }
 
-        // ── تحديث product_locations لو في مخزن ──
         $locBefore = $before;
         $locAfter  = $after;
 
         if (!empty($data['warehouse_id'])) {
+            // ✅ FIX 2: تحقق إن المخزن بتاع نفس الشركة — زي ما بنعمل في transfer()
+            $warehouseExists = \App\Models\Warehouse::where('id', $data['warehouse_id'])
+                ->where('company_id', $this->companyId())
+                ->exists();
+
+            if (!$warehouseExists) {
+                if ($returnResponse) {
+                    return response()->json(['success' => false, 'message' => 'المخزن غير موجود أو لا تملك صلاحية الوصول إليه.'], 403);
+                }
+                return ['error' => true, 'message' => 'المخزن غير موجود.', 'movement' => null];
+            }
+
             $location = ProductLocation::firstOrCreate(
-                ['product_id' => $data['product_id'], 'warehouse_id' => $data['warehouse_id'], 'company_id' => $this->companyId()],
+                [
+                    'product_id'   => $data['product_id'],
+                    'warehouse_id' => $data['warehouse_id'],
+                    'company_id'   => $this->companyId(),
+                ],
                 ['qty' => 0]
             );
 
-            // ── حفظ الرصيد قبل التعديل ──
             $locBefore = (float) $location->qty;
 
             if ($data['type'] === 'adjustment') {
@@ -203,7 +259,6 @@ class StockMovementController extends BaseController
                 $locAfter = $locBefore - $data['qty'];
             }
 
-            // ── تحديث qty الكلي من مجموع الـ locations ──
             $totalQty = ProductLocation::where('product_id', $data['product_id'])
                 ->where('company_id', $this->companyId())
                 ->sum('qty');

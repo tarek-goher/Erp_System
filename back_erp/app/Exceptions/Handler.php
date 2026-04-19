@@ -30,12 +30,8 @@ class Handler extends ExceptionHandler
         });
     }
 
-    /**
-     * تحويل كل الأخطاء لـ JSON responses منظمة
-     */
     public function render($request, Throwable $e): JsonResponse|\Illuminate\Http\Response|\Symfony\Component\HttpFoundation\Response
     {
-        // لو الـ request بيتوقع JSON (API calls)
         if ($request->expectsJson() || $request->is('api/*')) {
             return $this->renderJsonException($e);
         }
@@ -84,6 +80,15 @@ class Handler extends ExceptionHandler
                 'success' => false,
                 'message' => $e->getMessage() ?: 'خطأ في الطلب.',
             ], $e->getStatusCode());
+        }
+
+        // ── Insufficient Stock ────────────────────────
+        if ($e instanceof \App\Exceptions\InsufficientStockException) {
+            return response()->json([
+                'success' => false,
+                'error'   => $e->getMessage(),
+                'type'    => 'insufficient_stock',
+            ], 422);
         }
 
         // ── Generic Server Error ──────────────────────

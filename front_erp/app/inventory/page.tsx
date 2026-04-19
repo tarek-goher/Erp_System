@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import ERPLayout from '../../components/layout/ERPLayout'
 import { api, extractArray } from '../../lib/api'
 import { useI18n } from '../../lib/i18n'
+import WhereIsProduct from './product/page'   // ← الـ component الجديد
 
 // ── Types ─────────────────────────────────────────────────
 type Product = {
@@ -13,7 +14,7 @@ type Product = {
   sku: string
   barcode?: string
   qty: number
-   locations?: { warehouse_id: number; qty: number }[]
+  locations?: { warehouse_id: number; qty: number }[]
   min_qty?: number
   price: number
   cost?: number
@@ -43,32 +44,32 @@ type StockMovement = {
   user?: { name: string }
 }
 
-type Tab = 'products' | 'movements'
+type Tab        = 'products' | 'movements' | 'where'
 type ActionType = 'in' | 'out' | 'adjustment' | 'transfer'
 
 const generateSku = () => 'SKU-' + Date.now().toString(36).toUpperCase()
 
 // ── Badge helpers ─────────────────────────────────────────
 const stockBadge = (q: number, min = 0) => {
-  if (q <= 0)            return 'badge-danger'
-  if (min && q <= min)   return 'badge-warning'
+  if (q <= 0)          return 'badge-danger'
+  if (min && q <= min) return 'badge-warning'
   return 'badge-success'
 }
 
 const movementColor: Record<string, string> = {
-  in:            '#16a34a',
-  transfer_in:   '#0284c7',
-  out:           '#dc2626',
-  transfer_out:  '#ea580c',
-  adjustment:    '#7c3aed',
+  in:           '#16a34a',
+  transfer_in:  '#0284c7',
+  out:          '#dc2626',
+  transfer_out: '#ea580c',
+  adjustment:   '#7c3aed',
 }
 
 const movementIcon: Record<string, string> = {
-  in:            '⬆️',
-  transfer_in:   '↩️',
-  out:           '⬇️',
-  transfer_out:  '↪️',
-  adjustment:    '⚙️',
+  in:           '⬆️',
+  transfer_in:  '↩️',
+  out:          '⬇️',
+  transfer_out: '↪️',
+  adjustment:   '⚙️',
 }
 
 // ══════════════════════════════════════════════════════════
@@ -76,14 +77,14 @@ export default function InventoryPage() {
   const { t, lang } = useI18n()
   const ar = lang === 'ar'
 
-  const [isMounted,   setIsMounted]   = useState(false)
-  const [activeTab,   setActiveTab]   = useState<Tab>('products')
+  const [isMounted,  setIsMounted]  = useState(false)
+  const [activeTab,  setActiveTab]  = useState<Tab>('products')
 
   // ── Products state ────────────────────────────────────
-  const [items,       setItems]       = useState<Product[]>([])
-  const [categories,  setCategories]  = useState<Category[]>([])
-  const [warehouses,  setWarehouses]  = useState<Warehouse[]>([])
-  const [loading,     setLoading]     = useState(true)
+  const [items,      setItems]      = useState<Product[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([])
+  const [loading,    setLoading]    = useState(true)
 
   // ── Filters ───────────────────────────────────────────
   const [search,          setSearch]          = useState('')
@@ -117,10 +118,10 @@ export default function InventoryPage() {
   })
 
   // ── Action form ───────────────────────────────────────
-  const [actionQty,         setActionQty]         = useState('')
-  const [actionNote,        setActionNote]         = useState('')
-  const [actionWarehouse,   setActionWarehouse]    = useState('')
-  const [actionWarehouseTo, setActionWarehouseTo]  = useState('')
+  const [actionQty,         setActionQty]        = useState('')
+  const [actionNote,        setActionNote]        = useState('')
+  const [actionWarehouse,   setActionWarehouse]   = useState('')
+  const [actionWarehouseTo, setActionWarehouseTo] = useState('')
 
   // ── Category inline add ───────────────────────────────
   const [showNewCat, setShowNewCat] = useState(false)
@@ -156,7 +157,7 @@ export default function InventoryPage() {
   }, [movFilterType, movFilterProd])
 
   useEffect(() => { setIsMounted(true) }, [])
-  useEffect(() => { fetchItems() },     [fetchItems])
+  useEffect(() => { fetchItems() }, [fetchItems])
   useEffect(() => {
     if (activeTab === 'movements') fetchMovements()
   }, [activeTab, fetchMovements])
@@ -179,7 +180,7 @@ export default function InventoryPage() {
     is_active: true,
   })
 
-  // ── Add product ────────────────────────────────────────
+  // ── Add product ───────────────────────────────────────
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setFormErr('')
@@ -192,7 +193,6 @@ export default function InventoryPage() {
       setFormErr(ar ? 'سعر البيع مطلوب' : 'Selling price is required')
       return
     }
-    // ── FIX: منع سعر البيع أقل من سعر الشراء ──────────
     if (form.purchase_price && Number(form.price) < Number(form.purchase_price)) {
       setFormErr(ar
         ? `⚠️ سعر البيع (${form.price}) أقل من سعر الشراء (${form.purchase_price}) — يرجى المراجعة`
@@ -205,7 +205,6 @@ export default function InventoryPage() {
     }
 
     setSaving(true)
-
     const payload: Record<string, any> = {
       name:        form.name.trim(),
       sku:         form.sku.trim() || generateSku(),
@@ -213,55 +212,39 @@ export default function InventoryPage() {
       price:       Number(form.price),
       is_active:   form.is_active,
     }
-
-    if (form.barcode.trim())      payload.barcode      = form.barcode.trim()
-    if (form.purchase_price)      payload.cost         = Number(form.purchase_price)
-    if (form.unit)                payload.unit         = form.unit
-    if (form.description.trim())  payload.description  = form.description.trim()
-    if (form.qty)                 payload.qty          = Number(form.qty)
-    if (form.min_qty)             payload.min_qty      = Number(form.min_qty)
-    if (form.warehouse_id)        payload.warehouse_id = Number(form.warehouse_id)
+    if (form.barcode.trim())     payload.barcode      = form.barcode.trim()
+    if (form.purchase_price)     payload.cost         = Number(form.purchase_price)
+    if (form.unit)               payload.unit         = form.unit
+    if (form.description.trim()) payload.description  = form.description.trim()
+    if (form.qty)                payload.qty          = Number(form.qty)
+    if (form.min_qty)            payload.min_qty      = Number(form.min_qty)
+    if (form.warehouse_id)       payload.warehouse_id = Number(form.warehouse_id)
 
     const res = await api.post('/products', payload)
     setSaving(false)
-
-    if (res.error) {
-      setFormErr(res.error)
-      return
-    }
-
-    setModal(false)
-    resetForm()
-    fetchItems()
+    if (res.error) { setFormErr(res.error); return }
+    setModal(false); resetForm(); fetchItems()
   }
 
-  // ── Stock action ────────────────────────────────────────
+  // ── Stock action ──────────────────────────────────────
   const handleAction = async (e: FormEvent) => {
     e.preventDefault()
     if (!actionModal || !actionQty) return
-
-    // Adjustment: warehouse اختياري
     if (actionModal.type !== 'adjustment' && !actionWarehouse) return
-    // Transfer: لازم المخزنين
     if (actionModal.type === 'transfer' && (!actionWarehouse || !actionWarehouseTo)) return
 
     setSaving(true)
-
     try {
-     if (actionModal.type === 'transfer') {
-    const res = await api.post('/stock-movements/transfer', {
-        product_id:        actionModal.product.id,
-        from_warehouse_id: Number(actionWarehouse),
-        to_warehouse_id:   Number(actionWarehouseTo),
-        qty:               Number(actionQty),
-        notes:             actionNote || undefined,
-    })
-    if (res.error) {
-        alert(ar ? `خطأ: ${res.error}` : `Error: ${res.error}`)
-        setSaving(false)
-        return
-    }
-}else {
+      if (actionModal.type === 'transfer') {
+        const res = await api.post('/stock-movements/transfer', {
+          product_id:        actionModal.product.id,
+          from_warehouse_id: Number(actionWarehouse),
+          to_warehouse_id:   Number(actionWarehouseTo),
+          qty:               Number(actionQty),
+          notes:             actionNote || undefined,
+        })
+        if (res.error) { alert(ar ? `خطأ: ${res.error}` : `Error: ${res.error}`); setSaving(false); return }
+      } else {
         const payload: Record<string, any> = {
           product_id: actionModal.product.id,
           type:       actionModal.type,
@@ -269,26 +252,17 @@ export default function InventoryPage() {
         }
         if (actionWarehouse) payload.warehouse_id = Number(actionWarehouse)
         if (actionNote)      payload.notes        = actionNote
-
         const res = await api.post('/stock-movements', payload)
-        if (res.error) {
-          alert(ar ? `خطأ: ${res.error}` : `Error: ${res.error}`)
-          setSaving(false)
-          return
-        }
+        if (res.error) { alert(ar ? `خطأ: ${res.error}` : `Error: ${res.error}`); setSaving(false); return }
       }
-    } catch (err) {
+    } catch {
       alert(ar ? 'حدث خطأ غير متوقع' : 'Unexpected error occurred')
-      setSaving(false)
-      return
+      setSaving(false); return
     }
 
     setSaving(false)
-    setActionModal(null)
-    setActionQty('')
-    setActionNote('')
-    setActionWarehouse('')
-    setActionWarehouseTo('')
+    setActionModal(null); setActionQty(''); setActionNote('')
+    setActionWarehouse(''); setActionWarehouseTo('')
     fetchItems()
     if (activeTab === 'movements') fetchMovements()
   }
@@ -298,8 +272,7 @@ export default function InventoryPage() {
     if (!deleteId) return
     const res = await api.delete(`/products/${deleteId}`)
     if (res.error) { alert(res.error); return }
-    setDeleteId(null)
-    fetchItems()
+    setDeleteId(null); fetchItems()
   }
 
   // ── Toggle active ─────────────────────────────────────
@@ -318,9 +291,7 @@ export default function InventoryPage() {
     const created: Category = res.data?.id ? res.data : { id: res.data?.data?.id, name }
     setCategories(prev => [...prev, created])
     setForm(f => ({ ...f, category_id: String(created.id) }))
-    setNewCatName('')
-    setShowNewCat(false)
-    setSavingCat(false)
+    setNewCatName(''); setShowNewCat(false); setSavingCat(false)
   }
 
   // ── Helpers ───────────────────────────────────────────
@@ -338,20 +309,19 @@ export default function InventoryPage() {
       hour: '2-digit', minute: '2-digit',
     })
 
-  const lowStockCount = items.filter(i => i.min_qty && i.qty <= i.min_qty).length
+  const lowStockCount    = items.filter(i => i.min_qty && i.qty <= i.min_qty).length
   const activeWarehouses = warehouses.filter(w => w.is_active !== false)
 
   const movementLabel: Record<string, { ar: string; en: string }> = {
-    in:           { ar: 'وارد',        en: 'Stock In' },
-    out:          { ar: 'صادر',        en: 'Stock Out' },
-    adjustment:   { ar: 'تعديل',       en: 'Adjustment' },
-    transfer_in:  { ar: 'تحويل وارد',  en: 'Transfer In' },
-    transfer_out: { ar: 'تحويل صادر',  en: 'Transfer Out' },
+    in:           { ar: 'وارد',       en: 'Stock In'      },
+    out:          { ar: 'صادر',       en: 'Stock Out'     },
+    adjustment:   { ar: 'تعديل',      en: 'Adjustment'    },
+    transfer_in:  { ar: 'تحويل وارد', en: 'Transfer In'   },
+    transfer_out: { ar: 'تحويل صادر', en: 'Transfer Out'  },
   }
 
   const warehouseRequired = (type: ActionType) => type !== 'adjustment'
 
-  // ── Price validation warning (real-time) ──────────────
   const priceWarning = form.purchase_price && form.price &&
     Number(form.price) > 0 && Number(form.purchase_price) > 0 &&
     Number(form.price) < Number(form.purchase_price)
@@ -363,15 +333,10 @@ export default function InventoryPage() {
       {/* ── Reorder Alert Banner ─────────────────────── */}
       {lowStockCount > 0 && (
         <div style={{
-          background: 'linear-gradient(135deg, #fef3c7, #fde68a)',
-          border: '1px solid #f59e0b',
-          borderRadius: 8,
-          padding: '0.75rem 1rem',
-          marginBottom: '1rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.75rem',
-          cursor: 'pointer',
+          background: 'linear-gradient(135deg,#fef3c7,#fde68a)',
+          border: '1px solid #f59e0b', borderRadius: 8,
+          padding: '0.75rem 1rem', marginBottom: '1rem',
+          display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer',
         }} onClick={() => { setShowLowStock(true); setActiveTab('products') }}>
           <span style={{ fontSize: '1.25rem' }}>⚠️</span>
           <div>
@@ -394,28 +359,18 @@ export default function InventoryPage() {
       )}
 
       {/* ── Tabs ─────────────────────────────────────── */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: '1rem', borderBottom: '2px solid var(--border-color, #e5e7eb)' }}>
-        {(['products', 'movements'] as Tab[]).map(tab => (
-          <button
-            key={tab}
-            type="button"
-            onClick={() => setActiveTab(tab)}
-            style={{
-              padding: '0.625rem 1.25rem',
-              border: 'none',
-              background: 'none',
-              cursor: 'pointer',
-              fontWeight: activeTab === tab ? 700 : 400,
-              color: activeTab === tab ? '#1d4ed8' : 'var(--text-muted, #6b7280)',
-              borderBottom: activeTab === tab ? '2px solid #1d4ed8' : '2px solid transparent',
-              marginBottom: -2,
-              fontSize: '0.9rem',
-              transition: 'all 0.15s',
-            }}
-          >
-            {tab === 'products'
-              ? (ar ? '📦 المنتجات' : '📦 Products')
-              : (ar ? '📋 حركات المخزون' : '📋 Stock Movements')}
+      <div style={{ display: 'flex', gap: 4, marginBottom: '1rem', borderBottom: '2px solid var(--border-color,#e5e7eb)' }}>
+        {(['products', 'movements', 'where'] as Tab[]).map(tab => (
+          <button key={tab} type="button" onClick={() => setActiveTab(tab)} style={{
+            padding: '0.625rem 1.25rem', border: 'none', background: 'none', cursor: 'pointer',
+            fontWeight: activeTab === tab ? 700 : 400,
+            color: activeTab === tab ? '#1d4ed8' : 'var(--text-muted,#6b7280)',
+            borderBottom: activeTab === tab ? '2px solid #1d4ed8' : '2px solid transparent',
+            marginBottom: -2, fontSize: '0.9rem', transition: 'all 0.15s',
+          }}>
+            {tab === 'products'  ? (ar ? '📦 المنتجات'       : '📦 Products')
+           : tab === 'movements' ? (ar ? '📋 حركات المخزون'  : '📋 Stock Movements')
+           :                       (ar ? '🔍 أين المنتج؟'    : '🔍 Find Product')}
           </button>
         ))}
       </div>
@@ -425,19 +380,17 @@ export default function InventoryPage() {
       {/* ══════════════════════════════════════════════ */}
       {activeTab === 'products' && (
         <>
-          {/* ── Toolbar ────────────────────────────── */}
           <div className="toolbar" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
             <div className="search-bar" style={{ flex: '1 1 200px', minWidth: 0 }}>
               <span>🔍</span>
               <input
                 placeholder={ar ? 'بحث بالاسم أو SKU أو باركود...' : 'Search by name, SKU, barcode...'}
-                value={search}
-                onChange={e => setSearch(e.target.value)}
+                value={search} onChange={e => setSearch(e.target.value)}
               />
             </div>
 
-            <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} style={filterSelectStyle}>
-              <option value="">{ar ? 'كل الفئات' : 'All Categories'}</option>
+            <select value={filterCategory}  onChange={e => setFilterCategory(e.target.value)}  style={filterSelectStyle}>
+              <option value="">{ar ? 'كل الفئات'  : 'All Categories'}</option>
               {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
 
@@ -446,7 +399,7 @@ export default function InventoryPage() {
               {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
             </select>
 
-            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={filterSelectStyle}>
+            <select value={filterStatus}    onChange={e => setFilterStatus(e.target.value)}    style={filterSelectStyle}>
               <option value="">{ar ? 'كل الحالات' : 'All Status'}</option>
               <option value="active">{ar ? 'نشط' : 'Active'}</option>
               <option value="inactive">{ar ? 'غير نشط' : 'Inactive'}</option>
@@ -454,38 +407,24 @@ export default function InventoryPage() {
 
             <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={filterSelectStyle}>
               <option value="">{ar ? 'الترتيب' : 'Sort By'}</option>
-              <option value="price_asc">{ar ? 'السعر ↑' : 'Price ↑'}</option>
-              <option value="price_desc">{ar ? 'السعر ↓' : 'Price ↓'}</option>
-              <option value="qty_asc">{ar ? 'الكمية ↑' : 'Qty ↑'}</option>
-              <option value="qty_desc">{ar ? 'الكمية ↓' : 'Qty ↓'}</option>
+              <option value="price_asc">{ar  ? 'السعر ↑'  : 'Price ↑'}</option>
+              <option value="price_desc">{ar ? 'السعر ↓'  : 'Price ↓'}</option>
+              <option value="qty_asc">{ar    ? 'الكمية ↑' : 'Qty ↑'}</option>
+              <option value="qty_desc">{ar   ? 'الكمية ↓' : 'Qty ↓'}</option>
             </select>
 
-            <button
-              type="button"
-              onClick={() => setShowLowStock(!showLowStock)}
-              style={{
-                padding: '0.5rem 0.875rem',
-                border: `1px solid ${showLowStock ? '#f59e0b' : '#d1d5db'}`,
-                borderRadius: 6,
-                background: showLowStock ? '#fef3c7' : 'transparent',
-                color: showLowStock ? '#92400e' : 'var(--text-color, #374151)',
-                cursor: 'pointer',
-                fontSize: '0.8rem',
-                fontWeight: showLowStock ? 600 : 400,
-                whiteSpace: 'nowrap',
-              }}
-            >
+            <button type="button" onClick={() => setShowLowStock(!showLowStock)} style={{
+              padding: '0.5rem 0.875rem',
+              border: `1px solid ${showLowStock ? '#f59e0b' : '#d1d5db'}`, borderRadius: 6,
+              background: showLowStock ? '#fef3c7' : 'transparent',
+              color: showLowStock ? '#92400e' : 'var(--text-color,#374151)',
+              cursor: 'pointer', fontSize: '0.8rem', fontWeight: showLowStock ? 600 : 400, whiteSpace: 'nowrap',
+            }}>
               ⚠️ {ar ? 'مخزون منخفض' : 'Low Stock'}
               {lowStockCount > 0 && (
-                <span style={{
-                  marginInlineStart: '0.375rem',
-                  background: '#f59e0b',
-                  color: '#fff',
-                  borderRadius: '50%',
-                  padding: '0 5px',
-                  fontSize: '0.7rem',
-                  fontWeight: 700,
-                }}>{lowStockCount}</span>
+                <span style={{ marginInlineStart: '0.375rem', background: '#f59e0b', color: '#fff', borderRadius: '50%', padding: '0 5px', fontSize: '0.7rem', fontWeight: 700 }}>
+                  {lowStockCount}
+                </span>
               )}
             </button>
 
@@ -494,7 +433,6 @@ export default function InventoryPage() {
             </button>
           </div>
 
-          {/* ── Products Table ───────────────────────── */}
           <div className="card" style={{ padding: 0 }}>
             {loading ? (
               <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -514,11 +452,11 @@ export default function InventoryPage() {
                       <th>SKU / {ar ? 'باركود' : 'Barcode'}</th>
                       <th>{t('category')}</th>
                       <th>{ar ? 'الوحدة' : 'Unit'}</th>
-                      <th>{ar ? 'شراء' : 'Cost'}</th>
-                      <th>{ar ? 'بيع' : 'Price'}</th>
+                      <th>{ar ? 'شراء'   : 'Cost'}</th>
+                      <th>{ar ? 'بيع'    : 'Price'}</th>
                       <th>{ar ? 'هامش %' : 'Margin'}</th>
-                      <th style={{ textAlign: 'center' }}>{ar ? 'متاح' : 'Available'}</th>
-                      <th style={{ textAlign: 'center' }}>{ar ? 'فعلي' : 'On Hand'}</th>
+                      <th style={{ textAlign: 'center' }}>{ar ? 'متاح'      : 'Available'}</th>
+                      <th style={{ textAlign: 'center' }}>{ar ? 'فعلي'      : 'On Hand'}</th>
                       <th style={{ textAlign: 'center' }}>{ar ? 'الحد الأدنى' : 'Min Qty'}</th>
                       <th>{ar ? 'الحالة' : 'Status'}</th>
                       <th>{t('actions')}</th>
@@ -526,19 +464,15 @@ export default function InventoryPage() {
                   </thead>
                   <tbody>
                     {items.map(item => {
-                      const margin    = calcMargin(item.price, (item.cost ?? item.purchase_price ?? 0))
-                      const isLow     = !!(item.min_qty && item.qty <= item.min_qty)
-
+                      const margin = calcMargin(item.price, item.cost ?? item.purchase_price ?? 0)
+                      const isLow  = !!(item.min_qty && item.qty <= item.min_qty)
                       return (
                         <tr key={item.id} style={{ opacity: item.is_active ? 1 : 0.55, background: isLow ? 'rgba(245,158,11,0.04)' : undefined }}>
                           <td>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                               {isLow && <span title={ar ? 'مخزون منخفض' : 'Low stock'} style={{ fontSize: '0.75rem' }}>⚠️</span>}
-                              <span
-                                className="fw-semibold"
-                                style={{ cursor: 'pointer', color: '#1d4ed8' }}
-                                onClick={() => setDetailModal(item)}
-                              >{item.name}</span>
+                              <span className="fw-semibold" style={{ cursor: 'pointer', color: '#1d4ed8' }}
+                                onClick={() => setDetailModal(item)}>{item.name}</span>
                             </div>
                           </td>
                           <td className="text-muted" style={{ fontSize: '0.78rem' }}>
@@ -552,71 +486,59 @@ export default function InventoryPage() {
                           <td className="text-muted">{(item.cost ?? item.purchase_price) ? fmt(item.cost ?? item.purchase_price ?? 0) : '—'}</td>
                           <td className="fw-semibold">{fmt(item.price)}</td>
                           <td>
-                            {margin !== null ? (
-                              <span style={{ color: Number(margin) >= 0 ? '#16a34a' : '#dc2626', fontWeight: 600, fontSize: '0.85rem' }}>
-                                {Number(margin) >= 0 ? '+' : ''}{margin}%
-                              </span>
-                            ) : '—'}
+                            {margin !== null
+                              ? <span style={{ color: Number(margin) >= 0 ? '#16a34a' : '#dc2626', fontWeight: 600, fontSize: '0.85rem' }}>
+                                  {Number(margin) >= 0 ? '+' : ''}{margin}%
+                                </span>
+                              : '—'}
                           </td>
 
-                          {/* ── عمود "متاح" — اضغط لعرض الفروع ── */}
-                      <td style={{ textAlign: 'center' }}>
-  {filterWarehouse ? (
-    (() => {
-      const locQty = item.locations?.find(l => l.warehouse_id === Number(filterWarehouse))?.qty ?? 0
-      return <span className={`badge ${stockBadge(locQty, item.min_qty)}`}>{fmt(locQty)}</span>
-    })()
-  ) : item.locations && item.locations.filter(l => l.qty > 0).length > 0 ? (
-    <details style={{ cursor: 'pointer' }}>
-      <summary style={{ listStyle: 'none', display: 'inline-block' }}>
-        <span className={`badge ${stockBadge(item.available_qty ?? item.qty, item.min_qty)}`}>
-          {fmt(item.available_qty ?? item.qty)}
-        </span>
-      </summary>
-      <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 130, textAlign: ar ? 'right' : 'left' }}>
-        {item.locations.filter(l => l.qty > 0).map(l => {
-          const wh = warehouses.find(w => w.id === l.warehouse_id)
-          return (
-            <div key={l.warehouse_id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: '0.75rem' }}>
-              <span style={{ color: '#6b7280' }}>{wh?.name ?? '—'}</span>
-              <span className={`badge ${stockBadge(l.qty, item.min_qty)}`}>{fmt(l.qty)}</span>
-            </div>
-          )
-        })}
-      </div>
-    </details>
-  ) : (
-    <span className={`badge ${stockBadge(item.available_qty ?? item.qty, item.min_qty)}`}>
-      {fmt(item.available_qty ?? item.qty)}
-    </span>
-  )}
-</td>
+                          {/* عمود "متاح" */}
+                          <td style={{ textAlign: 'center' }}>
+                            {filterWarehouse ? (() => {
+                              const locQty = item.locations?.find(l => l.warehouse_id === Number(filterWarehouse))?.qty ?? 0
+                              return <span className={`badge ${stockBadge(locQty, item.min_qty)}`}>{fmt(locQty)}</span>
+                            })() : item.locations && item.locations.filter(l => l.qty > 0).length > 0 ? (
+                              <details style={{ cursor: 'pointer' }}>
+                                <summary style={{ listStyle: 'none', display: 'inline-block' }}>
+                                  <span className={`badge ${stockBadge(item.available_qty ?? item.qty, item.min_qty)}`}>
+                                    {fmt(item.available_qty ?? item.qty)}
+                                  </span>
+                                </summary>
+                                <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 130, textAlign: ar ? 'right' : 'left' }}>
+                                  {item.locations.filter(l => l.qty > 0).map(l => {
+                                    const wh = warehouses.find(w => w.id === l.warehouse_id)
+                                    return (
+                                      <div key={l.warehouse_id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: '0.75rem' }}>
+                                        <span style={{ color: '#6b7280' }}>{wh?.name ?? '—'}</span>
+                                        <span className={`badge ${stockBadge(l.qty, item.min_qty)}`}>{fmt(l.qty)}</span>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              </details>
+                            ) : (
+                              <span className={`badge ${stockBadge(item.available_qty ?? item.qty, item.min_qty)}`}>
+                                {fmt(item.available_qty ?? item.qty)}
+                              </span>
+                            )}
+                          </td>
 
                           <td style={{ textAlign: 'center' }}>
                             <span className="badge badge-secondary" style={{ background: '#f3f4f6', color: '#374151' }}>{fmt(item.qty)}</span>
                           </td>
                           <td style={{ textAlign: 'center' }}>
-                            {item.min_qty ? (
-                              <span style={{ fontSize: '0.8rem', color: isLow ? '#f59e0b' : '#6b7280', fontWeight: isLow ? 700 : 400 }}>
-                                {fmt(item.min_qty)}
-                              </span>
-                            ) : '—'}
+                            {item.min_qty
+                              ? <span style={{ fontSize: '0.8rem', color: isLow ? '#f59e0b' : '#6b7280', fontWeight: isLow ? 700 : 400 }}>{fmt(item.min_qty)}</span>
+                              : '—'}
                           </td>
                           <td>
-                            <button
-                              type="button"
-                              onClick={() => handleToggleActive(item)}
-                              style={{
-                                padding: '2px 10px',
-                                borderRadius: 20,
-                                border: 'none',
-                                cursor: 'pointer',
-                                fontSize: '0.75rem',
-                                fontWeight: 600,
-                                background: item.is_active ? '#dcfce7' : '#fee2e2',
-                                color:      item.is_active ? '#16a34a' : '#dc2626',
-                              }}
-                            >
+                            <button type="button" onClick={() => handleToggleActive(item)} style={{
+                              padding: '2px 10px', borderRadius: 20, border: 'none', cursor: 'pointer',
+                              fontSize: '0.75rem', fontWeight: 600,
+                              background: item.is_active ? '#dcfce7' : '#fee2e2',
+                              color:      item.is_active ? '#16a34a' : '#dc2626',
+                            }}>
                               {item.is_active ? (ar ? 'نشط' : 'Active') : (ar ? 'غير نشط' : 'Inactive')}
                             </button>
                           </td>
@@ -661,12 +583,12 @@ export default function InventoryPage() {
         <>
           <div className="toolbar" style={{ flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
             <select value={movFilterType} onChange={e => setMovFilterType(e.target.value)} style={filterSelectStyle}>
-              <option value="">{ar ? 'كل الأنواع' : 'All Types'}</option>
-              <option value="in">{ar ? 'وارد' : 'Stock In'}</option>
-              <option value="out">{ar ? 'صادر' : 'Stock Out'}</option>
-              <option value="adjustment">{ar ? 'تعديل' : 'Adjustment'}</option>
-              <option value="transfer_in">{ar ? 'تحويل وارد' : 'Transfer In'}</option>
-              <option value="transfer_out">{ar ? 'تحويل صادر' : 'Transfer Out'}</option>
+              <option value="">{ar ? 'كل الأنواع'     : 'All Types'}</option>
+              <option value="in">{ar           ? 'وارد'          : 'Stock In'}</option>
+              <option value="out">{ar          ? 'صادر'          : 'Stock Out'}</option>
+              <option value="adjustment">{ar   ? 'تعديل'         : 'Adjustment'}</option>
+              <option value="transfer_in">{ar  ? 'تحويل وارد'   : 'Transfer In'}</option>
+              <option value="transfer_out">{ar ? 'تحويل صادر'   : 'Transfer Out'}</option>
             </select>
 
             <select value={movFilterProd} onChange={e => setMovFilterProd(e.target.value)} style={filterSelectStyle}>
@@ -694,12 +616,12 @@ export default function InventoryPage() {
                 <table className="table">
                   <thead>
                     <tr>
-                      <th>{ar ? 'النوع' : 'Type'}</th>
+                      <th>{ar ? 'النوع'  : 'Type'}</th>
                       <th>{t('product')}</th>
                       <th>{t('warehouse')}</th>
-                      <th style={{ textAlign: 'center' }}>{ar ? 'قبل' : 'Before'}</th>
-                      <th style={{ textAlign: 'center' }}>{ar ? 'التغيير' : 'Change'}</th>
-                      <th style={{ textAlign: 'center' }}>{ar ? 'بعد' : 'After'}</th>
+                      <th style={{ textAlign: 'center' }}>{ar ? 'قبل'    : 'Before'}</th>
+                      <th style={{ textAlign: 'center' }}>{ar ? 'التغيير': 'Change'}</th>
+                      <th style={{ textAlign: 'center' }}>{ar ? 'بعد'    : 'After'}</th>
                       <th>{t('notes')}</th>
                       <th>{ar ? 'بواسطة' : 'By'}</th>
                       <th>{t('date')}</th>
@@ -734,8 +656,8 @@ export default function InventoryPage() {
                           <td className="text-muted" style={{ fontSize: '0.8rem', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {mov.notes || '—'}
                           </td>
-                          <td className="text-muted"  style={{ fontSize: '0.8rem' }}>{mov.user?.name || '—'}</td>
-                          <td className="text-muted"  style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{fmtDate(mov.created_at)}</td>
+                          <td className="text-muted" style={{ fontSize: '0.8rem' }}>{mov.user?.name || '—'}</td>
+                          <td className="text-muted" style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{fmtDate(mov.created_at)}</td>
                         </tr>
                       )
                     })}
@@ -747,63 +669,56 @@ export default function InventoryPage() {
         </>
       )}
 
+      {/* ══════════════════════════════════════════════ */}
+      {/* TAB: Where is the product? ← component منفصل  */}
+      {/* ══════════════════════════════════════════════ */}
+      {activeTab === 'where' && (
+        <WhereIsProduct
+          items={items}
+          warehouses={warehouses}
+          ar={ar}
+          fmt={fmt}
+        />
+      )}
+
       {/* ══════════════════════════════════════════════════ */}
       {/* MODAL: إضافة منتج جديد                            */}
       {/* ══════════════════════════════════════════════════ */}
       {modal && isMounted && createPortal(
         <div style={overlayStyle} onClick={() => setModal(false)}>
           <div style={{ ...modalStyle, maxWidth: 620 }} onClick={e => e.stopPropagation()}>
-
             <div style={modalHeaderStyle}>
               <h3 style={modalTitleStyle}>{ar ? '➕ منتج جديد' : '➕ New Product'}</h3>
               <button type="button" onClick={() => setModal(false)} style={closeButtonStyle}>✕</button>
             </div>
-
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
               <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1 }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
 
-                  {/* الاسم */}
                   <div style={fieldStyle}>
                     <label style={labelStyle}>{t('name')} *</label>
-                    <input
-                      style={inputStyle}
-                      value={form.name}
-                      onChange={e => setForm({ ...form, name: e.target.value })}
-                      autoFocus
-                      placeholder={ar ? 'اسم المنتج' : 'Product name'}
-                    />
+                    <input style={inputStyle} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
+                      autoFocus placeholder={ar ? 'اسم المنتج' : 'Product name'} />
                   </div>
 
-                  {/* SKU */}
                   <div style={fieldStyle}>
                     <label style={labelStyle}>SKU <small style={{ color: '#6b7280', fontWeight: 400 }}>({ar ? 'اختياري' : 'optional'})</small></label>
                     <input style={inputStyle} value={form.sku} onChange={e => setForm({ ...form, sku: e.target.value })} placeholder={ar ? 'كود المنتج' : 'Product code'} />
                   </div>
 
-                  {/* الباركود */}
                   <div style={{ ...fieldStyle, gridColumn: '1 / -1' }}>
                     <label style={labelStyle}>📷 {ar ? 'الباركود' : 'Barcode'}</label>
-                    <input
-                      ref={barcodeInputRef}
-                      style={{ ...inputStyle, fontFamily: 'monospace' }}
-                      value={form.barcode}
-                      onChange={e => setForm({ ...form, barcode: e.target.value })}
+                    <input ref={barcodeInputRef} style={{ ...inputStyle, fontFamily: 'monospace' }}
+                      value={form.barcode} onChange={e => setForm({ ...form, barcode: e.target.value })}
                       onKeyDown={e => e.key === 'Enter' && e.preventDefault()}
-                      placeholder={ar ? 'امسح أو اكتب...' : 'Scan or type...'}
-                    />
+                      placeholder={ar ? 'امسح أو اكتب...' : 'Scan or type...'} />
                   </div>
 
-                  {/* التصنيف */}
                   <div style={{ ...fieldStyle, gridColumn: '1 / -1' }}>
                     <label style={labelStyle}>{t('category')} *</label>
                     {!showNewCat ? (
                       <div style={{ display: 'flex', gap: 8 }}>
-                        <select
-                          style={{ ...inputStyle, flex: 1 }}
-                          value={form.category_id}
-                          onChange={e => setForm({ ...form, category_id: e.target.value })}
-                        >
+                        <select style={{ ...inputStyle, flex: 1 }} value={form.category_id} onChange={e => setForm({ ...form, category_id: e.target.value })}>
                           <option value="">{ar ? '— اختر —' : '— Select —'}</option>
                           {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
@@ -814,17 +729,9 @@ export default function InventoryPage() {
                       </div>
                     ) : (
                       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                        <input
-                          ref={newCatInputRef}
-                          value={newCatName}
-                          onChange={e => setNewCatName(e.target.value)}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter') { e.preventDefault(); handleAddCategory() }
-                            if (e.key === 'Escape') { setShowNewCat(false); setNewCatName('') }
-                          }}
-                          placeholder={ar ? 'اسم الفئة...' : 'Category name...'}
-                          style={{ ...inputStyle, flex: 1 }}
-                        />
+                        <input ref={newCatInputRef} value={newCatName} onChange={e => setNewCatName(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddCategory() } if (e.key === 'Escape') { setShowNewCat(false); setNewCatName('') } }}
+                          placeholder={ar ? 'اسم الفئة...' : 'Category name...'} style={{ ...inputStyle, flex: 1 }} />
                         <button type="button" onClick={handleAddCategory} disabled={!newCatName.trim() || savingCat}
                           style={{ padding: '0.5rem 0.75rem', background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                           {savingCat ? '...' : (ar ? '✓ حفظ' : '✓ Save')}
@@ -835,28 +742,17 @@ export default function InventoryPage() {
                     )}
                   </div>
 
-                  {/* سعر الشراء */}
                   <div style={fieldStyle}>
                     <label style={labelStyle}>{ar ? 'سعر الشراء' : 'Purchase Price'}</label>
                     <input type="number" min="0" step="0.01" style={inputStyle} value={form.purchase_price}
                       onChange={e => setForm({ ...form, purchase_price: e.target.value })} placeholder="0.00" />
                   </div>
 
-                  {/* سعر البيع */}
                   <div style={fieldStyle}>
                     <label style={labelStyle}>{ar ? 'سعر البيع' : 'Selling Price'} *</label>
-                    <input
-                      type="number" min="0" step="0.01"
-                      style={{
-                        ...inputStyle,
-                        borderColor: priceWarning ? '#f59e0b' : '#d1d5db',
-                        background: priceWarning ? '#fffbeb' : '#fff',
-                      }}
-                      value={form.price}
-                      onChange={e => setForm({ ...form, price: e.target.value })}
-                      placeholder="0.00"
-                    />
-                    {/* ── تحذير سعر البيع أقل من الشراء (real-time) ── */}
+                    <input type="number" min="0" step="0.01"
+                      style={{ ...inputStyle, borderColor: priceWarning ? '#f59e0b' : '#d1d5db', background: priceWarning ? '#fffbeb' : '#fff' }}
+                      value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} placeholder="0.00" />
                     {priceWarning ? (
                       <small style={{ marginTop: 4, display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#d97706', background: '#fef3c7', padding: '3px 6px', borderRadius: 4 }}>
                         ⚠️ {ar
@@ -870,34 +766,26 @@ export default function InventoryPage() {
                     ) : null}
                   </div>
 
-                  {/* الكمية */}
                   <div style={fieldStyle}>
                     <label style={labelStyle}>{t('quantity')} <small style={{ color: '#6b7280', fontWeight: 400 }}>({ar ? 'اختياري' : 'optional'})</small></label>
                     <input type="number" min="0" style={inputStyle} value={form.qty}
                       onChange={e => setForm({ ...form, qty: e.target.value })} placeholder="0" />
                   </div>
 
-                  {/* الحد الأدنى */}
                   <div style={fieldStyle}>
                     <label style={labelStyle}>{ar ? 'الحد الأدنى للتنبيه' : 'Reorder Level'}</label>
                     <input type="number" min="0" style={inputStyle} value={form.min_qty}
                       onChange={e => setForm({ ...form, min_qty: e.target.value })} placeholder={ar ? 'مثال: 10' : 'e.g. 10'} />
                   </div>
 
-                  {/* المخزن */}
                   <div style={fieldStyle}>
                     <label style={labelStyle}>{ar ? 'المخزن' : 'Warehouse'} <small style={{ color: '#6b7280', fontWeight: 400 }}>({ar ? 'اختياري' : 'optional'})</small></label>
-                    <select
-                      value={form.warehouse_id}
-                      onChange={e => setForm({ ...form, warehouse_id: e.target.value })}
-                      style={inputStyle}
-                    >
+                    <select value={form.warehouse_id} onChange={e => setForm({ ...form, warehouse_id: e.target.value })} style={inputStyle}>
                       <option value="">{ar ? '— اختر مخزن —' : '— Select Warehouse —'}</option>
                       {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
                     </select>
                   </div>
 
-                  {/* وحدة القياس */}
                   <div style={fieldStyle}>
                     <label style={labelStyle}>{ar ? 'وحدة القياس' : 'Unit'}</label>
                     <select value={form.unit} onChange={e => setForm({ ...form, unit: e.target.value })} style={inputStyle}>
@@ -911,7 +799,6 @@ export default function InventoryPage() {
                     </select>
                   </div>
 
-                  {/* الحالة */}
                   <div style={fieldStyle}>
                     <label style={labelStyle}>{ar ? 'الحالة' : 'Status'}</label>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
@@ -924,23 +811,19 @@ export default function InventoryPage() {
                     </div>
                   </div>
 
-                  {/* الوصف */}
                   <div style={{ ...fieldStyle, gridColumn: '1 / -1' }}>
                     <label style={labelStyle}>{t('description')}</label>
                     <textarea rows={2} style={{ ...inputStyle, resize: 'vertical' }} value={form.description}
                       onChange={e => setForm({ ...form, description: e.target.value })} />
                   </div>
-
                 </div>
 
-                {/* Error message */}
                 {formErr && (
                   <div style={{ color: '#dc2626', background: 'rgba(220,38,38,0.1)', padding: '0.5rem 0.75rem', borderRadius: 6, marginTop: '0.75rem', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: 6 }}>
                     ⚠️ {formErr}
                   </div>
                 )}
               </div>
-
               <div style={modalFooterStyle}>
                 <button type="button" onClick={() => setModal(false)} style={cancelBtnStyle}>{t('cancel')}</button>
                 <button type="submit" disabled={saving} style={submitBtnStyle}>
@@ -953,12 +836,11 @@ export default function InventoryPage() {
       )}
 
       {/* ══════════════════════════════════════════════════ */}
-      {/* MODAL: Quick Action (in/out/adjustment/transfer)   */}
+      {/* MODAL: Quick Action                                */}
       {/* ══════════════════════════════════════════════════ */}
       {actionModal && isMounted && createPortal(
         <div style={overlayStyle} onClick={() => setActionModal(null)}>
           <div style={{ ...modalStyle, maxWidth: 440 }} onClick={e => e.stopPropagation()}>
-
             <div style={modalHeaderStyle}>
               <div>
                 <h3 style={{ ...modalTitleStyle, marginBottom: 2 }}>
@@ -971,31 +853,22 @@ export default function InventoryPage() {
               </div>
               <button type="button" onClick={() => setActionModal(null)} style={closeButtonStyle}>✕</button>
             </div>
-
             <form onSubmit={handleAction} style={{ display: 'flex', flexDirection: 'column' }}>
               <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-
-                {/* الكمية */}
                 <div style={fieldStyle}>
                   <label style={labelStyle}>
                     {actionModal.type === 'adjustment'
                       ? (ar ? 'الكمية الجديدة (الفعلية) *' : 'New Quantity (actual) *')
                       : (ar ? 'الكمية *' : 'Quantity *')}
                   </label>
-                  <input
-                    type="number" min="0.001" step="0.001"
-                    value={actionQty}
-                    onChange={e => setActionQty(e.target.value)}
-                    required autoFocus
-                    style={inputStyle}
-                  />
+                  <input type="number" min="0.001" step="0.001" value={actionQty}
+                    onChange={e => setActionQty(e.target.value)} required autoFocus style={inputStyle} />
                   <small style={{ color: '#6b7280', fontSize: '0.75rem', marginTop: 4, display: 'block' }}>
                     {ar ? `المخزون الحالي: ${fmt(actionModal.product.qty)}` : `Current stock: ${fmt(actionModal.product.qty)}`}
                     {actionModal.product.unit ? ` (${actionModal.product.unit})` : ''}
                   </small>
                 </div>
 
-                {/* المخزن — اختياري للـ adjustment، إجباري للباقي */}
                 <div style={fieldStyle}>
                   <label style={labelStyle}>
                     {actionModal.type === 'transfer'
@@ -1004,38 +877,22 @@ export default function InventoryPage() {
                         ? (ar ? 'المخزن *' : 'Warehouse *')
                         : (ar ? 'المخزن (اختياري)' : 'Warehouse (optional)')}
                   </label>
-                  <select
-                    value={actionWarehouse}
-                    onChange={e => setActionWarehouse(e.target.value)}
-                    style={inputStyle}
-                  >
+                  <select value={actionWarehouse} onChange={e => setActionWarehouse(e.target.value)} style={inputStyle}>
                     <option value="">{ar ? '— اختر —' : '— Select —'}</option>
                     {activeWarehouses.map(w => {
                       const locQty = actionModal.product.locations?.find(l => l.warehouse_id === w.id)?.qty
-                      return (
-                        <option key={w.id} value={w.id}>
-                          {w.name}{locQty !== undefined ? ` — ${locQty}` : ''}
-                        </option>
-                      )
+                      return <option key={w.id} value={w.id}>{w.name}{locQty !== undefined ? ` — ${locQty}` : ''}</option>
                     })}
                   </select>
-                  {/* رصيد المخزن المختار */}
                   {actionWarehouse && (() => {
                     const locQty = actionModal.product.locations?.find(l => l.warehouse_id === Number(actionWarehouse))?.qty
                     if (locQty === undefined) return null
                     const enough = locQty >= Number(actionQty || 0)
                     return (
-                      <small style={{
-                        marginTop: 4, display: 'flex', alignItems: 'center', gap: 4,
-                        fontSize: '0.75rem', fontWeight: 600,
-                        color: enough ? '#16a34a' : '#dc2626',
-                        background: enough ? '#f0fdf4' : '#fef2f2',
-                        padding: '3px 8px', borderRadius: 4,
-                      }}>
+                      <small style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', fontWeight: 600,
+                        color: enough ? '#16a34a' : '#dc2626', background: enough ? '#f0fdf4' : '#fef2f2', padding: '3px 8px', borderRadius: 4 }}>
                         {enough ? '✅' : '⚠️'}
-                        {ar
-                          ? `الرصيد في هذا الفرع: ${fmt(locQty)}`
-                          : `Stock in this branch: ${fmt(locQty)}`}
+                        {ar ? `الرصيد في هذا الفرع: ${fmt(locQty)}` : `Stock in this branch: ${fmt(locQty)}`}
                         {!enough && actionQty && (
                           <span style={{ fontWeight: 400, marginInlineStart: 4 }}>
                             {ar ? `(المطلوب: ${fmt(Number(actionQty))})` : `(needed: ${fmt(Number(actionQty))})`}
@@ -1051,78 +908,39 @@ export default function InventoryPage() {
                   )}
                 </div>
 
-                {/* المخزن (إلى) — فقط للتحويل */}
                 {actionModal.type === 'transfer' && (
                   <div style={fieldStyle}>
                     <label style={labelStyle}>{ar ? 'إلى مخزن *' : 'To Warehouse *'}</label>
-                    <select
-                      value={actionWarehouseTo}
-                      onChange={e => setActionWarehouseTo(e.target.value)}
-                      style={inputStyle}
-                    >
+                    <select value={actionWarehouseTo} onChange={e => setActionWarehouseTo(e.target.value)} style={inputStyle}>
                       <option value="">{ar ? '— اختر —' : '— Select —'}</option>
-                      {activeWarehouses
-                        .filter(w => String(w.id) !== actionWarehouse)
-                        .map(w => {
-                          const locQty = actionModal.product.locations?.find(l => l.warehouse_id === w.id)?.qty
-                          return (
-                            <option key={w.id} value={w.id}>
-                              {w.name}{locQty !== undefined ? ` — ${locQty}` : ''}
-                            </option>
-                          )
-                        })}
+                      {activeWarehouses.filter(w => String(w.id) !== actionWarehouse).map(w => {
+                        const locQty = actionModal.product.locations?.find(l => l.warehouse_id === w.id)?.qty
+                        return <option key={w.id} value={w.id}>{w.name}{locQty !== undefined ? ` — ${locQty}` : ''}</option>
+                      })}
                     </select>
-                    {/* رصيد المخزن المستلم */}
                     {actionWarehouseTo && (() => {
                       const locQty = actionModal.product.locations?.find(l => l.warehouse_id === Number(actionWarehouseTo))?.qty ?? 0
                       return (
-                        <small style={{
-                          marginTop: 4, display: 'flex', alignItems: 'center', gap: 4,
-                          fontSize: '0.75rem', fontWeight: 600,
-                          color: '#0284c7', background: '#f0f9ff',
-                          padding: '3px 8px', borderRadius: 4,
-                        }}>
-                          📦 {ar
-                            ? `الرصيد الحالي في الفرع المستلم: ${fmt(locQty)}`
-                            : `Current stock in destination: ${fmt(locQty)}`}
-                          {actionQty && (
-                            <span style={{ color: '#16a34a', marginInlineStart: 4 }}>
-                              → {fmt(locQty + Number(actionQty))}
-                            </span>
-                          )}
+                        <small style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', fontWeight: 600,
+                          color: '#0284c7', background: '#f0f9ff', padding: '3px 8px', borderRadius: 4 }}>
+                          📦 {ar ? `الرصيد الحالي في الفرع المستلم: ${fmt(locQty)}` : `Current stock in destination: ${fmt(locQty)}`}
+                          {actionQty && <span style={{ color: '#16a34a', marginInlineStart: 4 }}>→ {fmt(locQty + Number(actionQty))}</span>}
                         </small>
                       )
                     })()}
                   </div>
                 )}
 
-                {/* ملاحظات */}
                 <div style={fieldStyle}>
                   <label style={labelStyle}>{t('notes')}</label>
                   <input value={actionNote} onChange={e => setActionNote(e.target.value)} style={inputStyle} placeholder={ar ? 'اختياري...' : 'Optional...'} />
                 </div>
-
               </div>
-
               <div style={modalFooterStyle}>
                 <button type="button" onClick={() => setActionModal(null)} style={cancelBtnStyle}>{t('cancel')}</button>
-                <button
-                  type="submit"
-                  disabled={
-                    saving ||
-                    !actionQty ||
-                    (warehouseRequired(actionModal.type) && !actionWarehouse) ||
-                    (actionModal.type === 'transfer' && !actionWarehouseTo)
-                  }
-                  style={{
-                    ...submitBtnStyle,
-                    background:
-                      actionModal.type === 'in'         ? '#16a34a' :
-                      actionModal.type === 'out'        ? '#dc2626' :
-                      actionModal.type === 'transfer'   ? '#1d4ed8' :
-                      '#7c3aed',
-                  }}
-                >
+                <button type="submit" disabled={saving || !actionQty || (warehouseRequired(actionModal.type) && !actionWarehouse) || (actionModal.type === 'transfer' && !actionWarehouseTo)}
+                  style={{ ...submitBtnStyle,
+                    background: actionModal.type === 'in' ? '#16a34a' : actionModal.type === 'out' ? '#dc2626' : actionModal.type === 'transfer' ? '#1d4ed8' : '#7c3aed' }}>
                   {saving ? (ar ? 'جاري...' : 'Saving...') : t('save')}
                 </button>
               </div>
@@ -1143,16 +961,16 @@ export default function InventoryPage() {
             </div>
             <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {([
-                ['SKU',                                   detailModal.sku],
-                [ar ? 'الباركود'   : 'Barcode',          detailModal.barcode],
-                [ar ? 'الفئة'      : 'Category',         detailModal.category?.name],
-                [ar ? 'الوحدة'     : 'Unit',             detailModal.unit],
-                [ar ? 'سعر الشراء' : 'Cost',             detailModal.cost ? fmt(detailModal.cost) : undefined],
-                [ar ? 'سعر البيع'  : 'Price',            fmt(detailModal.price)],
-                [ar ? 'المخزون الفعلي' : 'On Hand',      fmt(detailModal.qty)],
+                ['SKU',                                  detailModal.sku],
+                [ar ? 'الباركود'    : 'Barcode',        detailModal.barcode],
+                [ar ? 'الفئة'       : 'Category',       detailModal.category?.name],
+                [ar ? 'الوحدة'      : 'Unit',           detailModal.unit],
+                [ar ? 'سعر الشراء'  : 'Cost',           detailModal.cost ? fmt(detailModal.cost) : undefined],
+                [ar ? 'سعر البيع'   : 'Price',          fmt(detailModal.price)],
+                [ar ? 'المخزون الفعلي' : 'On Hand',     fmt(detailModal.qty)],
                 [ar ? 'الحد الأدنى' : 'Min Qty',        detailModal.min_qty ? fmt(detailModal.min_qty) : undefined],
-                [ar ? 'المخزن'     : 'Warehouse',        detailModal.warehouse?.name],
-                [ar ? 'الحالة'     : 'Status',           detailModal.is_active ? (ar ? 'نشط ✅' : 'Active ✅') : (ar ? 'غير نشط ❌' : 'Inactive ❌')],
+                [ar ? 'المخزن'      : 'Warehouse',      detailModal.warehouse?.name],
+                [ar ? 'الحالة'      : 'Status',         detailModal.is_active ? (ar ? 'نشط ✅' : 'Active ✅') : (ar ? 'غير نشط ❌' : 'Inactive ❌')],
               ] as [string, string | undefined][]).filter(([, v]) => v).map(([label, value]) => (
                 <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0', borderBottom: '1px solid #f3f4f6' }}>
                   <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>{label}</span>
@@ -1201,70 +1019,43 @@ export default function InventoryPage() {
 
 // ── Shared inline styles ───────────────────────────────────
 const filterSelectStyle: React.CSSProperties = {
-  padding: '0.5rem 0.75rem',
-  border: '1px solid #d1d5db',
-  borderRadius: 6,
-  background: 'var(--bg-card, #fff)',
-  color: 'var(--text-color, #374151)',
-  fontSize: '0.85rem',
-  cursor: 'pointer',
+  padding: '0.5rem 0.75rem', border: '1px solid #d1d5db', borderRadius: 6,
+  background: 'var(--bg-card,#fff)', color: 'var(--text-color,#374151)',
+  fontSize: '0.85rem', cursor: 'pointer',
 }
 const overlayStyle: React.CSSProperties = {
   position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
   backgroundColor: 'rgba(0,0,0,0.6)',
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  zIndex: 9999999,
+  display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999999,
 }
 const modalStyle: React.CSSProperties = {
-  width: '95%',
-  background: 'var(--bg-card, #fff)',
-  color: 'var(--text-color, #000)',
-  borderRadius: 10,
-  display: 'flex', flexDirection: 'column',
-  maxHeight: '90vh',
-  boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+  width: '95%', background: 'var(--bg-card,#fff)', color: 'var(--text-color,#000)',
+  borderRadius: 10, display: 'flex', flexDirection: 'column',
+  maxHeight: '90vh', boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
 }
 const modalHeaderStyle: React.CSSProperties = {
-  padding: '1.25rem 1.5rem',
-  borderBottom: '1px solid var(--border-color, #e5e7eb)',
+  padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-color,#e5e7eb)',
   display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
 }
-const modalTitleStyle: React.CSSProperties = {
-  margin: 0, fontSize: '1.1rem', fontWeight: 700,
-}
+const modalTitleStyle: React.CSSProperties = { margin: 0, fontSize: '1.1rem', fontWeight: 700 }
 const modalFooterStyle: React.CSSProperties = {
-  padding: '1rem 1.5rem',
-  borderTop: '1px solid #e5e7eb',
+  padding: '1rem 1.5rem', borderTop: '1px solid #e5e7eb',
   display: 'flex', justifyContent: 'flex-end', gap: '0.75rem',
 }
 const closeButtonStyle: React.CSSProperties = {
   background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: '#9ca3af', lineHeight: 1,
 }
-const fieldStyle: React.CSSProperties = {
-  display: 'flex', flexDirection: 'column', gap: '0.375rem',
-}
-const labelStyle: React.CSSProperties = {
-  fontWeight: 600, fontSize: '0.875rem',
-}
+const fieldStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '0.375rem' }
+const labelStyle: React.CSSProperties = { fontWeight: 600, fontSize: '0.875rem' }
 const inputStyle: React.CSSProperties = {
-  padding: '0.625rem 0.75rem',
-  border: '1px solid #d1d5db',
-  borderRadius: 6,
-  background: '#fff',
-  color: '#000',
-  width: '100%',
-  boxSizing: 'border-box',
-  fontSize: '0.875rem',
+  padding: '0.625rem 0.75rem', border: '1px solid #d1d5db', borderRadius: 6,
+  background: '#fff', color: '#000', width: '100%', boxSizing: 'border-box', fontSize: '0.875rem',
 }
 const cancelBtnStyle: React.CSSProperties = {
-  padding: '0.625rem 1.25rem',
-  border: '1px solid #d1d5db',
-  borderRadius: 6, cursor: 'pointer',
-  fontWeight: 500, background: '#fff', color: '#374151',
+  padding: '0.625rem 1.25rem', border: '1px solid #d1d5db', borderRadius: 6,
+  cursor: 'pointer', fontWeight: 500, background: '#fff', color: '#374151',
 }
 const submitBtnStyle: React.CSSProperties = {
-  padding: '0.625rem 1.25rem',
-  border: 'none', borderRadius: 6,
-  background: '#1d4ed8', color: '#fff',
-  cursor: 'pointer', fontWeight: 600,
+  padding: '0.625rem 1.25rem', border: 'none', borderRadius: 6,
+  background: '#1d4ed8', color: '#fff', cursor: 'pointer', fontWeight: 600,
 }

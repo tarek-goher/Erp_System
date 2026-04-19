@@ -23,71 +23,100 @@ class ReportService
     /**
      * تقرير المبيعات
      */
-    public function salesReport(string $from, string $to, ?int $companyId): array
-    {
-        $sales = Sale::where('company_id', $companyId)
+public function salesReport(string $from, string $to, ?int $companyId): array
+{
+    $sales = Sale::where('company_id', $companyId)
+        ->whereDate('created_at', '>=', $from)
+        ->whereDate('created_at', '<=', $to)
+        ->where('status', 'completed')
+        ->with('customer')
+        ->get();
+
+    $daily = Sale::where('company_id', $companyId)
+        ->whereDate('created_at', '>=', $from)
+        ->whereDate('created_at', '<=', $to)
+        ->where('status', 'completed')
+        ->selectRaw('DATE(created_at) as date, SUM(total) as total, COUNT(*) as count')
+        ->groupBy('date')
+        ->orderBy('date')
+        ->get();
+
+    return [
+        'summary' => [
+            'total_revenue'  => $sales->sum('total'),
+            'total_invoices' => $sales->count(),
+            'avg_invoice'    => $sales->count() ? $sales->sum('total') / $sales->count() : 0,
+            'total_tax'      => $sales->sum('tax'),
+            'total_discount' => $sales->sum('discount'),
+        ],
+        'daily' => $daily,
+        'by_payment_method' => Sale::where('company_id', $companyId)
             ->whereDate('created_at', '>=', $from)
             ->whereDate('created_at', '<=', $to)
             ->where('status', 'completed')
-            ->with('customer');
-
-        // مبيعات يومية
-        $daily = Sale::where('company_id', $companyId)
-            ->whereDate('created_at', '>=', $from)
-            ->whereDate('created_at', '<=', $to)
-            ->where('status', 'completed')
-            ->selectRaw('DATE(created_at) as date, SUM(total) as total, COUNT(*) as count')
-            ->groupBy('date')
-            ->orderBy('date')
-            ->get();
-
-        return [
-            'summary' => [
-                'total_revenue'    => $sales->sum('total'),
-                'total_invoices'   => $sales->count(),
-                'avg_invoice'      => $sales->count() ? $sales->sum('total') / $sales->count() : 0,
-                'total_tax'        => $sales->sum('tax'),
-                'total_discount'   => $sales->sum('discount'),
-            ],
-            'daily'   => $daily,
-            'by_payment_method' => Sale::where('company_id', $companyId)
-                ->whereDate('created_at', '>=', $from)
-                ->whereDate('created_at', '<=', $to)
-                ->where('status', 'completed')
-                ->selectRaw('payment_method, SUM(total) as total, COUNT(*) as count')
-                ->groupBy('payment_method')
-                ->get(),
-        ];
-    }
+            ->selectRaw('payment_method, SUM(total) as total, COUNT(*) as count')
+            ->groupBy('payment_method')
+            ->get(),
+        'sales' => $sales->map(fn($s) => [
+            'invoice_number' => $s->invoice_number,
+            'customer_name'  => $s->customer?->name ?? '—',
+            'created_at'     => $s->created_at?->toDateString(),
+            'due_date'       => $s->due_date?->toDateString() ?? '—',
+            'payment_method' => $s->payment_method ?? '—',
+            'status'         => $s->status,
+            'subtotal'       => $s->subtotal,
+            'discount'       => $s->discount,
+            'tax'            => $s->tax,
+            'total'          => $s->total,
+        ])->toArray(),
+    ];
+}
 
     /**
      * تقرير المشتريات
      */
-    public function purchasesReport(string $from, string $to, ?int $companyId): array
-    {
-        $purchases = Purchase::where('company_id', $companyId)
-            ->whereDate('created_at', '>=', $from)
-            ->whereDate('created_at', '<=', $to);
+public function purchasesReport(string $from, string $to, ?int $companyId): array
+{
+    $purchases = Purchase::where('company_id', $companyId)
+        ->whereDate('created_at', '>=', $from)
+        ->whereDate('created_at', '<=', $to)
+       ->with(['supplier', 'items.product', 'items.warehouse']) // ✅ // ✅ ضيف items.product
+        ->get();
 
-        $daily = Purchase::where('company_id', $companyId)
-            ->whereDate('created_at', '>=', $from)
-            ->whereDate('created_at', '<=', $to)
-            ->selectRaw('DATE(created_at) as date, SUM(total) as total, COUNT(*) as count')
-            ->groupBy('date')
-            ->orderBy('date')
-            ->get();
+    $daily = Purchase::where('company_id', $companyId)
+        ->whereDate('created_at', '>=', $from)
+        ->whereDate('created_at', '<=', $to)
+        ->selectRaw('DATE(created_at) as date, SUM(total) as total, COUNT(*) as count')
+        ->groupBy('date')
+        ->orderBy('date')
+        ->get();
 
-        return [
-            'summary' => [
-                'total_cost'    => $purchases->sum('total'),
-                'total_orders'  => $purchases->count(),
-                'pending'       => $purchases->where('status', 'pending')->count(),
-                'received'      => $purchases->where('status', 'received')->count(),
-            ],
-            'daily' => $daily,
-        ];
-    }
-
+    return [
+        'summary' => [
+            'total_cost'   => $purchases->sum('total'),
+            'total_orders' => $purchases->count(),
+            'pending'      => $purchases->where('status', 'pending')->count(),
+            'received'     => $purchases->where('status', 'received')->count(),
+        ],
+        'daily' => $daily,
+        'purchases' => $purchases->map(fn($p) => [
+            'reference'     => $p->po_number,
+            'supplier_name' => $p->supplier?->name ?? '—',
+            'created_at'    => $p->created_at?->toDateString(),
+            'status'        => $p->status,
+            'subtotal'      => $p->subtotal,
+            'tax'           => $p->tax,
+            'total'         => $p->total,
+            'items'         => $p->items->map(fn($i) => [ // ✅ ضيف items
+                'product_name' => $i->product?->name ?? '—',
+                 'warehouse_name' => $i->warehouse?->name ?? ($i->warehouse_id ? \App\Models\Warehouse::find($i->warehouse_id)?->name ?? '—' : '—'),
+                'quantity'     => $i->quantity,
+                'unit_price'   => $i->unit_price,
+                'total'        => $i->total,
+            ])->toArray(),
+        ])->toArray(),
+    ];
+}
     /**
      * تقرير المخزون
      */

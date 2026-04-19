@@ -21,15 +21,15 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
  $middleware->alias([
+    'auth'               => \App\Http\Middleware\Authenticate::class, // ✅ ضيف
     'permission'         => \App\Http\Middleware\CheckPermission::class,
     'super.admin'        => \App\Http\Middleware\CheckSuperAdmin::class,
     'check.super.admin'  => \App\Http\Middleware\CheckSuperAdmin::class,
     'company.tenant'     => \App\Http\Middleware\EnsureCompanyTenant::class,
     'audit.log'          => \App\Http\Middleware\AuditLog::class,
     'ip.whitelist'       => \App\Http\Middleware\IpWhitelist::class,
-    'company.active'     => \App\Http\Middleware\EnsureCompanyActive::class,  // ← أضف السطر ده
+    'company.active'     => \App\Http\Middleware\EnsureCompanyActive::class,
 ]);
-
         // ══════════════════════════════════════════════════════
         // CSRF Exception for API routes
         // الـ frontend بيستخدم Bearer Token مش cookies
@@ -65,13 +65,15 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         // ─── Auth Errors → 401 ────────────────────
-        $exceptions->render(function (AuthenticationException $e, Request $request) {
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'message' => 'غير مصرح. سجّل دخولك أولاً.',
-                ], 401);
-            }
-        });
+        // ─── Auth Errors → 401 ────────────────────
+$exceptions->render(function (AuthenticationException $e, Request $request) {
+    // ✅ بدل expectsJson فقط
+    if ($request->expectsJson() || $request->is('api/*')) {
+        return response()->json([
+            'message' => 'غير مصرح. سجّل دخولك أولاً.',
+        ], 401);
+    }
+});
 
         // ─── General Server Errors → 500 ──────────
         $exceptions->render(function (\Throwable $e, Request $request) {
