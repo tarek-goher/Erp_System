@@ -3,14 +3,18 @@
 namespace App\Http\Controllers\API;
 
 use App\Models\Appraisal;
+use App\Models\AppraisalTemplate;
+use App\Models\AppraisalGoal;
+use App\Models\Appraisal360Feedback;
 use App\Models\Employee;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * AppraisalController — تقييم الأداء
+ * AppraisalController — تقييم الأداء (Enhanced)
  *
- * مكتمل: CRUD + submit + approve/reject + stats
+ * مكتمل: CRUD + submit + approve/reject + stats + templates
+ *        + 360° feedback + goals tracking
  * الفرونت موجود في app/appraisals/page.tsx
  */
 class AppraisalController extends BaseController
@@ -18,7 +22,8 @@ class AppraisalController extends BaseController
     /** GET /api/appraisals */
     public function index(Request $request): JsonResponse
     {
-        $appraisals = Appraisal::with('employee', 'reviewer')
+        $appraisals = Appraisal::where('company_id', $this->companyId())
+            ->with('employee', 'reviewer', 'template')
             ->when($request->status,      fn($q) => $q->where('status', $request->status))
             ->when($request->employee_id, fn($q) => $q->where('employee_id', $request->employee_id))
             ->when($request->period,      fn($q) => $q->where('period', $request->period))
@@ -32,28 +37,42 @@ class AppraisalController extends BaseController
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'employee_id' => 'required|exists:employees,id',
-            'period'      => 'required|string|max:50',  // مثل "Q1-2024" أو "2024-H1"
-            'score'       => 'nullable|numeric|between:0,100',
-            'feedback'    => 'nullable|string|max:2000',
-            'goals'       => 'nullable|string|max:2000',
+            'employee_id'       => 'required|exists:employees,id',
+            'period'            => 'required|string|max:50',
+            'template_id'       => 'nullable|exists:appraisal_templates,id',
+            'score'             => 'nullable|numeric|between:0,100',
+            'feedback'          => 'nullable|string|max:2000',
+            'goals'             => 'nullable|string|max:2000',
+            'criteria_scores'   => 'nullable|json',
+            'linked_promotion'  => 'nullable|boolean',
+            'linked_raise'      => 'nullable|numeric|between:0,100',
         ]);
 
         // تأكد مفيش تقييم موجود للموظف في نفس الفترة
-        $exists = Appraisal::where('employee_id', $data['employee_id'])
+        $exists = Appraisal::where('company_id', $this->companyId())
+            ->where('employee_id', $data['employee_id'])
             ->where('period', $data['period'])
             ->exists();
 
         abort_if($exists, 422, 'يوجد تقييم مسبق لهذا الموظف في نفس الفترة.');
 
         $appraisal = Appraisal::create([
-            'company_id'  => $this->companyId(),
-            'reviewer_id' => auth()->id(),
-            'status'      => 'draft',
-            ...$data,
+            'company_id'        => $this->companyId(),
+            'reviewer_id'       => auth()->id(),
+            'status'            => 'draft',
+            'template_id'       => $data['template_id'] ?? null,
+            'employee_id'       => $data['employee_id'],
+            'period'            => $data['period'],
+            'score'             => $data['score'] ?? null,
+            'feedback'          => $data['feedback'] ?? null,
+            'goals'             => $data['goals'] ?? null,
+            'criteria_scores'   => $data['criteria_scores'] ?? null,
+            'linked_promotion'  => $data['linked_promotion'] ?? false,
+            'linked_raise'      => $data['linked_raise'] ?? null,
+            'approval_chain'    => [],
         ]);
 
-        return $this->created($appraisal->load('employee', 'reviewer'));
+        return $this->created($appraisal->load('employee', 'reviewer', 'template'));
     }
 
     /** GET /api/appraisals/{appraisal} */
@@ -61,7 +80,7 @@ class AppraisalController extends BaseController
     {
         abort_if($appraisal->company_id !== $this->companyId(), 403);
 
-        return $this->success($appraisal->load('employee', 'reviewer'));
+        return $this->success($appraisal->load('employee', 'reviewer', 'template'));
     }
 
     /** PUT /api/appraisals/{appraisal} */
@@ -140,13 +159,14 @@ class AppraisalController extends BaseController
     /** GET /api/appraisals/stats — إحصائيات التقييمات */
     public function stats(): JsonResponse
     {
+        $companyId = $this->companyId();
         return $this->success([
-            'total'     => Appraisal::count(),
-            'draft'     => Appraisal::where('status', 'draft')->count(),
-            'submitted' => Appraisal::where('status', 'submitted')->count(),
-            'approved'  => Appraisal::where('status', 'approved')->count(),
-            'rejected'  => Appraisal::where('status', 'rejected')->count(),
-            'avg_score' => round(Appraisal::whereNotNull('score')->avg('score') ?? 0, 1),
+            'total'     => Appraisal::where('company_id', $companyId)->count(),
+            'draft'     => Appraisal::where('company_id', $companyId)->where('status', 'draft')->count(),
+            'submitted' => Appraisal::where('company_id', $companyId)->where('status', 'submitted')->count(),
+            'approved'  => Appraisal::where('company_id', $companyId)->where('status', 'approved')->count(),
+            'rejected'  => Appraisal::where('company_id', $companyId)->where('status', 'rejected')->count(),
+            'avg_score' => round(Appraisal::where('company_id', $companyId)->whereNotNull('score')->avg('score') ?? 0, 1),
         ]);
     }
 
@@ -167,5 +187,108 @@ class AppraisalController extends BaseController
         }
 
         return $this->success($periods);
+    }
+
+    /** GET /api/appraisals/templates — قوالس التقييم */
+    public function templates(): JsonResponse
+    {
+        $templates = AppraisalTemplate::where('company_id', $this->companyId())->get();
+        return $this->success($templates);
+    }
+
+    /** POST /api/appraisals/{appraisal}/360-feedback — إضافة تقييم 360° */
+    public function submit360Feedback(Request $request, Appraisal $appraisal): JsonResponse
+    {
+        abort_if($appraisal->company_id !== $this->companyId(), 403);
+
+        $data = $request->validate([
+            'from_employee_id' => 'required|exists:employees,id',
+            'relation'         => 'required|in:self,peer,manager,subordinate',
+            'scores'           => 'nullable|json',
+            'comments'         => 'nullable|string|max:2000',
+        ]);
+
+        $feedback = Appraisal360Feedback::create([
+            'company_id'       => $this->companyId(),
+            'appraisal_id'     => $appraisal->id,
+            'from_employee_id' => $data['from_employee_id'],
+            'relation'         => $data['relation'],
+            'scores'           => $data['scores'] ?? [],
+            'comments'         => $data['comments'] ?? '',
+            'submitted_at'     => now(),
+        ]);
+
+        return $this->created($feedback->load('fromEmployee'), 'تم إضافة التقييم 360°');
+    }
+
+    /** GET /api/appraisals/{appraisal}/360-feedback — الحصول على تقييمات 360° */
+    public function get360Feedback(Request $request, Appraisal $appraisal): JsonResponse
+    {
+        abort_if($appraisal->company_id !== $this->companyId(), 403);
+
+        $feedback = Appraisal360Feedback::where('appraisal_id', $appraisal->id)
+            ->with('fromEmployee')
+            ->get();
+
+        return $this->success($feedback);
+    }
+
+    /** GET /api/appraisals/goals — جميع الأهداف */
+    public function getGoals(Request $request): JsonResponse
+    {
+        $goals = AppraisalGoal::where('company_id', $this->companyId())
+            ->with('employee', 'appraisal')
+            ->when($request->employee_id, fn($q) => $q->where('employee_id', $request->employee_id))
+            ->when($request->status, fn($q) => $q->where('status', $request->status))
+            ->latest()
+            ->paginate($this->perPage());
+
+        return $this->success($goals);
+    }
+
+    /** POST /api/appraisals/goals — إنشاء هدف جديد */
+    public function storeGoal(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'employee_id' => 'required|exists:employees,id',
+            'appraisal_id' => 'nullable|exists:appraisals,id',
+            'title'       => 'required|string|max:255',
+            'target'      => 'required|numeric|min:1',
+            'current'     => 'nullable|numeric|min:0',
+            'unit'        => 'nullable|string|max:50',
+            'due_date'    => 'nullable|date',
+            'status'      => 'nullable|in:on_track,at_risk,completed,overdue',
+        ]);
+
+        $goal = AppraisalGoal::create([
+            'company_id'   => $this->companyId(),
+            'employee_id'  => $data['employee_id'],
+            'appraisal_id' => $data['appraisal_id'] ?? null,
+            'title'        => $data['title'],
+            'target'       => $data['target'],
+            'current'      => $data['current'] ?? 0,
+            'unit'         => $data['unit'] ?? '',
+            'due_date'     => $data['due_date'] ?? null,
+            'status'       => $data['status'] ?? 'on_track',
+        ]);
+
+        return $this->created($goal->load('employee'), 'تم إنشاء الهدف');
+    }
+
+    /** PATCH /api/appraisals/goals/{goal} — تحديث الهدف */
+    public function updateGoal(Request $request, AppraisalGoal $goal): JsonResponse
+    {
+        abort_if($goal->company_id !== $this->companyId(), 403);
+
+        $data = $request->validate([
+            'current' => 'nullable|numeric|min:0',
+            'status'  => 'nullable|in:on_track,at_risk,completed,overdue',
+            'title'   => 'nullable|string|max:255',
+            'target'  => 'nullable|numeric|min:1',
+        ]);
+
+        $goal->update($data);
+
+        return $this->success($goal, 'تم تحديث الهدف');
     }
 }

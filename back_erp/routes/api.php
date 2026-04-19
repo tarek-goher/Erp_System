@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\API\AccountController;
+use App\Http\Controllers\API\GeneralLedgerController;
 use App\Http\Controllers\API\AIController;
 use App\Http\Controllers\API\AppraisalController;
 use App\Http\Controllers\API\AttendanceController;
@@ -55,7 +56,9 @@ use App\Http\Controllers\API\SuperAdmin\CompanyController as SuperAdminCompanyCo
 use App\Http\Controllers\API\SuperAdmin\SuperAdminUserController;
 use App\Http\Controllers\API\SuperAdmin\TicketController as SuperAdminTicketController;
 use App\Http\Controllers\API\SuperAdmin\SubscriptionController as SuperAdminSubscriptionController;
+use App\Http\Controllers\API\ApplicantController;
 use Illuminate\Support\Facades\Route;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -221,8 +224,37 @@ Route::apiResource('stock-movements', StockMovementController::class);
     // ── Attendance ───────────────────────────────────────────
     Route::apiResource('attendance', AttendanceController::class);
 
-    // ── Recruitment ──────────────────────────────────────────
-    Route::apiResource('recruitment', RecruitmentController::class);
+// ── Recruitment ────────────────────────────────────────── 
+Route::prefix('recruitment')->middleware(['auth:sanctum', 'company.active'])->group(function () {
+    // Dashboard Summary - Must be before apiResource to avoid conflicts
+    Route::get('dashboard-summary', [RecruitmentController::class, 'dashboardSummary']);
+    
+    // Filter by status
+    Route::get('by-status', [RecruitmentController::class, 'byStatus']);
+    
+    // CRUD Operations - Handle {recruitment} parameter properly
+    Route::get('/{recruitment}', [RecruitmentController::class, 'show']);
+    Route::post('/', [RecruitmentController::class, 'store']);
+    Route::get('/', [RecruitmentController::class, 'index']);
+    Route::put('/{recruitment}', [RecruitmentController::class, 'update']);
+    Route::delete('/{recruitment}', [RecruitmentController::class, 'destroy']);
+    
+    // Custom POST actions for existing resources
+    Route::post('/{recruitment}/archive', [RecruitmentController::class, 'archive']);
+    Route::post('/{recruitment}/unarchive', [RecruitmentController::class, 'unarchive']);
+    Route::post('/{recruitment}/duplicate', [RecruitmentController::class, 'duplicate']);
+    
+    // Related resources
+    Route::get('/{jobId}/applicants', [RecruitmentController::class, 'getApplicants']);
+    Route::get('/{jobId}/pipeline-stats', [RecruitmentController::class, 'getPipelineStats']);
+});
+    // ── Applicants ──────────────────────────────
+    Route::apiResource('applicants', ApplicantController::class);
+    Route::patch('applicants/{id}/stage', [ApplicantController::class, 'changePipelineStage']);
+    Route::post('applicants/{id}/upload-cv', [ApplicantController::class, 'uploadCV']);
+    Route::get('applicants-stats/pipeline', [ApplicantController::class, 'pipelineStats']);
+    Route::get('applicants-stats/high-rated', [ApplicantController::class, 'highRated']);
+    Route::get('applicants-stats/by-job/{jobId}', [ApplicantController::class, 'byJob']);
 
     // ── POS ──────────────────────────────────────────────────
     Route::prefix('pos')->controller(PosController::class)->group(function () {
@@ -278,7 +310,13 @@ Route::apiResource('stock-movements', StockMovementController::class);
 
     // ── Accounting ───────────────────────────────────────────
     Route::apiResource('journal-entries', JournalEntryController::class);
+    Route::get('accounts/trial-balance', [AccountController::class, 'trialBalance']);
     Route::apiResource('accounts',        AccountController::class);
+    // ── General Ledger ───────────────────────────────────────
+Route::get('general-ledger',        [GeneralLedgerController::class, 'index']);
+Route::get('general-ledger/{accountId}', [GeneralLedgerController::class, 'show']);
+
+    Route::get('budgets/{budget}/vs', [BudgetController::class, 'vs']);
     Route::apiResource('budgets',         BudgetController::class);
     Route::apiResource('bank-statements', BankStatementController::class);
 

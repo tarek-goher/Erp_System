@@ -4,7 +4,14 @@ use App\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 class FixedAsset extends Model {
     use BelongsToCompany;
-    protected $fillable = ['company_id','name','category','purchase_value','salvage_value','depreciation_rate','depreciation_method','purchase_date','useful_life_years','accumulated_depreciation','status'];
+    protected $fillable = [
+    'company_id', 'name', 'category',
+    'asset_code', 'location', 'vendor',  // ← الجديد
+    'purchase_value', 'salvage_value',
+    'depreciation_rate', 'depreciation_method',
+    'purchase_date', 'useful_life_years',
+    'accumulated_depreciation', 'status'
+];
     protected $casts = ['purchase_date'=>'date','purchase_value'=>'float','salvage_value'=>'float','depreciation_rate'=>'float','accumulated_depreciation'=>'float'];
     public function calculateAnnualDepreciation(): float {
         return match($this->depreciation_method) {
@@ -14,3 +21,4 @@ class FixedAsset extends Model {
         };
     }
 }
+    

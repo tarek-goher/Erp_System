@@ -32,6 +32,7 @@ import {
   faUserTie,
   faUsers,
   faWarehouse,
+  faRotateLeft,
 } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import Link from 'next/link'
@@ -50,12 +51,14 @@ const NAV_ITEMS: Array<{
 }> = [
   { path: '/dashboard', icon: faChartColumn, key: 'dashboard', permission: null },
   { path: '/sales', icon: faSackDollar, key: 'sales', permission: 'manage-sales' },
+  { path: '/returns', icon: faRotateLeft, key: 'returns', permission: 'manage-sales' },
   { path: '/quotations', icon: faFileCircleCheck, key: 'quotations', permission: 'manage-sales' },
   { path: '/purchases', icon: faCartShopping, key: 'purchases', permission: 'manage-purchases' },
   { path: '/suppliers', icon: faHandshake, key: 'suppliers', permission: 'manage-purchases' },
   { path: '/inventory', icon: faBoxesStacked, key: 'inventory', permission: 'manage-products' },
   { path: '/warehouses', icon: faWarehouse, key: 'warehouses', permission: 'manage-products' },
   { path: '/accounting', icon: faCalculator, key: 'accounting', permission: 'manage-accounting' },
+  { path: '/accounting/general-ledger', icon: faScaleBalanced, key: 'general-ledger', permission: 'manage-accounting' },
   { path: '/budgets', icon: faChartLine, key: 'budgets', permission: 'manage-accounting' },
   { path: '/fixed-assets', icon: faBuilding, key: 'fixed_assets', permission: 'manage-accounting' },
   { path: '/hr', icon: faUsers, key: 'hr', permission: 'manage-hr' },

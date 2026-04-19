@@ -153,31 +153,33 @@ class SaleService
     // ══════════════════════════════════════════════════════════
     // تعديل metadata الفاتورة (status / notes / payment_method)
     // ══════════════════════════════════════════════════════════
-    public function updateSale(Sale $sale, array $data): Sale
-    {
-        return DB::transaction(function () use ($sale, $data) {
-            // لو الـ status اتغير لـ confirmed → خصم المخزون لو لسه draft
-            // (في حالة الـ workflow: draft → confirmed → completed)
-            // الـ stock خصم وقت الإنشاء بغض النظر عن الـ status
+   public function updateSale(Sale $sale, array $data): Sale
+{
+    return DB::transaction(function () use ($sale, $data) {
+        
+        // ── حفظ الـ status القديم ────────────────────
+        $oldStatus = $sale->status;
+        $newStatus = $data['status'] ?? $oldStatus;
+        
+        // ── تحديث البيانات ──────────────────────────
+        $sale->update($data);
 
-            $sale->update($data);
-
-            return $sale->fresh()->load('items.product', 'customer', 'user');
-        });
-    }
-
-    // ══════════════════════════════════════════════════════════
-    // حذف فاتورة مع إرجاع المخزون
-    // ══════════════════════════════════════════════════════════
-    public function deleteSale(Sale $sale): void
-    {
-        DB::transaction(function () use ($sale) {
+        // ── لو الحالة اتغيرت ل refunded أو partial 
+        //    → إضافة حركات مخزون (إرجاع) ──────────
+        if (in_array($newStatus, ['refunded', 'partial']) && 
+            $oldStatus !== $newStatus) {
+            
             foreach ($sale->items as $item) {
-                $product = Product::withoutGlobalScopes()->find($item->product_id);
+                $product = Product::withoutGlobalScopes()
+                    ->find($item->product_id);
+                    
                 if ($product) {
                     $qtyBefore   = (float) $product->qty;
-                    $warehouseId = $item->warehouse_id ?? $product->warehouse_id ?? null;
+                    $warehouseId = $item->warehouse_id 
+                        ?? $product->warehouse_id 
+                        ?? null;
 
+                    // إضافة المنتج للمخزون
                     if ($warehouseId) {
                         $location = \App\Models\ProductLocation::firstOrCreate(
                             [
@@ -192,26 +194,27 @@ class SaleService
 
                     $product->increment('qty', $item->quantity);
 
+                    // تسجيل حركة المخزون
                     StockMovement::create([
                         'company_id'     => $sale->company_id,
                         'product_id'     => $item->product_id,
                         'warehouse_id'   => $warehouseId ?? null,
                         'user_id'        => auth()->id(),
-                        'type'           => 'in',
+                        'type'           => 'in', // ← إضافة (إرجاع)
                         'qty'            => $item->quantity,
                         'qty_before'     => $qtyBefore,
                         'qty_after'      => $qtyBefore + $item->quantity,
                         'reference_type' => Sale::class,
                         'reference_id'   => $sale->id,
-                        'notes'          => "إرجاع فاتورة {$sale->invoice_number}",
+                        'notes'          => "[مرتجع] " . ($data['notes'] ?? "فاتورة {$sale->invoice_number}"),
                     ]);
                 }
             }
-            $sale->items()->delete();
-            $sale->delete();
-        });
-    }
+        }
 
+        return $sale->fresh()->load('items.product', 'customer', 'user');
+    });
+}
     // ══════════════════════════════════════════════════════════
     // إحصائيات المبيعات
     // Fix #6: الـ fields اتغيرت عشان تتوافق مع الفرونت

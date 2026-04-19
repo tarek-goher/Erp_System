@@ -20,19 +20,19 @@ class SaleController extends BaseController
     public function __construct(private SaleService $saleService) {}
 
     public function index(Request $request): JsonResponse
-    {
-        $sales = Sale::with('customer', 'user')
-            ->where('company_id', $this->companyId())
-            ->when($request->status,      fn($q) => $q->where('status', $request->status))
-            ->when($request->customer_id, fn($q) => $q->where('customer_id', $request->customer_id))
-            ->when($request->from,        fn($q) => $q->whereDate('created_at', '>=', $request->from))
-            ->when($request->to,          fn($q) => $q->whereDate('created_at', '<=', $request->to))
-            ->when($request->search,      fn($q) => $q->where('invoice_number', 'like', "%{$request->search}%"))
-            ->latest()
-            ->paginate($this->perPage());
+{
+    $sales = Sale::with('customer', 'user')
+        ->where('company_id', $this->companyId())
+        ->when($request->status,      fn($q) => $q->whereIn('status', explode(',', $request->status)))
+        ->when($request->customer_id, fn($q) => $q->where('customer_id', $request->customer_id))
+        ->when($request->from,        fn($q) => $q->whereDate('created_at', '>=', $request->from))
+        ->when($request->to,          fn($q) => $q->whereDate('created_at', '<=', $request->to))
+        ->when($request->search,      fn($q) => $q->where('invoice_number', 'like', "%{$request->search}%"))
+        ->latest()
+        ->paginate($this->perPage());
 
-        return $this->success(SaleResource::collection($sales)->response()->getData(true));
-    }
+    return $this->success(SaleResource::collection($sales)->response()->getData(true));
+}
 
     public function store(StoreSaleRequest $request): JsonResponse
     {

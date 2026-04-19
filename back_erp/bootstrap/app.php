@@ -65,13 +65,15 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         // ─── Auth Errors → 401 ────────────────────
-        $exceptions->render(function (AuthenticationException $e, Request $request) {
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'message' => 'غير مصرح. سجّل دخولك أولاً.',
-                ], 401);
-            }
-        });
+        // ─── Auth Errors → 401 ────────────────────
+$exceptions->render(function (AuthenticationException $e, Request $request) {
+    // ✅ بدل expectsJson فقط
+    if ($request->expectsJson() || $request->is('api/*')) {
+        return response()->json([
+            'message' => 'غير مصرح. سجّل دخولك أولاً.',
+        ], 401);
+    }
+});
 
         // ─── General Server Errors → 500 ──────────
         $exceptions->render(function (\Throwable $e, Request $request) {

@@ -21,8 +21,7 @@ class UpdateSaleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'status' => 'sometimes|required|in:completed,pending,quotation,cancelled,confirmed,refunded,draft',
-            'payment_method' => 'sometimes|required|in:cash,card,bank_transfer,credit',
+'status' => 'sometimes|required|in:completed,pending,quotation,cancelled,confirmed,refunded,partial,draft',            'payment_method' => 'sometimes|required|in:cash,card,bank_transfer,credit',
             'notes'          => 'nullable|string|max:1000',
             'discount'       => 'nullable|numeric|min:0',
             'customer_id'    => 'nullable|exists:customers,id',
