@@ -6,10 +6,17 @@
     background: var(--bg-page)
 }
 
+.dark .erp-loading {
+    background:
+        radial-gradient(circle at top left, rgba(244, 233, 78, .12), transparent 28%),
+        radial-gradient(circle at top right, rgba(255, 153, 80, .16), transparent 30%),
+        linear-gradient(180deg, #17110d 0%, #0f0c09 100%)
+}
+
 .sidebar-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,.4);
+    background: rgba(0,0,0,.55);
     z-index: 150;
     animation: fadeIn .2s ease
 }

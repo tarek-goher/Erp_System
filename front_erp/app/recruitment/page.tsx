@@ -1,11 +1,7 @@
 'use client'
 
-// ══════════════════════════════════════════════════════════
-// app/recruitment/page.tsx — صفحة الوظائف محدثة
-// ✅ يحتوي على جميع الـ 15 Features
-// ══════════════════════════════════════════════════════════
-
 import { useState, useEffect, FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import ERPLayout from '../../components/layout/ERPLayout'
 import { api } from '../../lib/api'
@@ -45,6 +41,7 @@ const EMPTY_FORM = {
 export default function RecruitmentPage() {
   const { t, lang } = useI18n()
 
+  const [isMounted, setIsMounted] = useState(false)
   const [jobs, setJobs] = useState<Job[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -62,12 +59,10 @@ export default function RecruitmentPage() {
   const [formErr, setFormErr] = useState('')
   const [saving, setSaving] = useState(false)
   const [deleteId, setDeleteId] = useState<number | null>(null)
-  const [duplicateId, setDuplicateId] = useState<number | null>(null)
   const [stats, setStats] = useState<any>(null)
 
   const ar = (a: string, e: string) => lang === 'ar' ? a : e
 
-  // ── Fetch Jobs ────────────────────────────────────────────
   const fetchJobs = async () => {
     setLoading(true)
     const params = new URLSearchParams({
@@ -88,18 +83,20 @@ export default function RecruitmentPage() {
     setLoading(false)
   }
 
-  // ── Fetch Dashboard Stats ─────────────────────────────────
   const fetchStats = async () => {
     const res = await api.get('/recruitment/dashboard-summary')
     if (res.data) setStats(res.data)
   }
 
   useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  useEffect(() => {
     fetchJobs()
     fetchStats()
   }, [page, search, statusFilter, departmentFilter, sortBy, sortOrder, includeArchived])
 
-  // ── Open Add Modal ────────────────────────────────────────
   const openAdd = () => {
     setEditJob(null)
     setForm(EMPTY_FORM)
@@ -107,7 +104,6 @@ export default function RecruitmentPage() {
     setModal(true)
   }
 
-  // ── Open Edit Modal ───────────────────────────────────────
   const openEdit = (job: Job) => {
     setEditJob(job)
     setForm({
@@ -124,7 +120,6 @@ export default function RecruitmentPage() {
     setModal(true)
   }
 
-  // ── Handle Submit ─────────────────────────────────────────
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setFormErr('')
@@ -134,7 +129,6 @@ export default function RecruitmentPage() {
       return
     }
 
-    // ✅ Feature #8: Validation أقوى
     if (form.salary_range_min && form.salary_range_max) {
       if (Number(form.salary_range_min) > Number(form.salary_range_max)) {
         setFormErr(ar('الحد الأدنى يجب أن يكون أقل من الأقصى', 'Min salary must be less than max'))
@@ -175,8 +169,6 @@ export default function RecruitmentPage() {
     fetchStats()
   }
 
-  // ── Delete ────────────────────────────────────────────────
-  // ✅ Feature #7: Soft Delete
   const handleDelete = async () => {
     if (!deleteId) return
     await api.delete(`/recruitment/${deleteId}`)
@@ -185,8 +177,6 @@ export default function RecruitmentPage() {
     fetchStats()
   }
 
-  // ── Duplicate Job ─────────────────────────────────────────
-  // ✅ Feature #12: Duplicate Job
   const handleDuplicate = async (jobId: number) => {
     const res = await api.post(`/recruitment/${jobId}/duplicate`, {})
     if (!res.error) {
@@ -195,7 +185,6 @@ export default function RecruitmentPage() {
     }
   }
 
-  // ── Archive/Unarchive ─────────────────────────────────────
   const handleArchive = async (jobId: number, isArchived: boolean) => {
     const res = await isArchived
       ? await api.post(`/recruitment/${jobId}/unarchive`, {})
@@ -223,8 +212,6 @@ export default function RecruitmentPage() {
   return (
     <ERPLayout pageTitle={ar('التوظيف', 'Recruitment')}>
 
-      {/* ── Dashboard Stats ──────────────────────────────────── */}
-      {/* ✅ Feature #15: Dashboard / Stats */}
       {stats && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
           <div className="card" style={{ textAlign: 'center', padding: '1.5rem' }}>
@@ -270,8 +257,6 @@ export default function RecruitmentPage() {
         </div>
       )}
 
-      {/* ── Toolbar with Advanced Filters ────────────────────── */}
-      {/* ✅ Feature #9: Filters أقوى */}
       <div className="toolbar">
         <div className="toolbar-actions">
           <div className="search-bar">
@@ -283,7 +268,6 @@ export default function RecruitmentPage() {
             />
           </div>
 
-          {/* Status Filter */}
           <select
             className="input"
             style={{ width: 'auto' }}
@@ -296,7 +280,6 @@ export default function RecruitmentPage() {
             ))}
           </select>
 
-          {/* Department Filter */}
           <select
             className="input"
             style={{ width: 'auto' }}
@@ -309,7 +292,6 @@ export default function RecruitmentPage() {
             ))}
           </select>
 
-          {/* Sort */}
           <select
             className="input"
             style={{ width: 'auto' }}
@@ -321,7 +303,6 @@ export default function RecruitmentPage() {
             <option value="salary_range_min">{ar('الراتب', 'Salary')}</option>
           </select>
 
-          {/* Include Archived */}
           <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <input
               type="checkbox"
@@ -337,7 +318,6 @@ export default function RecruitmentPage() {
         </button>
       </div>
 
-      {/* ── Table ────────────────────────────────────────────── */}
       <div className="card" style={{ padding: 0 }}>
         {loading ? (
           <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -425,8 +405,6 @@ export default function RecruitmentPage() {
           </div>
         )}
 
-        {/* ── Pagination ──────────────────────────────────────── */}
-        {/* ✅ Feature #11: Pagination حقيقية */}
         {total > 15 && (
           <div className="sales-pagination">
             <button
@@ -450,20 +428,18 @@ export default function RecruitmentPage() {
         )}
       </div>
 
-      {/* ── Modal: Add/Edit Job ──────────────────────────────── */}
-      {modal && (
-        <div className="modal-overlay" onClick={() => setModal(false)}>
-          <div className="modal" style={{ maxWidth: 640 }} onClick={e => e.stopPropagation()}>
+      {modal && isMounted && createPortal(
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999999 }} onClick={() => setModal(false)}>
+          <div style={{ maxWidth: 640, width: '95%', background: 'var(--bg-card, #fff)', color: 'var(--text-color, #000)', borderRadius: 8, display: 'flex', flexDirection: 'column', maxHeight: '90vh', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">
                 {editJob ? ar('تعديل وظيفة', 'Edit Job') : ar('وظيفة جديدة', 'New Job')}
               </h3>
               <button className="btn-icon" onClick={() => setModal(false)}>✕</button>
             </div>
-            <form onSubmit={handleSubmit}>
-              <div className="modal-body">
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+              <div className="modal-body" style={{ overflowY: 'auto' }}>
                 <div className="form-grid form-grid-2">
-                  {/* Title */}
                   <div className="input-group" style={{ gridColumn: '1 / -1' }}>
                     <label className="input-label">{ar('المسمى الوظيفي', 'Job Title')} *</label>
                     <input
@@ -473,7 +449,6 @@ export default function RecruitmentPage() {
                     />
                   </div>
 
-                  {/* Department */}
                   <div className="input-group">
                     <label className="input-label">{ar('القسم', 'Department')}</label>
                     <select
@@ -488,7 +463,6 @@ export default function RecruitmentPage() {
                     </select>
                   </div>
 
-                  {/* Status */}
                   <div className="input-group">
                     <label className="input-label">{ar('الحالة', 'Status')}</label>
                     <select
@@ -502,7 +476,6 @@ export default function RecruitmentPage() {
                     </select>
                   </div>
 
-                  {/* Salary Min */}
                   <div className="input-group">
                     <label className="input-label">{ar('الحد الأدنى للراتب', 'Min Salary')}</label>
                     <input
@@ -514,7 +487,6 @@ export default function RecruitmentPage() {
                     />
                   </div>
 
-                  {/* Salary Max */}
                   <div className="input-group">
                     <label className="input-label">{ar('الحد الأقصى للراتب', 'Max Salary')}</label>
                     <input
@@ -526,7 +498,6 @@ export default function RecruitmentPage() {
                     />
                   </div>
 
-                  {/* Open Date */}
                   <div className="input-group">
                     <label className="input-label">{ar('تاريخ الفتح', 'Open Date')}</label>
                     <input
@@ -537,7 +508,6 @@ export default function RecruitmentPage() {
                     />
                   </div>
 
-                  {/* Close Date */}
                   <div className="input-group">
                     <label className="input-label">{ar('تاريخ الإغلاق', 'Close Date')}</label>
                     <input
@@ -548,7 +518,6 @@ export default function RecruitmentPage() {
                     />
                   </div>
 
-                  {/* Requirements */}
                   <div className="input-group" style={{ gridColumn: '1 / -1' }}>
                     <label className="input-label">{ar('المتطلبات', 'Requirements')}</label>
                     <textarea
@@ -577,18 +546,19 @@ export default function RecruitmentPage() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* ── Delete Confirmation ──────────────────────────────── */}
-      {deleteId && (
-        <div className="modal-overlay" onClick={() => setDeleteId(null)}>
-          <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+      {deleteId && isMounted && createPortal(
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999999 }} onClick={() => setDeleteId(null)}>
+          <div style={{ maxWidth: 400, width: '95%', background: 'var(--bg-card, #fff)', color: 'var(--text-color, #000)', borderRadius: 8, display: 'flex', flexDirection: 'column', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">{ar('تأكيد الحذف', 'Confirm Delete')}</h3>
               <button className="btn-icon" onClick={() => setDeleteId(null)}>✕</button>
             </div>
-            <div className="modal-body">
+            <div className="modal-body" style={{ padding: '2rem', textAlign: 'center' }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🗑️</div>
               <p>{ar('هل أنت متأكد من حذف هذه الوظيفة؟', 'Are you sure you want to delete this job?')}</p>
             </div>
             <div className="modal-footer">
@@ -596,7 +566,8 @@ export default function RecruitmentPage() {
               <button className="btn btn-danger" onClick={handleDelete}>{t('delete')}</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </ERPLayout>

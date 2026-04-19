@@ -4,12 +4,14 @@
 // app/sales/page.tsx — صفحة المبيعات (النسخة المحسّنة)
 // ══════════════════════════════════════════════════════════
 // التعديلات الجديدة:
+//  ✅ حل مشكلة عدم ظهور نافذة (Modal) الإضافة عبر استخدام createPortal
 //  ✅ Edit الفاتورة (metadata فقط: عميل، ستاتوس، دفع، خصم، ملاحظات)
 //  ✅ Searchable Product Input بدل select عادي
 //  ✅ زر "تعديل" في الجدول
 // ══════════════════════════════════════════════════════════
 
 import { useState, useEffect, useRef, FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 import ERPLayout from '../../components/layout/ERPLayout'
 import { api, extractArray } from '../../lib/api'
 import { useToast } from '../../hooks/useToast'
@@ -52,7 +54,7 @@ const PAYMENT_METHODS = [
   { value: 'credit',        label_ar: 'آجل (دين)',     label_en: 'Credit' },
 ]
 
-// ✅ جديد — نوع الـ SaleItem خارج الـ component عشان يتستخدم في الـ Edit
+// ✅ نوع الـ SaleItem خارج الـ component عشان يتستخدم في الـ Edit
 type SaleItem = {
   product_id:   string
   name:         string
@@ -62,7 +64,7 @@ type SaleItem = {
   discount:     number
 }
 
-// ✅ جديد — Component للـ Searchable Product Input
+// ✅ Component للـ Searchable Product Input
 function ProductSearchInput({
   value,
   products,
@@ -192,6 +194,8 @@ export default function SalesPage() {
   const { show, toasts, remove } = useToast()
   const { t, lang } = useI18n()
 
+  const [isMounted, setIsMounted] = useState(false)
+
   // ─── البيانات ──────────────────────────────────────────
   const [sales,     setSales]     = useState<Sale[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -212,7 +216,7 @@ export default function SalesPage() {
   const [modalOpen,      setModalOpen]      = useState(false)
   const [exportLoading,  setExportLoading]  = useState(false)
 
-  // ✅ جديد — Edit states
+  // ✅ Edit states
   const [editId,      setEditId]      = useState<number | null>(null)
   const [editLoading, setEditLoading] = useState(false)
 
@@ -286,6 +290,7 @@ export default function SalesPage() {
   useEffect(() => { fetchSales() }, [page, search, statusFilter, customerFilter, dateFrom, dateTo])
 
   useEffect(() => {
+    setIsMounted(true)
     fetchStats()
     fetchCustomers()
     api.get<any>('/tax-rates').then(r => { if (r.data) setTaxRates(extractArray(r.data)) })
@@ -327,14 +332,13 @@ export default function SalesPage() {
   }
 
   // ══════════════════════════════════════════════════════
-  // ✅ جديد — تحميل بيانات الفاتورة للتعديل
+  // ✅ تحميل بيانات الفاتورة للتعديل
   // ══════════════════════════════════════════════════════
   const handleEdit = async (sale: Sale) => {
     setEditLoading(true)
     setEditId(sale.id)
     setModalOpen(true)
 
-    // نجيب التفاصيل الكاملة من الـ API
     const res = await api.get<any>(`/sales/${sale.id}`)
     const s   = res.data?.data ?? res.data ?? sale
 
@@ -344,13 +348,10 @@ export default function SalesPage() {
       status:         s.status         || 'draft',
       tax_rate_id:    String(s.tax_rate_id || ''),
       payment_method: s.payment_method || 'cash',
-      // ✅ الخصم في الـ DB محفوظ كقيمة مش نسبة —
-      //    نعرضه كقيمة مباشرة في الـ Edit (الفيلد هيبقى read-only في الـ Edit)
       discount:       Number(s.discount || 0),
       due_date:       s.due_date ? String(s.due_date).slice(0, 10) : '',
     })
 
-    // ✅ نحمل الأصناف للعرض فقط (read-only في الـ Edit)
     if (s.items?.length > 0) {
       setSaleItems(
         s.items.map((i: any) => ({
@@ -414,7 +415,7 @@ export default function SalesPage() {
     return s + (lineTotal - lineDiscount)
   }, 0)
   const invoiceDiscount = editId
-    ? Number(form.discount)   // في الـ Edit الخصم قيمة جاهزة من الـ DB
+    ? Number(form.discount)
     : (saleSubtotal * (form.discount || 0)) / 100
   const afterDiscount   = saleSubtotal - invoiceDiscount
   const selectedSaleTax = taxRates.find(tx => String(tx.id) === form.tax_rate_id)
@@ -435,7 +436,7 @@ export default function SalesPage() {
 
     setFormLoading(true)
 
-    // ✅ جديد — لو Edit نبعت PUT بالـ metadata فقط
+    // ✅ لو Edit نبعت PUT بالـ metadata فقط
     if (editId) {
       const payload: Record<string, any> = {
         customer_id:    Number(form.customer_id),
@@ -443,7 +444,6 @@ export default function SalesPage() {
         payment_method: form.payment_method,
         notes:          form.notes,
       }
-      // ✅ لو الـ discount اتغير نبعته
       if (form.discount !== undefined) payload.discount = Number(form.discount)
 
       const res = await api.put(`/sales/${editId}`, payload)
@@ -525,7 +525,6 @@ export default function SalesPage() {
 
   const n = (v: any) => new Intl.NumberFormat(lang === 'ar' ? 'ar-EG' : 'en-US').format(Number(v) || 0)
 
-  // ✅ جديد — الفاتورة ممكن تتعدل لو مش cancelled/refunded
   const canEdit = (status: string) => !['cancelled', 'refunded'].includes(status)
 
   return (
@@ -675,7 +674,6 @@ export default function SalesPage() {
                         <a href={`/sales/${sale.id}`} className="btn btn-secondary btn-sm">
                           {t('view')}
                         </a>
-                        {/* ✅ جديد — زر التعديل */}
                         {canEdit(sale.status) && (
                           <button
                             className="btn btn-secondary btn-sm"
@@ -722,14 +720,13 @@ export default function SalesPage() {
       </div>
 
       {/* ══════════════════════════════════════════════════
-          Modal: إضافة / تعديل بيع
+          Modal: إضافة / تعديل بيع (مُحدث بـ Portal)
       ══════════════════════════════════════════════════ */}
-      {modalOpen && (
-        <div className="modal-overlay" onClick={() => { setModalOpen(false); resetForm() }}>
-          <div className="modal" style={{ maxWidth: 820 }} onClick={e => e.stopPropagation()}>
+      {modalOpen && isMounted && createPortal(
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999999 }} onClick={() => { setModalOpen(false); resetForm() }}>
+          <div style={{ maxWidth: 820, width: '95%', background: 'var(--bg-card, #fff)', color: 'var(--text-color, #000)', borderRadius: 8, display: 'flex', flexDirection: 'column', maxHeight: '90vh', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">
-                {/* ✅ جديد — العنوان بيتغير حسب الـ mode */}
                 {editId
                   ? (lang === 'ar' ? '✏️ تعديل الفاتورة' : '✏️ Edit Sale')
                   : (lang === 'ar' ? '🧾 بيع جديد'       : '🧾 New Sale')
@@ -738,7 +735,6 @@ export default function SalesPage() {
               <button className="btn-icon" onClick={() => { setModalOpen(false); resetForm() }}>✕</button>
             </div>
 
-            {/* ✅ جديد — لو بيتحمل بيانات الـ Edit نعرض spinner */}
             {editLoading ? (
               <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                 <div className="spinner" style={{ width: 28, height: 28, margin: '0 auto 12px' }} />
@@ -746,14 +742,13 @@ export default function SalesPage() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-                <div className="modal-body">
+                <div className="modal-body" style={{ overflowY: 'auto' }}>
                   <div className="form-grid">
 
                     {/* ── العميل ── */}
                     <div className="input-group">
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
                         <label className="input-label" style={{ marginBottom: 0 }}>{t('customer')} *</label>
-                        {/* ✅ زر إضافة عميل بس في الـ Create مش Edit */}
                         {!editId && (
                           <button
                             type="button"
@@ -804,7 +799,7 @@ export default function SalesPage() {
                       </select>
                     </div>
 
-                    {/* ── تاريخ الاستحقاق — بس في Create ── */}
+                    {/* ── تاريخ الاستحقاق ── */}
                     {!editId && (
                       <div className="input-group">
                         <label className="input-label">{lang === 'ar' ? 'تاريخ الاستحقاق (اختياري)' : 'Due Date (optional)'}</label>
@@ -812,7 +807,7 @@ export default function SalesPage() {
                       </div>
                     )}
 
-                    {/* ── الضريبة — بس في Create ── */}
+                    {/* ── الضريبة ── */}
                     {!editId && (
                       <div className="input-group">
                         <label className="input-label">{lang === 'ar' ? 'الضريبة (اختياري)' : 'Tax Rate (optional)'}</label>
@@ -827,7 +822,6 @@ export default function SalesPage() {
                     <div className="input-group">
                       <label className="input-label">
                         {lang === 'ar' ? 'خصم على الفاتورة' : 'Invoice Discount'}
-                        {/* ✅ في Edit الخصم قيمة مباشرة، في Create نسبة % */}
                         {editId
                           ? (lang === 'ar' ? ' (قيمة)' : ' (amount)')
                           : ' %'
@@ -838,7 +832,6 @@ export default function SalesPage() {
                         placeholder="0"
                         value={form.discount || ''}
                         onChange={e => setForm({ ...form, discount: Number(e.target.value) })}
-                        // ✅ في الـ Edit الخصم read-only لأن الباك مش بيعيد حساب الـ total
                         readOnly={!!editId}
                         style={editId ? { background: 'var(--bg-hover)', cursor: 'not-allowed', opacity: 0.7 } : {}}
                       />
@@ -854,14 +847,12 @@ export default function SalesPage() {
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                         <label className="fw-semibold">
                           {lang === 'ar' ? 'أصناف الفاتورة' : 'Invoice Items'}
-                          {/* ✅ في Edit بنعرض الأصناف للمعلومات بس */}
                           {editId && (
                             <span style={{ fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-muted)', marginInlineStart: 8 }}>
                               {lang === 'ar' ? '(للعرض فقط)' : '(read-only)'}
                             </span>
                           )}
                         </label>
-                        {/* زر إضافة صنف بس في Create */}
                         {!editId && (
                           <button type="button" className="btn btn-secondary btn-sm" onClick={addSaleItem}>
                             + {lang === 'ar' ? 'صنف' : 'Add Item'}
@@ -892,17 +883,14 @@ export default function SalesPage() {
                               gridTemplateColumns: editId ? '2fr 1.2fr 0.8fr 1fr 0.8fr' : '2fr 1.2fr 0.8fr 1fr 0.8fr auto',
                               gap: 6,
                               alignItems: 'center',
-                              // ✅ في Edit نعطم الـ row
                               opacity: editId ? 0.75 : 1,
                             }}
                           >
                             {editId ? (
-                              // ✅ في Edit: نعرض اسم المنتج كـ text مش input
                               <div className="input" style={{ background: 'var(--bg-hover)', cursor: 'default', display: 'flex', alignItems: 'center' }}>
                                 {item.name || '—'}
                               </div>
                             ) : (
-                              // ✅ في Create: نستخدم الـ Searchable Input
                               <ProductSearchInput
                                 value={item}
                                 products={products}
@@ -994,7 +982,6 @@ export default function SalesPage() {
                   <button type="button" className="btn btn-secondary" onClick={() => { setModalOpen(false); resetForm() }}>
                     {t('cancel')}
                   </button>
-                  {/* ✅ في Create بس نعرض "حفظ مسودة" */}
                   {!editId && (
                     <button
                       type="button"
@@ -1025,15 +1012,16 @@ export default function SalesPage() {
               </form>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ══════════════════════════════════════════════════
-          Modal: تأكيد الحذف
+          Modal: تأكيد الحذف (مُحدث بـ Portal)
       ══════════════════════════════════════════════════ */}
-      {deleteId && (
-        <div className="modal-overlay" onClick={() => setDeleteId(null)}>
-          <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+      {deleteId && isMounted && createPortal(
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999999 }} onClick={() => setDeleteId(null)}>
+          <div style={{ maxWidth: 400, width: '95%', background: 'var(--bg-card, #fff)', color: 'var(--text-color, #000)', borderRadius: 8, display: 'flex', flexDirection: 'column', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
             <div className="modal-body" style={{ textAlign: 'center', padding: '2rem' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🗑️</div>
               <h3 style={{ marginBottom: '0.5rem' }}>{t('confirm_delete')}</h3>
@@ -1046,7 +1034,8 @@ export default function SalesPage() {
               <button className="btn btn-danger" onClick={handleDelete}>{t('delete')}</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </ERPLayout>

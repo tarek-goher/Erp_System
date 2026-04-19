@@ -1,8 +1,8 @@
 .navbar {
     position: fixed;
-    top: 0;
-    inset-inline-start: var(--sidebar-width);
-    inset-inline-end: 0;
+    top: 14px;
+    inset-inline-start: calc(var(--sidebar-width) + 14px);
+    inset-inline-end: 14px;
     height: var(--navbar-height);
     background: var(--bg-navbar);
     border-bottom: 1px solid var(--border);
@@ -12,11 +12,16 @@
     padding: 0 1.25rem;
     z-index: 100;
     gap: 1rem;
-    transition: inset-inline-start var(--transition-slow)
+    transition: inset-inline-start var(--transition-slow), inset-inline-end var(--transition-slow), background var(--transition-slow);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    box-shadow: var(--shadow-md);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px)
 }
 
 .navbar.sidebar-collapsed {
-    inset-inline-start: var(--sidebar-collapsed)
+    inset-inline-start: calc(var(--sidebar-collapsed) + 14px)
 }
 
 .navbar-start {
@@ -27,10 +32,11 @@
 }
 
 .navbar-title {
-    font-size: 1.05rem;
-    font-weight: 700;
+    font-size: 1.1rem;
+    font-weight: 600;
     color: var(--text-primary);
-    white-space: nowrap
+    white-space: nowrap;
+    letter-spacing: -.02em
 }
 
 .navbar-menu-btn {
@@ -41,18 +47,18 @@
 .navbar-end {
     display: flex;
     align-items: center;
-    gap: .35rem;
+    gap: .5rem;
     flex-shrink: 0
 }
 
 .navbar-lang-btn {
     font-size: .75rem;
     font-weight: 700;
-    min-width: 36px;
-    height: 36px;
+    min-width: 40px;
+    height: 40px;
     border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    background: 0 0;
+    border-radius: var(--radius-full);
+    background: rgba(255, 255, 255, 0.03);
     color: var(--text-secondary);
     cursor: pointer;
     transition: all var(--transition)
@@ -61,7 +67,7 @@
 .navbar-lang-btn:hover {
     background: var(--bg-hover);
     color: var(--color-primary);
-    border-color: var(--color-primary)
+    border-color: rgba(244, 233, 78, .38)
 }
 
 .navbar-notif {
@@ -84,7 +90,8 @@
     align-items: center;
     justify-content: center;
     padding: 0 4px;
-    border: 2px solid var(--bg-navbar)
+    border: 2px solid rgba(28, 21, 17, .88);
+    box-shadow: 0 10px 18px rgba(0, 0, 0, .22)
 }
 
 [dir=rtl] .navbar-notif-badge {
@@ -99,10 +106,10 @@
     display: flex;
     align-items: center;
     gap: .5rem;
-    padding: .35rem .6rem;
-    border-radius: var(--radius-md);
+    padding: .35rem .7rem;
+    border-radius: var(--radius-full);
     border: 1px solid var(--border);
-    background: 0 0;
+    background: rgba(255, 255, 255, 0.03);
     cursor: pointer;
     transition: all var(--transition);
     color: var(--text-primary);
@@ -110,15 +117,16 @@
 }
 
 .navbar-user-btn:hover {
-    background: var(--bg-hover)
+    background: var(--bg-hover);
+    border-color: rgba(255, 153, 80, .3)
 }
 
 .navbar-avatar {
     width: 30px;
     height: 30px;
     border-radius: 50%;
-    background: var(--color-primary-light);
-    color: var(--color-primary);
+    background: linear-gradient(135deg, var(--color-primary), var(--accent-orange));
+    color: var(--text-inverse);
     font-size: .8rem;
     font-weight: 700;
     display: flex;
@@ -150,7 +158,8 @@
 }
 
 .navbar-user-menu {
-    min-width: 220px
+    min-width: 220px;
+    overflow: hidden
 }
 
 .navbar-user-info {
@@ -180,7 +189,9 @@
 
 @media (max-width:768px) {
     .navbar {
-        inset-inline-start: 0
+        top: 10px;
+        inset-inline-start: 10px;
+        inset-inline-end: 10px
     }
 
     .navbar-menu-btn {

@@ -1,23 +1,14 @@
 'use client'
 
-// ══════════════════════════════════════════════════════════
-// app/hr/page.tsx — صفحة الموارد البشرية (محدّثة بالكامل)
-// API: GET/POST /api/employees | DELETE /api/employees/{id}
-//      GET/POST /api/attendance
-//      GET/POST /api/leave-requests
-//      POST /api/leave-requests/{id}/approve
-//      POST /api/leave-requests/{id}/reject
-//      GET /api/payroll
-// ══════════════════════════════════════════════════════════
-
 import { useState, useEffect, FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 import ERPLayout from '../../components/layout/ERPLayout'
 import { api, extractArray } from '../../lib/api'
 import { useToast } from '../../hooks/useToast'
 import { ToastContainer } from '../../components/ui'
 import { useI18n } from '../../lib/i18n'
 
-type Employee     = { id: number; name: string; email: string; department?: string; position?: string; role?: string; status: string; hire_date: string; salary?: number; phone?: string }
+type Employee = { id: number; name: string; email: string; department?: string; position?: string; role?: string; status: string; hire_date: string; salary?: number; phone?: string }
 type Attendance = { 
   id: number; 
   employee_id?: number;        
@@ -43,56 +34,51 @@ type Payroll = {
 
 const TABS = ['employees', 'attendance', 'leaves', 'payroll'] as const
 
-// ── Validation helpers ──────────────────────────────────
 const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 const isValidPhone  = (phone: string) => !phone || /^[\d\s\+\-\(\)]{7,20}$/.test(phone)
 
 export default function HRPage() {
   const { show, toasts, remove } = useToast()
   const { t, lang } = useI18n()
+  const [isMounted, setIsMounted] = useState(false)
   const [activeTab, setActiveTab] = useState<typeof TABS[number]>('employees')
 
-  // ── Employees ──────────────────────────────────────────
-  const [employees, setEmployees]   = useState<Employee[]>([])
+  const [employees, setEmployees] = useState<Employee[]>([])
   const [empLoading, setEmpLoading] = useState(true)
-  const [empSearch, setEmpSearch]   = useState('')
-  const [empModal, setEmpModal]     = useState(false)
+  const [empSearch, setEmpSearch] = useState('')
+  const [empModal, setEmpModal] = useState(false)
   const [empViewModal, setEmpViewModal] = useState<Employee | null>(null)
-  const [deleteId, setDeleteId]     = useState<number | null>(null)
-  const [empSaving, setEmpSaving]   = useState(false)
-  const [empErr, setEmpErr]         = useState('')
+  const [deleteId, setDeleteId] = useState<number | null>(null)
+  const [empSaving, setEmpSaving] = useState(false)
+  const [empErr, setEmpErr] = useState('')
   const [editingEmpId, setEditingEmpId] = useState<number | null>(null)
-  const [empForm, setEmpForm]       = useState({
+  const [empForm, setEmpForm] = useState({
     name: '', email: '', phone: '', department: '', role: '', hire_date: '', salary: '',
   })
 
-  // ── Attendance ─────────────────────────────────────────
-  const [attendance, setAttendance]   = useState<Attendance[]>([])
-  const [attLoading, setAttLoading]   = useState(true)
-  const [attDate, setAttDate]         = useState('')
+  const [attendance, setAttendance] = useState<Attendance[]>([])
+  const [attLoading, setAttLoading] = useState(true)
+  const [attDate, setAttDate] = useState('')
   const [checkInEmpId, setCheckInEmpId] = useState('')
-  const [checkingIn, setCheckingIn]   = useState(false)
+  const [checkingIn, setCheckingIn] = useState(false)
   const [checkingOut, setCheckingOut] = useState(false)
-  const [attMsg, setAttMsg]           = useState('')
+  const [attMsg, setAttMsg] = useState('')
 
-  // ── Leave Requests ─────────────────────────────────────
-  const [leaves, setLeaves]           = useState<LeaveRequest[]>([])
+  const [leaves, setLeaves] = useState<LeaveRequest[]>([])
   const [leaveLoading, setLeaveLoading] = useState(true)
-  const [leaveModal, setLeaveModal]   = useState(false)
+  const [leaveModal, setLeaveModal] = useState(false)
   const [leaveViewModal, setLeaveViewModal] = useState<LeaveRequest | null>(null)
   const [leaveEditModal, setLeaveEditModal] = useState<LeaveRequest | null>(null)
   const [deleteLeaveId, setDeleteLeaveId] = useState<number | null>(null)
   const [leaveSaving, setLeaveSaving] = useState(false)
-  const [leaveErr, setLeaveErr]       = useState('')
-  const [leaveForm, setLeaveForm]     = useState({
+  const [leaveErr, setLeaveErr] = useState('')
+  const [leaveForm, setLeaveForm] = useState({
     employee_id: '', type: 'annual', start_date: '', end_date: '', reason: '',
   })
 
-  // ── Payroll ────────────────────────────────────────────
-  const [payroll, setPayroll]     = useState<Payroll[]>([])
+  const [payroll, setPayroll] = useState<Payroll[]>([])
   const [payLoading, setPayLoading] = useState(true)
 
-  // ─── تحديد الموظف المتسجل check-in في اليوم ده ────────
   const todayCheckedIn = (empId: string) => {
     if (!empId) return false
     const today = new Date().toISOString().split('T')[0]
@@ -101,7 +87,6 @@ export default function HRPage() {
     )
   }
 
-  // ─── Fetch Employees ───────────────────────────────────
   const fetchEmployees = async () => {
     setEmpLoading(true)
     const p = new URLSearchParams({ per_page: '50', ...(empSearch && { search: empSearch }) })
@@ -110,7 +95,6 @@ export default function HRPage() {
     setEmpLoading(false)
   }
 
-  // ─── Fetch Attendance ──────────────────────────────────
   const fetchAttendance = async () => {
     setAttLoading(true)
     const p = new URLSearchParams({ per_page: '50', ...(attDate && { date: attDate }) })
@@ -119,7 +103,6 @@ export default function HRPage() {
     setAttLoading(false)
   }
 
-  // ─── Fetch Leaves ──────────────────────────────────────
   const fetchLeaves = async () => {
     setLeaveLoading(true)
     const res = await api.get<{ data: LeaveRequest[] }>('/leave-requests?per_page=50')
@@ -127,16 +110,13 @@ export default function HRPage() {
     setLeaveLoading(false)
   }
 
-  // ─── Fetch Payroll ─────────────────────────────────────
   const fetchPayroll = async () => {
     setPayLoading(true)
     const res = await api.get('/payroll?per_page=50')
-    // ✅ تصحيح: استخدام extractArray بدلاً من res.data?.data?.data
     if (res.data) setPayroll(extractArray(res.data))
     setPayLoading(false)
   }
 
-  // ── تسجيل حضور ────────────────────────────────────────
   const handleCheckIn = async () => {
     if (!checkInEmpId) {
       setAttMsg(lang === 'ar' ? '⚠️ اختر موظف أولاً' : '⚠️ Select employee first')
@@ -158,13 +138,11 @@ export default function HRPage() {
     fetchAttendance()
   }
 
-  // ── تسجيل انصراف ───────────────────────────────────────
   const handleCheckOut = async () => {
     if (!checkInEmpId) {
       setAttMsg(lang === 'ar' ? '⚠️ اختر موظف أولاً' : '⚠️ Select employee first')
       return
     }
-    // ✅ التحقق من أن الموظف check-in اليوم
     if (!todayCheckedIn(checkInEmpId)) {
       setAttMsg(lang === 'ar' ? '⚠️ هذا الموظف لم يسجل حضوره اليوم' : '⚠️ Employee has not checked in today')
       return
@@ -186,6 +164,10 @@ export default function HRPage() {
   }
 
   useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  useEffect(() => {
     if (activeTab === 'employees')  fetchEmployees()
     if (activeTab === 'attendance') fetchAttendance()
     if (activeTab === 'leaves')     fetchLeaves()
@@ -200,7 +182,6 @@ export default function HRPage() {
   
   useEffect(() => { if (activeTab === 'attendance') fetchAttendance() }, [attDate])
 
-  // ── إضافة/تعديل موظف ────────────────────────────────────────
   const handleEmpSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setEmpErr('')
@@ -225,10 +206,8 @@ export default function HRPage() {
 
     let res
     if (editingEmpId) {
-      // ✅ تعديل موظف موجود
       res = await api.put(`/employees/${editingEmpId}`, payload)
     } else {
-      // ✅ إضافة موظف جديد
       res = await api.post('/employees', payload)
     }
 
@@ -241,7 +220,6 @@ export default function HRPage() {
     fetchEmployees()
   }
 
-  // ✅ فتح modal التعديل بالبيانات الموجودة
   const openEditEmp = (emp: Employee) => {
     setEditingEmpId(emp.id)
     setEmpForm({
@@ -257,12 +235,10 @@ export default function HRPage() {
     setEmpModal(true)
   }
 
-  // ✅ فتح modal العرض
   const openViewEmp = (emp: Employee) => {
     setEmpViewModal(emp)
   }
 
-  // ✅ Soft Delete
   const handleEmpDelete = async () => {
     if (!deleteId) return
     const res = await api.delete(`/employees/${deleteId}`)
@@ -272,7 +248,6 @@ export default function HRPage() {
     setEmployees(prev => prev.filter(e => e.id !== deleteId))
   }
 
-  // ── طلب إجازة / تعديل إجازة ──────────────────────────────────────────
   const handleLeaveSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setLeaveErr('')
@@ -303,10 +278,8 @@ export default function HRPage() {
 
     let res
     if (leaveEditModal) {
-      // ✅ تعديل إجازة موجودة
       res = await api.put(`/leave-requests/${leaveEditModal.id}`, payload)
     } else {
-      // ✅ تقديم إجازة جديدة
       res = await api.post('/leave-requests', payload)
     }
 
@@ -319,7 +292,6 @@ export default function HRPage() {
     fetchLeaves()
   }
 
-  // ✅ فتح modal التعديل للإجازة
   const openEditLeave = (leave: LeaveRequest) => {
     if (leave.status !== 'pending') {
       show(lang === 'ar' ? 'لا يمكن تعديل إجازة تم حسمها' : 'Cannot edit approved/rejected leave', 'error')
@@ -337,12 +309,10 @@ export default function HRPage() {
     setLeaveModal(true)
   }
 
-  // ✅ فتح modal العرض للإجازة
   const openViewLeave = (leave: LeaveRequest) => {
     setLeaveViewModal(leave)
   }
 
-  // ✅ حذف إجازة
   const handleLeaveDelete = async (id: number) => {
     if (!confirm(lang === 'ar' ? 'تأكيد الحذف؟' : 'Confirm delete?')) return
     const res = await api.delete(`/leave-requests/${id}`)
@@ -351,7 +321,6 @@ export default function HRPage() {
     setLeaves(prev => prev.filter(l => l.id !== id))
   }
 
-  // ✅ الموافقة على الإجازة
   const handleLeaveApprove = async (id: number) => {
     const res = await api.post(`/leave-requests/${id}/approve`, {})
     if (res.error) { show(res.error, 'error'); return }
@@ -359,7 +328,6 @@ export default function HRPage() {
     fetchLeaves()
   }
 
-  // ✅ رفض الإجازة
   const handleLeaveReject = async (id: number) => {
     const res = await api.post(`/leave-requests/${id}/reject`, {})
     if (res.error) { show(res.error, 'error'); return }
@@ -367,7 +335,6 @@ export default function HRPage() {
     fetchLeaves()
   }
 
-  // ── Helpers ────────────────────────────────────────────
   const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US') : '—'
   const fmt     = (n: number) => new Intl.NumberFormat(lang === 'ar' ? 'ar-EG' : 'en-US').format(n || 0)
   const fmtCurrency = (n: number) => new Intl.NumberFormat(lang === 'ar' ? 'ar-EG' : 'en-US', { style: 'currency', currency: 'EGP' }).format(n || 0)
@@ -400,7 +367,6 @@ export default function HRPage() {
     <ERPLayout pageTitle={t('hr')}>
       <ToastContainer toasts={toasts} remove={remove} />
 
-      {/* Tabs */}
       <div className="tabs">
         {TABS.map(tab => (
           <button key={tab} className={`tab ${activeTab === tab ? 'active' : ''}`} onClick={() => setActiveTab(tab)}>
@@ -409,9 +375,6 @@ export default function HRPage() {
         ))}
       </div>
 
-      {/* ══════════════════════════════════════════════════
-          تاب: الموظفون
-      ══════════════════════════════════════════════════ */}
       {activeTab === 'employees' && (
         <>
           <div className="toolbar">
@@ -469,15 +432,12 @@ export default function HRPage() {
                         </td>
                         <td>
                           <div style={{ display: 'flex', gap: 4 }}>
-                            {/* ✅ زر View */}
                             <button className="btn btn-info btn-sm" onClick={() => openViewEmp(emp)} title={lang === 'ar' ? 'عرض' : 'View'}>
                               👁️
                             </button>
-                            {/* ✅ زر Edit */}
                             <button className="btn btn-secondary btn-sm" onClick={() => openEditEmp(emp)} title={lang === 'ar' ? 'تعديل' : 'Edit'}>
                               ✏️
                             </button>
-                            {/* ✅ زر Delete */}
                             <button className="btn btn-danger btn-sm" onClick={() => setDeleteId(emp.id)} title={lang === 'ar' ? 'حذف' : 'Delete'}>
                               🗑️
                             </button>
@@ -491,19 +451,16 @@ export default function HRPage() {
             )}
           </div>
 
-          {/* Modal: إضافة/تعديل موظف */}
-          {empModal && (
-            <div className="modal-overlay" onClick={() => setEmpModal(false)}>
-              <div className="modal" onClick={e => e.stopPropagation()}>
+          {empModal && isMounted && createPortal(
+            <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999999 }} onClick={() => setEmpModal(false)}>
+              <div style={{ maxWidth: 600, width: '95%', background: 'var(--bg-card, #fff)', color: 'var(--text-color, #000)', borderRadius: 8, display: 'flex', flexDirection: 'column', maxHeight: '90vh', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
                   <h3 className="modal-title">{editingEmpId ? (lang === 'ar' ? 'تعديل الموظف' : 'Edit Employee') : (lang === 'ar' ? 'موظف جديد' : 'New Employee')}</h3>
                   <button className="btn-icon" onClick={() => { setEmpModal(false); setEditingEmpId(null) }}>✕</button>
                 </div>
-                <form onSubmit={handleEmpSubmit}>
-                  <div className="modal-body">
+                <form onSubmit={handleEmpSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+                  <div className="modal-body" style={{ overflowY: 'auto' }}>
                     <div className="form-grid form-grid-2">
-
-                      {/* الاسم */}
                       <div className="input-group">
                         <label className="input-label">
                           {t('name')} <span style={{ color: 'var(--color-danger)' }}>*</span>
@@ -516,7 +473,6 @@ export default function HRPage() {
                         />
                       </div>
 
-                      {/* الإيميل */}
                       <div className="input-group">
                         <label className="input-label">
                           {t('email')} <span style={{ color: 'var(--color-danger)' }}>*</span>
@@ -536,7 +492,6 @@ export default function HRPage() {
                         )}
                       </div>
 
-                      {/* الهاتف */}
                       <div className="input-group">
                         <label className="input-label">{t('phone')}</label>
                         <input
@@ -553,7 +508,6 @@ export default function HRPage() {
                         )}
                       </div>
 
-                      {/* الراتب */}
                       <div className="input-group">
                         <label className="input-label">{lang === 'ar' ? 'الراتب' : 'Salary'}</label>
                         <input
@@ -567,7 +521,6 @@ export default function HRPage() {
                         />
                       </div>
 
-                      {/* القسم */}
                       <div className="input-group">
                         <label className="input-label">{lang === 'ar' ? 'القسم' : 'Department'}</label>
                         <input
@@ -578,7 +531,6 @@ export default function HRPage() {
                         />
                       </div>
 
-                      {/* المنصب */}
                       <div className="input-group">
                         <label className="input-label">
                           {lang === 'ar' ? 'المنصب' : 'Position'} <span style={{ color: 'var(--color-danger)' }}>*</span>
@@ -591,7 +543,6 @@ export default function HRPage() {
                         />
                       </div>
 
-                      {/* تاريخ التعيين */}
                       <div className="input-group" style={{ gridColumn: '1 / -1' }}>
                         <label className="input-label">{lang === 'ar' ? 'تاريخ التعيين' : 'Hire Date'}</label>
                         <input
@@ -624,18 +575,18 @@ export default function HRPage() {
                   </div>
                 </form>
               </div>
-            </div>
+            </div>,
+            document.body
           )}
 
-          {/* Modal: عرض موظف */}
-          {empViewModal && (
-            <div className="modal-overlay" onClick={() => setEmpViewModal(null)}>
-              <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 600 }}>
+          {empViewModal && isMounted && createPortal(
+            <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999999 }} onClick={() => setEmpViewModal(null)}>
+              <div style={{ maxWidth: 600, width: '95%', background: 'var(--bg-card, #fff)', color: 'var(--text-color, #000)', borderRadius: 8, display: 'flex', flexDirection: 'column', maxHeight: '90vh', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
                   <h3 className="modal-title">{lang === 'ar' ? 'بيانات الموظف' : 'Employee Details'}</h3>
                   <button className="btn-icon" onClick={() => setEmpViewModal(null)}>✕</button>
                 </div>
-                <div className="modal-body">
+                <div className="modal-body" style={{ overflowY: 'auto' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                     <div>
                       <label style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: 600 }}>{t('name')}</label>
@@ -682,13 +633,13 @@ export default function HRPage() {
                   </button>
                 </div>
               </div>
-            </div>
+            </div>,
+            document.body
           )}
 
-          {/* تأكيد الحذف */}
-          {deleteId && (
-            <div className="modal-overlay" onClick={() => setDeleteId(null)}>
-              <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+          {deleteId && isMounted && createPortal(
+            <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999999 }} onClick={() => setDeleteId(null)}>
+              <div style={{ maxWidth: 400, width: '95%', background: 'var(--bg-card, #fff)', color: 'var(--text-color, #000)', borderRadius: 8, display: 'flex', flexDirection: 'column', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
                 <div className="modal-body" style={{ textAlign: 'center', padding: '2rem' }}>
                   <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🗑️</div>
                   <h3 style={{ marginBottom: '0.5rem' }}>{t('confirm_delete')}</h3>
@@ -703,17 +654,14 @@ export default function HRPage() {
                   <button className="btn btn-danger" onClick={handleEmpDelete}>{t('delete')}</button>
                 </div>
               </div>
-            </div>
+            </div>,
+            document.body
           )}
         </>
       )}
 
-      {/* ══════════════════════════════════════════════════
-          تاب: الحضور
-      ══════════════════════════════════════════════════ */}
       {activeTab === 'attendance' && (
         <>
-          {/* ── لوحة الحضور والانصراف السريع ── */}
           <div className="card" style={{ marginBottom: '1rem', padding: '1rem 1.25rem' }}>
             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
               <div className="input-group" style={{ margin: 0, minWidth: 200, flex: 1 }}>
@@ -732,7 +680,6 @@ export default function HRPage() {
                 </select>
               </div>
 
-              {/* ✅ الأزرار */}
               <button
                 className="btn btn-primary"
                 onClick={handleCheckIn}
@@ -832,9 +779,6 @@ export default function HRPage() {
         </>
       )}
 
-      {/* ══════════════════════════════════════════════════
-          تاب: الإجازات
-      ══════════════════════════════════════════════════ */}
       {activeTab === 'leaves' && (
         <>
           <div className="toolbar">
@@ -885,19 +829,16 @@ export default function HRPage() {
                         </td>
                         <td>
                           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                            {/* ✅ زر View */}
                             <button className="btn btn-info btn-sm" onClick={() => openViewLeave(l)} title={lang === 'ar' ? 'عرض' : 'View'}>
                               👁️
                             </button>
                             
-                            {/* ✅ زر Edit — فقط للـ pending */}
                             {l.status === 'pending' && (
                               <button className="btn btn-secondary btn-sm" onClick={() => openEditLeave(l)} title={lang === 'ar' ? 'تعديل' : 'Edit'}>
                                 ✏️
                               </button>
                             )}
 
-                            {/* ✅ زر Approve */}
                             {l.status === 'pending' && (
                               <button
                                 className="btn btn-sm"
@@ -907,7 +848,6 @@ export default function HRPage() {
                               >✓</button>
                             )}
 
-                            {/* ✅ زر Reject */}
                             {l.status === 'pending' && (
                               <button
                                 className="btn btn-danger btn-sm"
@@ -916,7 +856,6 @@ export default function HRPage() {
                               >✕</button>
                             )}
 
-                            {/* ✅ زر Delete */}
                             <button className="btn btn-danger btn-sm" onClick={() => handleLeaveDelete(l.id)} title={lang === 'ar' ? 'حذف' : 'Delete'}>
                               🗑️
                             </button>
@@ -930,15 +869,14 @@ export default function HRPage() {
             )}
           </div>
 
-          {/* Modal: عرض إجازة */}
-          {leaveViewModal && (
-            <div className="modal-overlay" onClick={() => setLeaveViewModal(null)}>
-              <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 500 }}>
+          {leaveViewModal && isMounted && createPortal(
+            <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999999 }} onClick={() => setLeaveViewModal(null)}>
+              <div style={{ maxWidth: 500, width: '95%', background: 'var(--bg-card, #fff)', color: 'var(--text-color, #000)', borderRadius: 8, display: 'flex', flexDirection: 'column', maxHeight: '90vh', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
                   <h3 className="modal-title">{lang === 'ar' ? 'بيانات الإجازة' : 'Leave Request Details'}</h3>
                   <button className="btn-icon" onClick={() => setLeaveViewModal(null)}>✕</button>
                 </div>
-                <div className="modal-body">
+                <div className="modal-body" style={{ overflowY: 'auto' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                     <div>
                       <label style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: 600 }}>{lang === 'ar' ? 'الموظف' : 'Employee'}</label>
@@ -982,19 +920,19 @@ export default function HRPage() {
                   <button className="btn btn-secondary" onClick={() => setLeaveViewModal(null)}>{t('close')}</button>
                 </div>
               </div>
-            </div>
+            </div>,
+            document.body
           )}
 
-          {/* Modal: طلب إجازة جديد / تعديل */}
-          {leaveModal && (
-            <div className="modal-overlay" onClick={() => { setLeaveModal(false); setLeaveEditModal(null) }}>
-              <div className="modal" onClick={e => e.stopPropagation()}>
+          {leaveModal && isMounted && createPortal(
+            <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999999 }} onClick={() => { setLeaveModal(false); setLeaveEditModal(null) }}>
+              <div style={{ maxWidth: 500, width: '95%', background: 'var(--bg-card, #fff)', color: 'var(--text-color, #000)', borderRadius: 8, display: 'flex', flexDirection: 'column', maxHeight: '90vh', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
                   <h3 className="modal-title">{leaveEditModal ? (lang === 'ar' ? 'تعديل الإجازة' : 'Edit Leave') : (lang === 'ar' ? 'طلب إجازة جديد' : 'New Leave Request')}</h3>
                   <button className="btn-icon" onClick={() => { setLeaveModal(false); setLeaveEditModal(null) }}>✕</button>
                 </div>
-                <form onSubmit={handleLeaveSubmit}>
-                  <div className="modal-body">
+                <form onSubmit={handleLeaveSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+                  <div className="modal-body" style={{ overflowY: 'auto' }}>
                     <div className="form-grid form-grid-2">
                       <div className="input-group">
                         <label className="input-label">
@@ -1091,14 +1029,12 @@ export default function HRPage() {
                   </div>
                 </form>
               </div>
-            </div>
+            </div>,
+            document.body
           )}
         </>
       )}
 
-      {/* ══════════════════════════════════════════════════
-          تاب: الرواتب
-      ══════════════════════════════════════════════════ */}
       {activeTab === 'payroll' && (
         <div className="card" style={{ padding: 0 }}>
           {payLoading ? (
