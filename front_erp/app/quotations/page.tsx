@@ -1,15 +1,12 @@
 'use client'
 
-// ══════════════════════════════════════════════════════════
-// app/quotations/page.tsx — صفحة عروض الأسعار (كاملة)
-// ══════════════════════════════════════════════════════════
-
 import { useState, useEffect, useRef, FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 import ERPLayout from '../../components/layout/ERPLayout'
 import { api } from '../../lib/api'
 import { useI18n } from '../../lib/i18n'
+import './page.css'
 
-// ── Types ──────────────────────────────────────────────────
 type QuotItem = {
   id: number
   invoice_number: string
@@ -27,35 +24,31 @@ type Product  = { id: number; name: string; sku?: string; sale_price?: number; p
 
 type LineItem = {
   product_id: string
-  name:       string
-  qty:        number
-  price:      number
-  discount:   number
+  name: string
+  qty: number
+  price: number
+  discount: number
 }
 
 const EMPTY_LINE: LineItem = { product_id: '', name: '', qty: 1, price: 0, discount: 0 }
 
-// ── Status Config ──────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { labelAr: string; labelEn: string; bg: string; color: string }> = {
-  quotation:  { labelAr: 'عرض سعر',    labelEn: 'Quotation',  bg: '#eff6ff', color: '#1e40af' },
-  sent:       { labelAr: 'تم الإرسال', labelEn: 'Sent',       bg: '#e0f2fe', color: '#0369a1' },
-  confirmed:  { labelAr: 'مؤكد',       labelEn: 'Confirmed',  bg: '#d1fae5', color: '#065f46' },
-  cancelled:  { labelAr: 'ملغي',       labelEn: 'Cancelled',  bg: '#fef2f2', color: '#dc2626' },
-  converted:  { labelAr: 'محوّل',      labelEn: 'Converted',  bg: '#f3f4f6', color: '#374151' },
+  quotation: { labelAr: 'عرض سعر', labelEn: 'Quotation', bg: '#eff6ff', color: '#1e40af' },
+  sent: { labelAr: 'تم الإرسال', labelEn: 'Sent', bg: '#e0f2fe', color: '#0369a1' },
+  confirmed: { labelAr: 'مؤكد', labelEn: 'Confirmed', bg: '#d1fae5', color: '#065f46' },
+  cancelled: { labelAr: 'ملغي', labelEn: 'Cancelled', bg: '#fef2f2', color: '#dc2626' },
+  converted: { labelAr: 'محوّل', labelEn: 'Converted', bg: '#f3f4f6', color: '#374151' },
 }
 
 const getStatusCfg = (status: string, ar: boolean) => {
-  const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG['quotation']
+  const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.quotation
   return { ...cfg, label: ar ? cfg.labelAr : cfg.labelEn }
 }
 
-// ── Print Quotation ────────────────────────────────────────
 const printQuotation = async (q: QuotItem, ar: boolean) => {
-  // جيب اسم الشركة من localStorage
   const user = JSON.parse(localStorage.getItem('erp_user') || '{}')
   const companyName = user?.company?.name ?? (ar ? 'شركتنا' : 'Our Company')
 
-  // جيب التفاصيل الكاملة مع الأصناف
   const res = await api.get(`/quotations/${q.id}`)
   const full = (res.data?.data ?? res.data ?? q) as QuotItem
 
@@ -66,11 +59,11 @@ const printQuotation = async (q: QuotItem, ar: boolean) => {
 
   const itemsHtml = full.items && full.items.length > 0
     ? full.items.map((item: any, idx: number) => {
-        const name     = item.product?.name ?? item.name ?? '—'
-        const qty      = item.quantity ?? item.qty ?? 0
-        const price    = Number(item.unit_price ?? item.price ?? 0)
+        const name = item.product?.name ?? item.name ?? '-'
+        const qty = item.quantity ?? item.qty ?? 0
+        const price = Number(item.unit_price ?? item.price ?? 0)
         const discount = Number(item.discount ?? 0)
-        const net      = qty * price - discount
+        const net = qty * price - discount
         return `
           <tr>
             <td style="padding:10px 14px;border-bottom:1px solid #e5e7eb;">${idx + 1}</td>
@@ -119,7 +112,7 @@ const printQuotation = async (q: QuotItem, ar: boolean) => {
     <body>
       <div class="header">
         <div>
-          <div class="company">🏢 ${companyName}</div>
+          <div class="company">${companyName}</div>
           <div class="doc-title">${ar ? 'عرض سعر' : 'Quotation'}</div>
         </div>
         <div style="text-align:${ar ? 'left' : 'right'}">
@@ -132,8 +125,8 @@ const printQuotation = async (q: QuotItem, ar: boolean) => {
         <div class="meta-box">
           <div class="meta-label">${ar ? 'العميل' : 'Customer'}</div>
           <div class="meta-value">${full.customer?.name ?? (ar ? 'عميل نقدي' : 'Walk-in')}</div>
-          ${full.customer?.phone ? `<div class="meta-sub">📞 ${full.customer.phone}</div>` : ''}
-          ${full.customer?.email ? `<div class="meta-sub">✉️ ${full.customer.email}</div>` : ''}
+          ${full.customer?.phone ? `<div class="meta-sub">${full.customer.phone}</div>` : ''}
+          ${full.customer?.email ? `<div class="meta-sub">${full.customer.email}</div>` : ''}
         </div>
         <div class="meta-box">
           <div class="meta-label">${ar ? 'تفاصيل العرض' : 'Quotation Details'}</div>
@@ -164,7 +157,7 @@ const printQuotation = async (q: QuotItem, ar: boolean) => {
 
       ${full.notes ? `
         <div class="notes">
-          <div class="notes-label">📝 ${ar ? 'ملاحظات / الشروط والأحكام' : 'Notes / Terms & Conditions'}</div>
+          <div class="notes-label">${ar ? 'ملاحظات / الشروط والأحكام' : 'Notes / Terms & Conditions'}</div>
           <div class="notes-text">${full.notes.replace(/\n/g, '<br/>')}</div>
         </div>
       ` : ''}
@@ -178,12 +171,20 @@ const printQuotation = async (q: QuotItem, ar: boolean) => {
     </html>`
 
   const win = window.open('', '_blank')
-  if (win) { win.document.write(html); win.document.close() }
+  if (win) {
+    win.document.write(html)
+    win.document.close()
+  }
 }
 
-// ── Autocomplete Component ─────────────────────────────────
 function Autocomplete({
-  placeholder, value, onSelect, fetchFn, renderOption, onAddNew, addNewLabel,
+  placeholder,
+  value,
+  onSelect,
+  fetchFn,
+  renderOption,
+  onAddNew,
+  addNewLabel,
 }: {
   placeholder: string
   value: string
@@ -193,9 +194,9 @@ function Autocomplete({
   onAddNew?: () => void
   addNewLabel?: string
 }) {
-  const [query,   setQuery]   = useState(value)
+  const [query, setQuery] = useState(value)
   const [results, setResults] = useState<any[]>([])
-  const [open,    setOpen]    = useState(false)
+  const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const timer = useRef<any>(null)
 
@@ -204,7 +205,12 @@ function Autocomplete({
   const handleChange = (val: string) => {
     setQuery(val)
     clearTimeout(timer.current)
-    if (!val.trim()) { setResults([]); setOpen(false); return }
+    if (!val.trim()) {
+      setResults([])
+      setOpen(false)
+      return
+    }
+
     timer.current = setTimeout(async () => {
       setLoading(true)
       const res = await fetchFn(val)
@@ -215,45 +221,29 @@ function Autocomplete({
   }
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div className="quotation-autocomplete">
       <input
+        className="input"
         value={query}
         onChange={e => handleChange(e.target.value)}
         onFocus={() => query && results.length && setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 200)}
         placeholder={placeholder}
-        style={{
-          width: '100%', padding: '10px 12px', border: '1px solid #d1d5db',
-          borderRadius: 8, fontSize: 14, boxSizing: 'border-box' as any,
-          outline: 'none',
-        }}
       />
       {loading && (
-        <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', fontSize: 12 }}>
-          ⏳
+        <div style={{ position: 'absolute', insetInlineEnd: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: 12 }}>
+          ...
         </div>
       )}
       {open && (results.length > 0 || onAddNew) && (
-        <div style={{
-          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 999,
-          background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8,
-          boxShadow: '0 8px 24px rgba(0,0,0,.12)', maxHeight: 240, overflowY: 'auto',
-        }}>
+        <div className="quotation-autocomplete-menu">
           {results.map((item, i) => (
-            <div key={i} onMouseDown={() => { onSelect(item); setQuery(item.name); setOpen(false) }}
-              style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid #f3f4f6' }}
-              onMouseEnter={e => (e.currentTarget.style.background = '#f9fafb')}
-              onMouseLeave={e => (e.currentTarget.style.background = '#fff')}
-            >
+            <div key={i} onMouseDown={() => { onSelect(item); setQuery(item.name); setOpen(false) }} className="quotation-autocomplete-option">
               {renderOption(item)}
             </div>
           ))}
           {onAddNew && (
-            <div onMouseDown={onAddNew}
-              style={{ padding: '10px 14px', cursor: 'pointer', color: '#1a56db', fontWeight: 600, fontSize: 13, borderTop: '1px solid #e5e7eb' }}
-              onMouseEnter={e => (e.currentTarget.style.background = '#eff6ff')}
-              onMouseLeave={e => (e.currentTarget.style.background = '#fff')}
-            >
+            <div onMouseDown={onAddNew} className="quotation-autocomplete-create">
               + {addNewLabel}
             </div>
           )}
@@ -263,62 +253,60 @@ function Autocomplete({
   )
 }
 
-// ── Main Page ──────────────────────────────────────────────
 export default function QuotationsPage() {
   const { lang } = useI18n()
   const ar = lang === 'ar'
 
+  const [isMounted, setIsMounted] = useState(false)
+  useEffect(() => { setIsMounted(true) }, [])
+
   const [quotations, setQuotations] = useState<QuotItem[]>([])
-  const [loading,    setLoading]    = useState(true)
-  const [saving,     setSaving]     = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [converting, setConverting] = useState<number | null>(null)
-  const [total,      setTotal]      = useState(0)
-  const [search,     setSearch]     = useState('')
-  const [page,       setPage]       = useState(1)
-  const [modalOpen,  setModalOpen]  = useState(false)
-  const [editing,    setEditing]    = useState<QuotItem | null>(null)
-  const [errors,     setErrors]     = useState<Record<string, string>>({})
-  const [toast,      setToast]      = useState<{ msg: string; ok: boolean } | null>(null)
+  const [total, setTotal] = useState(0)
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editing, setEditing] = useState<QuotItem | null>(null)
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null)
 
-  // ── Filters ──
-  const [filterStatus,    setFilterStatus]    = useState('')
-  const [filterDateFrom,  setFilterDateFrom]  = useState('')
-  const [filterDateTo,    setFilterDateTo]    = useState('')
+  const [filterStatus, setFilterStatus] = useState('')
+  const [filterDateFrom, setFilterDateFrom] = useState('')
+  const [filterDateTo, setFilterDateTo] = useState('')
 
-  // form state
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
-  const [customerQuery,    setCustomerQuery]    = useState('')
-  const [notes,            setNotes]            = useState('')
-  const [validUntil,       setValidUntil]       = useState('')
-  const [lines,            setLines]            = useState<LineItem[]>([{ ...EMPTY_LINE }])
+  const [customerQuery, setCustomerQuery] = useState('')
+  const [notes, setNotes] = useState('')
+  const [validUntil, setValidUntil] = useState('')
+  const [lines, setLines] = useState<LineItem[]>([{ ...EMPTY_LINE }])
 
-  // inline add customer modal
   const [addCustomerOpen, setAddCustomerOpen] = useState(false)
-  const [newCust,         setNewCust]         = useState({ name: '', phone: '', email: '' })
-  const [addingCust,      setAddingCust]      = useState(false)
+  const [newCust, setNewCust] = useState({ name: '', phone: '', email: '' })
+  const [addingCust, setAddingCust] = useState(false)
 
-  // inline add product modal
   const [addProductOpen, setAddProductOpen] = useState(false)
-  const [newProd,        setNewProd]        = useState({ name: '', sale_price: '', sku: '' })
-  const [addingProd,     setAddingProd]     = useState(false)
-  const [addProdLineIdx, setAddProdLineIdx] = useState<number>(0)
+  const [newProd, setNewProd] = useState({ name: '', sale_price: '', sku: '' })
+  const [addingProd, setAddingProd] = useState(false)
+  const [addProdLineIdx, setAddProdLineIdx] = useState(0)
 
   const flash = (msg: string, ok = true) => {
     setToast({ msg, ok })
     setTimeout(() => setToast(null), 3500)
   }
 
-  // ── Fetch quotations ──
   const fetchQuotations = async () => {
     setLoading(true)
     const p = new URLSearchParams({
-      page:     String(page),
+      page: String(page),
       per_page: '15',
-      ...(search         && { search }),
-      ...(filterStatus   && { status: filterStatus }),
+      ...(search && { search }),
+      ...(filterStatus && { status: filterStatus }),
       ...(filterDateFrom && { date_from: filterDateFrom }),
-      ...(filterDateTo   && { date_to:   filterDateTo }),
+      ...(filterDateTo && { date_to: filterDateTo }),
     })
+
     const res = await api.get(`/quotations?${p}`)
     if (res.data) {
       setQuotations(res.data.data ?? res.data)
@@ -337,9 +325,8 @@ export default function QuotationsPage() {
     setPage(1)
   }
 
-  const hasActiveFilters = filterStatus || filterDateFrom || filterDateTo || search
+  const hasActiveFilters = !!(filterStatus || filterDateFrom || filterDateTo || search)
 
-  // ── Autocomplete fetch functions ──
   const fetchCustomers = async (q: string): Promise<Customer[]> => {
     const res = await api.get(`/customers?search=${encodeURIComponent(q)}&per_page=10`)
     return res.data?.data ?? res.data ?? []
@@ -350,7 +337,6 @@ export default function QuotationsPage() {
     return res.data?.data ?? res.data ?? []
   }
 
-  // ── Line Items ──
   const addLine = () => setLines(p => [...p, { ...EMPTY_LINE }])
 
   const updateLine = (i: number, key: keyof LineItem, val: any) =>
@@ -366,8 +352,8 @@ export default function QuotationsPage() {
       arr[i] = {
         ...arr[i],
         product_id: String(prod.id),
-        name:       prod.name,
-        price:      prod.sale_price ?? prod.price ?? 0,
+        name: prod.name,
+        price: prod.sale_price ?? prod.price ?? 0,
       }
       return arr
     })
@@ -375,10 +361,9 @@ export default function QuotationsPage() {
 
   const removeLine = (i: number) => setLines(p => p.filter((_, idx) => idx !== i))
 
-  const lineNet    = (l: LineItem) => l.qty * l.price - (l.discount ?? 0)
+  const lineNet = (l: LineItem) => l.qty * l.price - (l.discount ?? 0)
   const grandTotal = () => lines.reduce((s, l) => s + lineNet(l), 0)
 
-  // ── Reset form ──
   const resetForm = () => {
     setSelectedCustomer(null)
     setCustomerQuery('')
@@ -389,7 +374,10 @@ export default function QuotationsPage() {
     setEditing(null)
   }
 
-  const openAdd = () => { resetForm(); setModalOpen(true) }
+  const openAdd = () => {
+    resetForm()
+    setModalOpen(true)
+  }
 
   const openEdit = (q: QuotItem) => {
     setEditing(q)
@@ -401,10 +389,10 @@ export default function QuotationsPage() {
       q.items && q.items.length > 0
         ? q.items.map((i: any) => ({
             product_id: String(i.product_id ?? ''),
-            name:       i.product?.name ?? i.name ?? '',
-            qty:        i.quantity ?? i.qty ?? 1,
-            price:      Number(i.unit_price ?? i.price ?? 0),
-            discount:   Number(i.discount ?? 0),
+            name: i.product?.name ?? i.name ?? '',
+            qty: i.quantity ?? i.qty ?? 1,
+            price: Number(i.unit_price ?? i.price ?? 0),
+            discount: Number(i.discount ?? 0),
           }))
         : [{ ...EMPTY_LINE }]
     )
@@ -412,7 +400,6 @@ export default function QuotationsPage() {
     setModalOpen(true)
   }
 
-  // ── Validate ──
   const validate = () => {
     const e: Record<string, string> = {}
     if (!editing) {
@@ -421,30 +408,28 @@ export default function QuotationsPage() {
       }
       lines.forEach((l, i) => {
         if (!l.product_id) e[`item_${i}`] = ar ? 'اختر منتج' : 'Select product'
-        if (l.qty <= 0)    e[`qty_${i}`]  = ar ? 'كمية غير صحيحة' : 'Invalid qty'
+        if (l.qty <= 0) e[`qty_${i}`] = ar ? 'كمية غير صحيحة' : 'Invalid qty'
       })
     }
     setErrors(e)
     return !Object.keys(e).length
   }
 
-  // ── Submit ──
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     if (!validate()) return
     setSaving(true)
 
     const validLines = lines.filter(l => l.product_id && l.qty > 0)
-
     const payload = {
       customer_id: selectedCustomer?.id ?? null,
       notes,
       valid_until: validUntil || undefined,
       items: validLines.map(l => ({
         product_id: Number(l.product_id),
-        qty:        l.qty,
-        price:      l.price,
-        discount:   l.discount ?? 0,
+        qty: l.qty,
+        price: l.price,
+        discount: l.discount ?? 0,
       })),
     }
 
@@ -453,48 +438,60 @@ export default function QuotationsPage() {
       : await api.post('/quotations', payload)
 
     setSaving(false)
-    if (res.error) { flash(res.error, false); return }
+    if (res.error) {
+      flash(res.error, false)
+      return
+    }
+
     flash(ar ? (editing ? 'تم التحديث ✓' : 'تم إنشاء العرض ✓') : (editing ? 'Updated ✓' : 'Created ✓'))
     setModalOpen(false)
     resetForm()
     fetchQuotations()
   }
 
-  // ── Delete ──
   const handleDelete = async (q: QuotItem) => {
     if (!confirm(ar ? `حذف عرض "${q.invoice_number}"؟` : `Delete "${q.invoice_number}"?`)) return
     const res = await api.delete(`/quotations/${q.id}`)
-    if (res.error) { flash(res.error, false); return }
+    if (res.error) {
+      flash(res.error, false)
+      return
+    }
     flash(ar ? 'تم الحذف' : 'Deleted')
     fetchQuotations()
   }
 
-  // ── Convert ──
   const handleConvert = async (q: QuotItem) => {
     if (!confirm(ar ? `تحويل العرض "${q.invoice_number}" إلى فاتورة مبيعات؟` : `Convert "${q.invoice_number}" to invoice?`)) return
     setConverting(q.id)
     const res = await api.post(`/quotations/${q.id}/convert`, {})
     setConverting(null)
-    if (res.error) { flash(res.error, false); return }
-    flash(ar ? '✅ تم التحويل إلى فاتورة' : '✅ Converted to invoice')
+    if (res.error) {
+      flash(res.error, false)
+      return
+    }
+    flash(ar ? 'تم التحويل إلى فاتورة ✓' : 'Converted to invoice ✓')
     fetchQuotations()
   }
 
-  // ── Change Status ──
   const handleChangeStatus = async (id: number, newStatus: string) => {
     const res = await api.put(`/quotations/${id}`, { status: newStatus })
-    if (res.error) { flash(res.error, false); return }
+    if (res.error) {
+      flash(res.error, false)
+      return
+    }
     flash(ar ? 'تم تغيير الحالة ✓' : 'Status updated ✓')
     fetchQuotations()
   }
 
-  // ── Add Customer inline ──
   const handleAddCustomer = async () => {
     if (!newCust.name.trim()) return
     setAddingCust(true)
     const res = await api.post('/customers', newCust)
     setAddingCust(false)
-    if (res.error) { flash(res.error, false); return }
+    if (res.error) {
+      flash(res.error, false)
+      return
+    }
     const c: Customer = res.data?.data ?? res.data
     setSelectedCustomer(c)
     setCustomerQuery(c.name)
@@ -503,17 +500,19 @@ export default function QuotationsPage() {
     flash(ar ? 'تم إضافة العميل ✓' : 'Customer added ✓')
   }
 
-  // ── Add Product inline ──
   const handleAddProduct = async () => {
     if (!newProd.name.trim()) return
     setAddingProd(true)
     const res = await api.post('/products', {
-      name:       newProd.name,
+      name: newProd.name,
       sale_price: Number(newProd.sale_price) || 0,
-      sku:        newProd.sku || undefined,
+      sku: newProd.sku || undefined,
     })
     setAddingProd(false)
-    if (res.error) { flash(res.error, false); return }
+    if (res.error) {
+      flash(res.error, false)
+      return
+    }
     const p: Product = res.data?.data ?? res.data
     selectProduct(addProdLineIdx, p)
     setAddProductOpen(false)
@@ -525,556 +524,412 @@ export default function QuotationsPage() {
     new Intl.NumberFormat(ar ? 'ar-EG' : 'en-US', { minimumFractionDigits: 2 }).format(n ?? 0)
 
   const canEdit = (status: string) => ['quotation', 'sent'].includes(status)
+  const statusBadgeClass = (status: string) => ({
+    quotation: 'badge-primary',
+    sent: 'badge-info',
+    confirmed: 'badge-success',
+    cancelled: 'badge-danger',
+    converted: 'badge-muted',
+  }[status] || 'badge-muted')
 
-  // ══════════════════════════════════════════════════════════
-  // RENDER
-  // ══════════════════════════════════════════════════════════
+  const expiredCount = quotations.filter(q => q.valid_until && new Date(q.valid_until) < new Date()).length
+  const convertibleCount = quotations.filter(q => canEdit(q.status)).length
+
   return (
-    <ERPLayout>
-      <div style={{ padding: '24px', maxWidth: 1200, margin: '0 auto' }}>
-
-        {/* Toast */}
+    <ERPLayout pageTitle={ar ? 'عروض الأسعار' : 'Quotations'}>
+      <div className="quotations-page">
         {toast && (
-          <div style={{
-            position: 'fixed', top: 20, right: 20, zIndex: 9999,
-            background: toast.ok ? '#22c55e' : '#ef4444',
-            color: '#fff', padding: '12px 22px', borderRadius: 8,
-            boxShadow: '0 4px 16px rgba(0,0,0,.2)', fontWeight: 600, fontSize: 14,
-          }}>{toast.msg}</div>
+          <div className={`quotation-toast ${toast.ok ? 'ok' : 'error'}`}>{toast.msg}</div>
         )}
 
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+        <div className="quotations-hero">
           <div>
-            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700 }}>
-              {ar ? '📄 عروض الأسعار' : '📄 Quotations'}
-            </h1>
-            <p style={{ margin: '4px 0 0', color: '#6b7280', fontSize: 14 }}>
-              {ar ? `الإجمالي: ${total} عرض` : `Total: ${total} quotations`}
-            </p>
+            <h2>{ar ? 'عروض الأسعار' : 'Quotations'}</h2>
+            <p>{ar ? `الإجمالي: ${total} عرض` : `Total: ${total} quotations`}</p>
           </div>
-          <button onClick={openAdd} style={{
-            background: '#1a56db', color: '#fff', border: 'none',
-            borderRadius: 8, padding: '10px 22px', cursor: 'pointer', fontWeight: 700, fontSize: 14,
-          }}>
-            {ar ? '+ عرض سعر جديد' : '+ New Quotation'}
+          <button onClick={openAdd} className="btn btn-primary">
+            + {ar ? 'عرض سعر جديد' : 'New Quotation'}
           </button>
         </div>
 
-        {/* ── Filters Bar ─────────────────────────────────── */}
-        <div style={{
-          background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10,
-          padding: '16px 20px', marginBottom: 16,
-          display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end',
-        }}>
-          {/* Search */}
-          <div style={{ flex: '2 1 200px' }}>
-            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 5, textTransform: 'uppercase' }}>
-              {ar ? 'بحث' : 'Search'}
-            </label>
-            <input
-              type="text"
-              placeholder={ar ? 'رقم العرض أو اسم العميل...' : 'Number or customer...'}
-              value={search}
-              onChange={e => { setSearch(e.target.value); setPage(1) }}
-              style={{
-                width: '100%', padding: '9px 12px',
-                border: '1px solid #d1d5db', borderRadius: 7, fontSize: 13,
-                boxSizing: 'border-box' as any,
-              }}
-            />
+        <div className="quotations-stats">
+          {[
+            { label: ar ? 'كل العروض' : 'All Quotations', value: total },
+            { label: ar ? 'قابلة للتحويل' : 'Ready To Convert', value: convertibleCount },
+            { label: ar ? 'منتهية الصلاحية' : 'Expired', value: expiredCount },
+          ].map(card => (
+            <div key={card.label} className="stat-card">
+              <div>
+                <div className="quotations-stat-value">{card.value}</div>
+                <div className="quotations-stat-label">{card.label}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="card quotations-filter-card">
+          <div className="quotations-filter-grid">
+            <div className="input-group">
+              <label className="input-label">{ar ? 'بحث' : 'Search'}</label>
+              <input
+                className="input"
+                type="text"
+                placeholder={ar ? 'رقم العرض أو اسم العميل...' : 'Number or customer...'}
+                value={search}
+                onChange={e => { setSearch(e.target.value); setPage(1) }}
+              />
+            </div>
+
+            <div className="input-group">
+              <label className="input-label">{ar ? 'الحالة' : 'Status'}</label>
+              <select className="input" value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setPage(1) }}>
+                <option value="">{ar ? 'كل الحالات' : 'All Statuses'}</option>
+                <option value="quotation">{ar ? 'عرض سعر' : 'Quotation'}</option>
+                <option value="sent">{ar ? 'تم الإرسال' : 'Sent'}</option>
+                <option value="confirmed">{ar ? 'مؤكد' : 'Confirmed'}</option>
+                <option value="cancelled">{ar ? 'ملغي' : 'Cancelled'}</option>
+                <option value="converted">{ar ? 'محوّل' : 'Converted'}</option>
+              </select>
+            </div>
+
+            <div className="input-group">
+              <label className="input-label">{ar ? 'من تاريخ' : 'Date From'}</label>
+              <input className="input" type="date" value={filterDateFrom} onChange={e => { setFilterDateFrom(e.target.value); setPage(1) }} />
+            </div>
+
+            <div className="input-group">
+              <label className="input-label">{ar ? 'إلى تاريخ' : 'Date To'}</label>
+              <input className="input" type="date" value={filterDateTo} onChange={e => { setFilterDateTo(e.target.value); setPage(1) }} />
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+              <button onClick={resetFilters} className="btn btn-secondary" disabled={!hasActiveFilters}>
+                {ar ? 'مسح الفلاتر' : 'Clear Filters'}
+              </button>
+            </div>
           </div>
 
-          {/* Status Filter */}
-          <div style={{ flex: '1 1 150px' }}>
-            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 5, textTransform: 'uppercase' }}>
-              {ar ? 'الحالة' : 'Status'}
-            </label>
-            <select
-              value={filterStatus}
-              onChange={e => { setFilterStatus(e.target.value); setPage(1) }}
-              style={{
-                width: '100%', padding: '9px 12px',
-                border: '1px solid #d1d5db', borderRadius: 7, fontSize: 13,
-                background: '#fff', cursor: 'pointer',
-              }}
-            >
-              <option value="">{ar ? 'كل الحالات' : 'All Statuses'}</option>
-              <option value="quotation">{ar ? 'عرض سعر' : 'Quotation'}</option>
-              <option value="sent">{ar ? 'تم الإرسال' : 'Sent'}</option>
-              <option value="confirmed">{ar ? 'مؤكد' : 'Confirmed'}</option>
-              <option value="cancelled">{ar ? 'ملغي' : 'Cancelled'}</option>
-              <option value="converted">{ar ? 'محوّل' : 'Converted'}</option>
-            </select>
-          </div>
-
-          {/* Date From */}
-          <div style={{ flex: '1 1 140px' }}>
-            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 5, textTransform: 'uppercase' }}>
-              {ar ? 'من تاريخ' : 'Date From'}
-            </label>
-            <input
-              type="date"
-              value={filterDateFrom}
-              onChange={e => { setFilterDateFrom(e.target.value); setPage(1) }}
-              style={{
-                width: '100%', padding: '9px 12px',
-                border: '1px solid #d1d5db', borderRadius: 7, fontSize: 13,
-                boxSizing: 'border-box' as any,
-              }}
-            />
-          </div>
-
-          {/* Date To */}
-          <div style={{ flex: '1 1 140px' }}>
-            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 5, textTransform: 'uppercase' }}>
-              {ar ? 'إلى تاريخ' : 'Date To'}
-            </label>
-            <input
-              type="date"
-              value={filterDateTo}
-              onChange={e => { setFilterDateTo(e.target.value); setPage(1) }}
-              style={{
-                width: '100%', padding: '9px 12px',
-                border: '1px solid #d1d5db', borderRadius: 7, fontSize: 13,
-                boxSizing: 'border-box' as any,
-              }}
-            />
-          </div>
-
-          {/* Reset */}
           {hasActiveFilters && (
-            <button
-              onClick={resetFilters}
-              style={{
-                padding: '9px 16px', border: '1px solid #fca5a5', borderRadius: 7,
-                background: '#fef2f2', color: '#dc2626', cursor: 'pointer',
-                fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap',
-              }}
-            >
-              ✕ {ar ? 'مسح الفلاتر' : 'Clear Filters'}
-            </button>
+            <div className="quotations-chips" style={{ marginTop: '0.9rem' }}>
+              {filterStatus && (
+                <span className="quotations-chip status">
+                  {ar ? 'الحالة: ' : 'Status: '}
+                  {ar ? STATUS_CONFIG[filterStatus]?.labelAr : STATUS_CONFIG[filterStatus]?.labelEn}
+                </span>
+              )}
+              {filterDateFrom && (
+                <span className="quotations-chip date">{ar ? 'من: ' : 'From: '}{filterDateFrom}</span>
+              )}
+              {filterDateTo && (
+                <span className="quotations-chip date">{ar ? 'إلى: ' : 'To: '}{filterDateTo}</span>
+              )}
+            </div>
           )}
         </div>
 
-        {/* Active filter chips */}
-        {hasActiveFilters && (
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-            {filterStatus && (
-              <span style={{ background: '#eff6ff', color: '#1e40af', padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
-                {ar ? 'الحالة: ' : 'Status: '}
-                {ar ? STATUS_CONFIG[filterStatus]?.labelAr : STATUS_CONFIG[filterStatus]?.labelEn}
-              </span>
-            )}
-            {filterDateFrom && (
-              <span style={{ background: '#f0fdf4', color: '#166534', padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
-                {ar ? 'من: ' : 'From: '}{filterDateFrom}
-              </span>
-            )}
-            {filterDateTo && (
-              <span style={{ background: '#f0fdf4', color: '#166534', padding: '3px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
-                {ar ? 'إلى: ' : 'To: '}{filterDateTo}
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Table */}
         {loading ? (
-          <div style={{ textAlign: 'center', padding: 80, color: '#9ca3af' }}>
-            <div style={{ fontSize: 36 }}>⏳</div>
-            <div style={{ marginTop: 10 }}>{ar ? 'جاري التحميل...' : 'Loading...'}</div>
+          <div className="card">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {Array(6).fill(0).map((_, i) => <div key={i} className="skeleton" style={{ height: 46 }} />)}
+            </div>
           </div>
         ) : quotations.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 80, background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,.08)' }}>
-            <div style={{ fontSize: 48 }}>📄</div>
-            <div style={{ marginTop: 10, color: '#6b7280' }}>
-              {ar ? 'لا توجد عروض أسعار' : 'No quotations found'}
-            </div>
+          <div className="card empty-state">
+            <div className="empty-state-icon">📄</div>
+            <div className="empty-state-text">{ar ? 'لا توجد عروض أسعار' : 'No quotations found'}</div>
             {hasActiveFilters && (
-              <button onClick={resetFilters} style={{ marginTop: 12, background: '#1a56db', color: '#fff', border: 'none', borderRadius: 7, padding: '8px 20px', cursor: 'pointer', fontWeight: 600 }}>
+              <button onClick={resetFilters} className="btn btn-primary" style={{ marginTop: 12 }}>
                 {ar ? 'مسح الفلاتر' : 'Clear Filters'}
               </button>
             )}
           </div>
         ) : (
-          <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,.08)', overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
-                  {[
-                    ar ? 'رقم العرض'  : 'Number',
-                    ar ? 'العميل'     : 'Customer',
-                    ar ? 'الإجمالي'   : 'Total',
-                    ar ? 'صالح حتى'   : 'Valid Until',
-                    ar ? 'التاريخ'    : 'Date',
-                    ar ? 'الحالة'     : 'Status',
-                    ar ? 'إجراءات'    : 'Actions',
-                  ].map(h => (
-                    <th key={h} style={{ padding: '12px 16px', textAlign: ar ? 'right' : 'left', fontWeight: 700, fontSize: 13, color: '#374151' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {quotations.map(q => {
-                  const cfg = getStatusCfg(q.status, ar)
-                  return (
-                    <tr key={q.id} style={{ borderBottom: '1px solid #f3f4f6' }}
-                      onMouseEnter={e => (e.currentTarget.style.background = '#fafafa')}
-                      onMouseLeave={e => (e.currentTarget.style.background = '#fff')}
-                    >
-                      {/* Number */}
-                      <td style={{ padding: '13px 16px', fontWeight: 700, color: '#1a56db', whiteSpace: 'nowrap' }}>
-                        {q.invoice_number}
-                      </td>
+          <div className="card" style={{ padding: 0 }}>
+            <div className="table-container">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>{ar ? 'رقم العرض' : 'Number'}</th>
+                    <th>{ar ? 'العميل' : 'Customer'}</th>
+                    <th>{ar ? 'الإجمالي' : 'Total'}</th>
+                    <th>{ar ? 'صالح حتى' : 'Valid Until'}</th>
+                    <th>{ar ? 'التاريخ' : 'Date'}</th>
+                    <th>{ar ? 'الحالة' : 'Status'}</th>
+                    <th>{ar ? 'إجراءات' : 'Actions'}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {quotations.map(q => {
+                    const cfg = getStatusCfg(q.status, ar)
+                    const isExpired = !!(q.valid_until && new Date(q.valid_until) < new Date())
 
-                      {/* Customer — enhanced */}
-                      <td style={{ padding: '13px 16px', minWidth: 160 }}>
-                        {q.customer ? (
-                          <div>
-                            <div style={{ fontWeight: 700, fontSize: 14, color: '#111827' }}>
-                              👤 {q.customer.name}
+                    return (
+                      <tr key={q.id}>
+                        <td className="quotation-number">{q.invoice_number}</td>
+                        <td>
+                          {q.customer ? (
+                            <div className="quotation-customer">
+                              <div className="quotation-customer-name">{q.customer.name}</div>
+                              {q.customer.phone && <div className="quotation-customer-sub">{q.customer.phone}</div>}
                             </div>
-                            {q.customer.phone && (
-                              <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>
-                                📞 {q.customer.phone}
-                              </div>
+                          ) : (
+                            <div className="text-muted">{ar ? '— عميل نقدي —' : '— Walk-in —'}</div>
+                          )}
+                        </td>
+                        <td className="quotation-total">{fmt(q.total)}</td>
+                        <td>
+                          {q.valid_until ? (
+                            <span className={`quotation-validity ${isExpired ? 'expired' : ''}`}>
+                              {new Date(q.valid_until).toLocaleDateString()}
+                              {isExpired ? ` ${ar ? 'منتهي' : 'Expired'}` : ''}
+                            </span>
+                          ) : '—'}
+                        </td>
+                        <td className="text-muted">{new Date(q.created_at).toLocaleDateString()}</td>
+                        <td><span className={`badge ${statusBadgeClass(q.status)}`}>{cfg.label}</span></td>
+                        <td>
+                          <div className="quotation-actions">
+                            <button onClick={() => printQuotation(q, ar)} className="btn btn-secondary btn-sm">
+                              {ar ? 'طباعة' : 'Print'}
+                            </button>
+
+                            {canEdit(q.status) && (
+                              <>
+                                <button onClick={() => openEdit(q)} className="btn btn-secondary btn-sm">
+                                  {ar ? 'تعديل' : 'Edit'}
+                                </button>
+
+                                <select className="input" value={q.status} onChange={e => handleChangeStatus(q.id, e.target.value)}>
+                                  <option value="quotation">{ar ? 'عرض سعر' : 'Quotation'}</option>
+                                  <option value="sent">{ar ? 'تم الإرسال' : 'Sent'}</option>
+                                  <option value="confirmed">{ar ? 'مؤكد' : 'Confirmed'}</option>
+                                  <option value="cancelled">{ar ? 'ملغي' : 'Cancelled'}</option>
+                                </select>
+
+                                <button onClick={() => handleConvert(q)} disabled={converting === q.id} className="btn btn-primary btn-sm">
+                                  {converting === q.id ? (ar ? 'جاري التحويل...' : 'Converting...') : (ar ? 'تحويل' : 'Convert')}
+                                </button>
+
+                                <button onClick={() => handleDelete(q)} className="btn btn-danger btn-sm">
+                                  {ar ? 'حذف' : 'Delete'}
+                                </button>
+                              </>
+                            )}
+
+                            {!canEdit(q.status) && q.status !== 'converted' && (
+                              <span className="text-muted">{cfg.label}</span>
+                            )}
+
+                            {q.status === 'converted' && (
+                              <span className="text-muted">{ar ? 'تم التحويل' : 'Converted'}</span>
                             )}
                           </div>
-                        ) : (
-                          <div style={{ color: '#9ca3af', fontSize: 13, fontStyle: 'italic' }}>
-                            {ar ? '— عميل نقدي —' : '— Walk-in —'}
-                          </div>
-                        )}
-                      </td>
-
-                      {/* Total */}
-                      <td style={{ padding: '13px 16px', fontWeight: 700, fontSize: 15, color: '#111827', whiteSpace: 'nowrap' }}>
-                        {fmt(q.total)}
-                      </td>
-
-                      {/* Valid Until */}
-                      <td style={{ padding: '13px 16px', color: '#6b7280', fontSize: 13 }}>
-                        {q.valid_until ? (
-                          <span style={{
-                            color: new Date(q.valid_until) < new Date() ? '#dc2626' : '#6b7280',
-                            fontWeight: new Date(q.valid_until) < new Date() ? 600 : 400,
-                          }}>
-                            {new Date(q.valid_until).toLocaleDateString()}
-                            {new Date(q.valid_until) < new Date() && (ar ? ' ⚠️ منتهي' : ' ⚠️ Expired')}
-                          </span>
-                        ) : '—'}
-                      </td>
-
-                      {/* Date */}
-                      <td style={{ padding: '13px 16px', color: '#6b7280', fontSize: 13 }}>
-                        {new Date(q.created_at).toLocaleDateString()}
-                      </td>
-
-                      {/* Status badge */}
-                      <td style={{ padding: '13px 16px' }}>
-                        <span style={{
-                          background: cfg.bg, color: cfg.color,
-                          padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700,
-                          whiteSpace: 'nowrap',
-                        }}>
-                          {cfg.label}
-                        </span>
-                      </td>
-
-                      {/* Actions */}
-                      <td style={{ padding: '13px 16px' }}>
-                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-
-                          {/* Print — always available */}
-                          <button
-                            onClick={() => printQuotation(q, ar)}
-                            title={ar ? 'طباعة' : 'Print'}
-                            style={{
-                              background: '#f3f4f6', border: 'none', borderRadius: 6,
-                              padding: '6px 11px', cursor: 'pointer', fontSize: 13,
-                            }}
-                          >
-                            🖨️
-                          </button>
-
-                          {canEdit(q.status) && (
-                            <>
-                              <button onClick={() => openEdit(q)} style={{
-                                background: '#f3f4f6', border: 'none', borderRadius: 6,
-                                padding: '6px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 600,
-                              }}>✏️ {ar ? 'تعديل' : 'Edit'}</button>
-
-                              <select
-                                value={q.status}
-                                onChange={e => handleChangeStatus(q.id, e.target.value)}
-                                style={{ fontSize: 12, borderRadius: 6, border: '1px solid #d1d5db', padding: '5px 8px', cursor: 'pointer' }}
-                              >
-                                <option value="quotation">{ar ? 'عرض سعر' : 'Quotation'}</option>
-                                <option value="sent">{ar ? 'تم الإرسال' : 'Sent'}</option>
-                                <option value="confirmed">{ar ? 'مؤكد' : 'Confirmed'}</option>
-                                <option value="cancelled">{ar ? 'ملغي' : 'Cancelled'}</option>
-                              </select>
-
-                              <button onClick={() => handleConvert(q)} disabled={converting === q.id} style={{
-                                background: '#d1fae5', color: '#065f46', border: 'none',
-                                borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 600,
-                              }}>
-                                {converting === q.id ? '⏳' : '🔄'} {ar ? 'تحويل' : 'Convert'}
-                              </button>
-
-                              <button onClick={() => handleDelete(q)} style={{
-                                background: '#fef2f2', color: '#dc2626', border: 'none',
-                                borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 600,
-                              }}>🗑️</button>
-                            </>
-                          )}
-
-                          {!canEdit(q.status) && q.status !== 'converted' && (
-                            <span style={{ color: '#9ca3af', fontSize: 12, padding: '6px 0' }}>
-                              {cfg.label}
-                            </span>
-                          )}
-
-                          {q.status === 'converted' && (
-                            <span style={{ color: '#9ca3af', fontSize: 12, padding: '6px 0' }}>
-                              {ar ? 'تم التحويل' : 'Converted'}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
-        {/* Pagination */}
         {total > 15 && (
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 20 }}>
-            <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
-              style={{ padding: '8px 18px', borderRadius: 7, border: '1px solid #d1d5db', cursor: page === 1 ? 'not-allowed' : 'pointer', background: '#fff' }}>
+          <div className="quotation-pagination">
+            <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="btn btn-secondary">
               {ar ? 'السابق' : 'Prev'}
             </button>
-            <span style={{ padding: '8px 14px', color: '#6b7280' }}>{page}</span>
-            <button disabled={quotations.length < 15} onClick={() => setPage(p => p + 1)}
-              style={{ padding: '8px 18px', borderRadius: 7, border: '1px solid #d1d5db', cursor: 'pointer', background: '#fff' }}>
+            <span className="quotation-page-badge">{page}</span>
+            <button disabled={quotations.length < 15} onClick={() => setPage(p => p + 1)} className="btn btn-secondary">
               {ar ? 'التالي' : 'Next'}
             </button>
           </div>
         )}
 
-        {/* ══ Modal: Create / Edit ══════════════════════════ */}
-        {modalOpen && (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 1000, padding: 24, overflowY: 'auto' }}>
-            <div style={{ background: '#fff', borderRadius: 12, padding: 32, width: '100%', maxWidth: 760, marginTop: 20, marginBottom: 20 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
-                  {editing ? (ar ? '✏️ تعديل عرض السعر' : '✏️ Edit Quotation') : (ar ? '📄 عرض سعر جديد' : '📄 New Quotation')}
-                </h2>
-                <button onClick={() => { setModalOpen(false); resetForm() }}
-                  style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#6b7280' }}>✕</button>
+        {/* ══════════════════════════════════════════════════════════
+            النافذة المنبثقة: إنشاء/تعديل عرض سعر 
+            استخدام ستايل مباشر مطابق لصفحة الـ Sales لضمان الظهور
+        ══════════════════════════════════════════════════════════ */}
+        {modalOpen && isMounted && createPortal(
+          <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999999 }} onClick={() => { setModalOpen(false); resetForm() }}>
+            <div style={{ maxWidth: 820, width: '95%', background: 'var(--bg-card, #242424)', color: 'var(--text-color, #fff)', borderRadius: 8, display: 'flex', flexDirection: 'column', maxHeight: '90vh', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5)' }} onClick={e => e.stopPropagation()}>
+              <div className="modal-header" style={{ padding: '1rem', borderBottom: '1px solid var(--border-color, #333)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.25rem' }}>{editing ? (ar ? 'تعديل عرض السعر' : 'Edit Quotation') : (ar ? 'عرض سعر جديد' : 'New Quotation')}</h3>
+                </div>
+                <button type="button" onClick={() => { setModalOpen(false); resetForm() }} style={{ background: 'transparent', border: 'none', color: 'inherit', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
               </div>
 
-              <form onSubmit={handleSubmit}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-
-                  {/* Customer */}
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                      <label style={{ fontWeight: 600, fontSize: 13 }}>{ar ? 'العميل' : 'Customer'}</label>
-                      <button type="button" onClick={() => setAddCustomerOpen(true)}
-                        style={{ background: 'none', border: 'none', color: '#1a56db', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
-                        + {ar ? 'عميل جديد' : 'New Customer'}
-                      </button>
+              <form onSubmit={handleSubmit} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                <div className="modal-body" style={{ padding: '1rem', overflowY: 'auto' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                    <div className="input-group" style={{ margin: 0 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.45rem' }}>
+                        <label className="input-label" style={{ marginBottom: 0 }}>{ar ? 'العميل' : 'Customer'}</label>
+                        <button type="button" onClick={() => setAddCustomerOpen(true)} className="btn btn-secondary btn-sm">
+                          + {ar ? 'عميل جديد' : 'New Customer'}
+                        </button>
+                      </div>
+                      <Autocomplete
+                        placeholder={ar ? 'ابحث عن عميل...' : 'Search customer...'}
+                        value={customerQuery}
+                        onSelect={(c: Customer) => { setSelectedCustomer(c); setCustomerQuery(c.name) }}
+                        fetchFn={fetchCustomers}
+                        renderOption={(c: Customer) => (
+                          <div>
+                            <div className="fw-semibold">{c.name}</div>
+                            {c.phone && <div className="quotation-customer-sub" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{c.phone}</div>}
+                          </div>
+                        )}
+                        onAddNew={() => setAddCustomerOpen(true)}
+                        addNewLabel={ar ? 'إضافة عميل جديد' : 'Add new customer'}
+                      />
                     </div>
-                    <Autocomplete
-                      placeholder={ar ? 'ابحث عن عميل...' : 'Search customer...'}
-                      value={customerQuery}
-                      onSelect={(c: Customer) => { setSelectedCustomer(c); setCustomerQuery(c.name) }}
-                      fetchFn={fetchCustomers}
-                      renderOption={(c: Customer) => (
-                        <div>
-                          <div style={{ fontWeight: 600, fontSize: 13 }}>{c.name}</div>
-                          {c.phone && <div style={{ fontSize: 11, color: '#6b7280' }}>{c.phone}</div>}
+
+                    <div className="input-group" style={{ margin: 0 }}>
+                      <label className="input-label" style={{ marginBottom: '0.45rem' }}>{ar ? 'صالح حتى' : 'Valid Until'}</label>
+                      <input className="input" type="date" value={validUntil} onChange={e => setValidUntil(e.target.value)} />
+                    </div>
+                  </div>
+
+                  {!editing && (
+                    <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <label className="input-label" style={{ marginBottom: 0 }}>{ar ? 'العناصر *' : 'Items *'}</label>
+                        <button type="button" onClick={addLine} className="btn btn-secondary btn-sm">
+                          + {ar ? 'إضافة عنصر' : 'Add Item'}
+                        </button>
+                      </div>
+
+                      {errors.items && <p style={{ color: 'var(--color-danger)', fontSize: '0.8rem' }}>{errors.items}</p>}
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 2.5fr) 90px 110px 100px 40px', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 700 }}>
+                        {[ar ? 'المنتج' : 'Product', ar ? 'كمية' : 'Qty', ar ? 'سعر' : 'Price', ar ? 'خصم' : 'Discount', ''].map((h, i) => (
+                          <div key={i}>{h}</div>
+                        ))}
+                      </div>
+
+                      {lines.map((line, i) => (
+                        <div key={i} style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 2.5fr) 90px 110px 100px 40px', gap: '0.5rem', alignItems: 'start' }}>
+                          <div>
+                            <Autocomplete
+                              placeholder={ar ? 'ابحث عن منتج...' : 'Search product...'}
+                              value={line.name}
+                              onSelect={(p: Product) => selectProduct(i, p)}
+                              fetchFn={fetchProducts}
+                              renderOption={(p: Product) => (
+                                <div>
+                                  <div className="fw-semibold">{p.name}</div>
+                                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                    {p.sku ? `${p.sku} ` : ''}
+                                    {p.sale_price !== undefined ? fmt(p.sale_price) : ''}
+                                  </div>
+                                </div>
+                              )}
+                              onAddNew={() => { setAddProdLineIdx(i); setAddProductOpen(true) }}
+                              addNewLabel={ar ? 'إضافة منتج جديد' : 'Add new product'}
+                            />
+                            {errors[`item_${i}`] && <p style={{ color: 'var(--color-danger)', fontSize: '0.8rem', marginTop: 4 }}>{errors[`item_${i}`]}</p>}
+                          </div>
+
+                          <input className="input" type="number" min="0.001" step="0.001" value={line.qty} onChange={e => updateLine(i, 'qty', Number(e.target.value))} />
+                          <input className="input" type="number" min="0" step="0.01" value={line.price} onChange={e => updateLine(i, 'price', Number(e.target.value))} />
+                          <input className="input" type="number" min="0" step="0.01" value={line.discount} onChange={e => updateLine(i, 'discount', Number(e.target.value))} placeholder="0" />
+                          <button type="button" onClick={() => removeLine(i)} className="btn btn-danger btn-sm" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>×</button>
+                        </div>
+                      ))}
+
+                      {lines.length > 0 && (
+                        <div style={{ padding: '0.9rem 1rem', border: '1px solid var(--border-color, #333)', borderRadius: 8, background: 'var(--bg-hover, #2a2a2a)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 700, marginTop: '0.5rem' }}>
+                          <span>{ar ? 'الإجمالي' : 'Total'}</span>
+                          <span>{fmt(grandTotal())}</span>
                         </div>
                       )}
-                      onAddNew={() => setAddCustomerOpen(true)}
-                      addNewLabel={ar ? 'إضافة عميل جديد' : 'Add new customer'}
+                    </div>
+                  )}
+
+                  <div className="input-group" style={{ marginTop: '1.5rem' }}>
+                    <label className="input-label">{ar ? 'ملاحظات / الشروط والأحكام' : 'Notes / Terms & Conditions'}</label>
+                    <textarea
+                      className="input"
+                      value={notes}
+                      onChange={e => setNotes(e.target.value)}
+                      rows={3}
+                      style={{ resize: 'vertical' }}
+                      placeholder={ar ? 'شروط الدفع، صلاحية العرض، ملاحظات أخرى...' : 'Payment terms, validity, other notes...'}
                     />
                   </div>
-
-                  {/* Valid Until */}
-                  <div>
-                    <label style={{ display: 'block', fontWeight: 600, fontSize: 13, marginBottom: 6 }}>
-                      {ar ? 'صالح حتى' : 'Valid Until'}
-                    </label>
-                    <input type="date" value={validUntil} onChange={e => setValidUntil(e.target.value)}
-                      style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' as any }} />
-                  </div>
                 </div>
 
-                {/* Items — only on create */}
-                {!editing && (
-                  <div style={{ marginBottom: 16 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                      <label style={{ fontWeight: 600, fontSize: 13 }}>{ar ? 'العناصر *' : 'Items *'}</label>
-                      <button type="button" onClick={addLine} style={{
-                        background: '#eff6ff', color: '#1a56db', border: 'none',
-                        borderRadius: 6, padding: '6px 14px', cursor: 'pointer', fontWeight: 600, fontSize: 13,
-                      }}>+ {ar ? 'إضافة عنصر' : 'Add Item'}</button>
-                    </div>
-
-                    {errors.items && <p style={{ color: '#ef4444', fontSize: 12, margin: '0 0 8px' }}>{errors.items}</p>}
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '2.5fr 80px 100px 90px auto', gap: 8, marginBottom: 4 }}>
-                      {[ar ? 'المنتج' : 'Product', ar ? 'كمية' : 'Qty', ar ? 'سعر' : 'Price', ar ? 'خصم' : 'Discount', ''].map((h, i) => (
-                        <div key={i} style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', padding: '0 2px' }}>{h}</div>
-                      ))}
-                    </div>
-
-                    {lines.map((line, i) => (
-                      <div key={i} style={{ display: 'grid', gridTemplateColumns: '2.5fr 80px 100px 90px auto', gap: 8, marginBottom: 8, alignItems: 'start' }}>
-                        <div>
-                          <Autocomplete
-                            placeholder={ar ? 'ابحث عن منتج...' : 'Search product...'}
-                            value={line.name}
-                            onSelect={(p: Product) => selectProduct(i, p)}
-                            fetchFn={fetchProducts}
-                            renderOption={(p: Product) => (
-                              <div>
-                                <div style={{ fontWeight: 600, fontSize: 13 }}>{p.name}</div>
-                                <div style={{ fontSize: 11, color: '#6b7280' }}>
-                                  {p.sku && <span style={{ marginLeft: 8 }}>{p.sku}</span>}
-                                  {p.sale_price !== undefined && <span style={{ color: '#1a56db' }}> {p.sale_price}</span>}
-                                </div>
-                              </div>
-                            )}
-                            onAddNew={() => { setAddProdLineIdx(i); setAddProductOpen(true) }}
-                            addNewLabel={ar ? 'إضافة منتج جديد' : 'Add new product'}
-                          />
-                          {errors[`item_${i}`] && <p style={{ color: '#ef4444', fontSize: 11, margin: '2px 0 0' }}>{errors[`item_${i}`]}</p>}
-                        </div>
-
-                        <input type="number" min="0.001" step="0.001" value={line.qty}
-                          onChange={e => updateLine(i, 'qty', Number(e.target.value))}
-                          style={{ padding: '10px 8px', border: `1px solid ${errors[`qty_${i}`] ? '#ef4444' : '#d1d5db'}`, borderRadius: 7, fontSize: 13, width: '100%', boxSizing: 'border-box' as any }} />
-
-                        <input type="number" min="0" step="0.01" value={line.price}
-                          onChange={e => updateLine(i, 'price', Number(e.target.value))}
-                          style={{ padding: '10px 8px', border: '1px solid #d1d5db', borderRadius: 7, fontSize: 13, width: '100%', boxSizing: 'border-box' as any }} />
-
-                        <input type="number" min="0" step="0.01" value={line.discount}
-                          onChange={e => updateLine(i, 'discount', Number(e.target.value))}
-                          placeholder="0"
-                          style={{ padding: '10px 8px', border: '1px solid #d1d5db', borderRadius: 7, fontSize: 13, width: '100%', boxSizing: 'border-box' as any }} />
-
-                        <button type="button" onClick={() => removeLine(i)}
-                          style={{ background: '#fef2f2', color: '#dc2626', border: 'none', borderRadius: 7, cursor: 'pointer', fontSize: 16, fontWeight: 700, padding: '10px 12px' }}>×</button>
-                      </div>
-                    ))}
-
-                    {lines.length > 0 && (
-                      <div style={{ textAlign: 'left', marginTop: 12, padding: '10px 14px', background: '#f9fafb', borderRadius: 8 }}>
-                        <span style={{ fontSize: 15, fontWeight: 700, color: '#1a56db' }}>
-                          {ar ? 'الإجمالي:' : 'Total:'} {fmt(grandTotal())}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Notes */}
-                <div style={{ marginBottom: 22 }}>
-                  <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, fontSize: 13 }}>
-                    {ar ? 'ملاحظات / الشروط والأحكام' : 'Notes / Terms & Conditions'}
-                  </label>
-                  <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
-                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' as any, resize: 'vertical' }}
-                    placeholder={ar ? 'شروط الدفع، صلاحية العرض، ملاحظات أخرى...' : 'Payment terms, validity, other notes...'} />
-                </div>
-
-                <div style={{ display: 'flex', gap: 10 }}>
-                  <button type="button" onClick={() => { setModalOpen(false); resetForm() }}
-                    style={{ flex: 1, padding: 11, border: '1px solid #d1d5db', borderRadius: 8, background: '#fff', cursor: 'pointer', fontWeight: 600 }}>
+                <div className="modal-footer" style={{ padding: '1rem', borderTop: '1px solid var(--border-color, #333)', display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', flexShrink: 0 }}>
+                  <button type="button" onClick={() => { setModalOpen(false); resetForm() }} className="btn btn-secondary">
                     {ar ? 'إلغاء' : 'Cancel'}
                   </button>
-                  <button type="submit" disabled={saving}
-                    style={{ flex: 2, padding: 11, border: 'none', borderRadius: 8, background: saving ? '#93c5fd' : '#1a56db', color: '#fff', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 14 }}>
-                    {saving ? (ar ? '⏳ جاري الحفظ...' : '⏳ Saving...') : (ar ? '💾 حفظ العرض' : '💾 Save Quotation')}
+                  <button type="submit" disabled={saving} className="btn btn-primary">
+                    {saving ? (ar ? 'جاري الحفظ...' : 'Saving...') : (ar ? 'حفظ العرض' : 'Save Quotation')}
                   </button>
                 </div>
               </form>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
-        {/* ══ Modal: Add Customer ═══════════════════════════ */}
-        {addCustomerOpen && (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
-            <div style={{ background: '#fff', borderRadius: 12, padding: 28, width: '100%', maxWidth: 420 }}>
-              <h3 style={{ margin: '0 0 20px', fontSize: 16, fontWeight: 700 }}>
-                {ar ? '👤 إضافة عميل جديد' : '👤 Add New Customer'}
-              </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <input placeholder={ar ? 'الاسم *' : 'Name *'} value={newCust.name}
-                  onChange={e => setNewCust(p => ({ ...p, name: e.target.value }))}
-                  style={{ padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }} autoFocus />
-                <input placeholder={ar ? 'الهاتف' : 'Phone'} value={newCust.phone}
-                  onChange={e => setNewCust(p => ({ ...p, phone: e.target.value }))}
-                  style={{ padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }} />
-                <input placeholder={ar ? 'البريد الإلكتروني' : 'Email'} type="email" value={newCust.email}
-                  onChange={e => setNewCust(p => ({ ...p, email: e.target.value }))}
-                  style={{ padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }} />
+        {/* ══════════════════════════════════════════════════════════
+            النافذة المنبثقة: إضافة عميل جديد 
+        ══════════════════════════════════════════════════════════ */}
+        {addCustomerOpen && isMounted && createPortal(
+          <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999999 }} onClick={() => setAddCustomerOpen(false)}>
+            <div style={{ maxWidth: 400, width: '95%', background: 'var(--bg-card, #242424)', color: 'var(--text-color, #fff)', borderRadius: 8, display: 'flex', flexDirection: 'column', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5)' }} onClick={e => e.stopPropagation()}>
+              <div style={{ padding: '1rem', borderBottom: '1px solid var(--border-color, #333)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ margin: 0, fontSize: '1.25rem' }}>{ar ? 'إضافة عميل جديد' : 'Add New Customer'}</h3>
+                <button onClick={() => setAddCustomerOpen(false)} style={{ background: 'transparent', border: 'none', color: 'inherit', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
               </div>
-              <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-                <button onClick={() => setAddCustomerOpen(false)}
-                  style={{ flex: 1, padding: '10px', border: '1px solid #d1d5db', borderRadius: 8, background: '#fff', cursor: 'pointer', fontWeight: 600 }}>
+              <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <input className="input" placeholder={ar ? 'الاسم *' : 'Name *'} value={newCust.name} onChange={e => setNewCust(p => ({ ...p, name: e.target.value }))} autoFocus />
+                <input className="input" placeholder={ar ? 'الهاتف' : 'Phone'} value={newCust.phone} onChange={e => setNewCust(p => ({ ...p, phone: e.target.value }))} />
+                <input className="input" placeholder={ar ? 'البريد الإلكتروني' : 'Email'} type="email" value={newCust.email} onChange={e => setNewCust(p => ({ ...p, email: e.target.value }))} />
+              </div>
+              <div style={{ padding: '1rem', borderTop: '1px solid var(--border-color, #333)', display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                <button onClick={() => setAddCustomerOpen(false)} className="btn btn-secondary">
                   {ar ? 'إلغاء' : 'Cancel'}
                 </button>
-                <button onClick={handleAddCustomer} disabled={addingCust || !newCust.name.trim()}
-                  style={{ flex: 2, padding: '10px', border: 'none', borderRadius: 8, background: '#1a56db', color: '#fff', cursor: 'pointer', fontWeight: 700 }}>
-                  {addingCust ? '⏳...' : (ar ? '✓ حفظ العميل' : '✓ Save Customer')}
+                <button onClick={handleAddCustomer} disabled={addingCust || !newCust.name.trim()} className="btn btn-primary">
+                  {addingCust ? '...' : (ar ? 'حفظ العميل' : 'Save Customer')}
                 </button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
-        {/* ══ Modal: Add Product ════════════════════════════ */}
-        {addProductOpen && (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
-            <div style={{ background: '#fff', borderRadius: 12, padding: 28, width: '100%', maxWidth: 420 }}>
-              <h3 style={{ margin: '0 0 20px', fontSize: 16, fontWeight: 700 }}>
-                {ar ? '📦 إضافة منتج جديد' : '📦 Add New Product'}
-              </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <input placeholder={ar ? 'اسم المنتج *' : 'Product Name *'} value={newProd.name}
-                  onChange={e => setNewProd(p => ({ ...p, name: e.target.value }))}
-                  style={{ padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }} autoFocus />
-                <input placeholder={ar ? 'سعر البيع' : 'Sale Price'} type="number" min="0" step="0.01" value={newProd.sale_price}
-                  onChange={e => setNewProd(p => ({ ...p, sale_price: e.target.value }))}
-                  style={{ padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }} />
-                <input placeholder={ar ? 'كود المنتج (اختياري)' : 'SKU (optional)'} value={newProd.sku}
-                  onChange={e => setNewProd(p => ({ ...p, sku: e.target.value }))}
-                  style={{ padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }} />
+        {/* ══════════════════════════════════════════════════════════
+            النافذة المنبثقة: إضافة منتج جديد
+        ══════════════════════════════════════════════════════════ */}
+        {addProductOpen && isMounted && createPortal(
+          <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999999 }} onClick={() => setAddProductOpen(false)}>
+            <div style={{ maxWidth: 400, width: '95%', background: 'var(--bg-card, #242424)', color: 'var(--text-color, #fff)', borderRadius: 8, display: 'flex', flexDirection: 'column', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5)' }} onClick={e => e.stopPropagation()}>
+              <div style={{ padding: '1rem', borderBottom: '1px solid var(--border-color, #333)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ margin: 0, fontSize: '1.25rem' }}>{ar ? 'إضافة منتج جديد' : 'Add New Product'}</h3>
+                <button onClick={() => setAddProductOpen(false)} style={{ background: 'transparent', border: 'none', color: 'inherit', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
               </div>
-              <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-                <button onClick={() => setAddProductOpen(false)}
-                  style={{ flex: 1, padding: '10px', border: '1px solid #d1d5db', borderRadius: 8, background: '#fff', cursor: 'pointer', fontWeight: 600 }}>
+              <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <input className="input" placeholder={ar ? 'اسم المنتج *' : 'Product Name *'} value={newProd.name} onChange={e => setNewProd(p => ({ ...p, name: e.target.value }))} autoFocus />
+                <input className="input" placeholder={ar ? 'سعر البيع' : 'Sale Price'} type="number" min="0" step="0.01" value={newProd.sale_price} onChange={e => setNewProd(p => ({ ...p, sale_price: e.target.value }))} />
+                <input className="input" placeholder={ar ? 'كود المنتج (اختياري)' : 'SKU (optional)'} value={newProd.sku} onChange={e => setNewProd(p => ({ ...p, sku: e.target.value }))} />
+              </div>
+              <div style={{ padding: '1rem', borderTop: '1px solid var(--border-color, #333)', display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                <button onClick={() => setAddProductOpen(false)} className="btn btn-secondary">
                   {ar ? 'إلغاء' : 'Cancel'}
                 </button>
-                <button onClick={handleAddProduct} disabled={addingProd || !newProd.name.trim()}
-                  style={{ flex: 2, padding: '10px', border: 'none', borderRadius: 8, background: '#1a56db', color: '#fff', cursor: 'pointer', fontWeight: 700 }}>
-                  {addingProd ? '⏳...' : (ar ? '✓ حفظ المنتج' : '✓ Save Product')}
+                <button onClick={handleAddProduct} disabled={addingProd || !newProd.name.trim()} className="btn btn-primary">
+                  {addingProd ? '...' : (ar ? 'حفظ المنتج' : 'Save Product')}
                 </button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
-
       </div>
     </ERPLayout>
   )
