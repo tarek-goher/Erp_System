@@ -1,0 +1,58 @@
+<?php
+
+namespace App\Providers;
+
+use App\Events\CompanySettingsUpdated;
+use App\Events\PayrollGenerated;
+use App\Events\SaleCreated;
+use App\Events\StockLowAlert;
+use App\Events\TicketAssigned;
+use App\Events\TicketCreated;
+use App\Listeners\InvalidateSlaCache;
+use App\Listeners\NotifyAdminTicketCreated;
+use App\Listeners\NotifyPayrollGenerated;
+use App\Listeners\NotifyTicketAssignee;
+use App\Listeners\SendLowStockAlert;
+use App\Listeners\SendSaleNotification;
+use App\Listeners\TicketNotificationListener;
+use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
+
+/**
+ * EventServiceProvider — MERGED
+ * أضاف: CompanySettingsUpdated → InvalidateSlaCache
+ */
+class EventServiceProvider extends ServiceProvider
+{
+    protected $listen = [
+        SaleCreated::class => [
+            SendSaleNotification::class,
+        ],
+        StockLowAlert::class => [
+            SendLowStockAlert::class,
+        ],
+        TicketAssigned::class => [
+            NotifyTicketAssignee::class,
+            TicketNotificationListener::class,  // إيميل للعميل عند التعيين
+        ],
+        TicketCreated::class => [
+            NotifyAdminTicketCreated::class,
+            TicketNotificationListener::class,  // إيميل للعميل عند فتح التذكرة
+        ],
+        PayrollGenerated::class => [
+            NotifyPayrollGenerated::class,
+        ],
+        // ← جديد: لما يتغير إعدادات الشركة، امسح cache الـ SLA
+        CompanySettingsUpdated::class => [
+            InvalidateSlaCache::class,
+        ],
+    ];
+
+    protected $subscribe = [];
+
+    public function boot(): void {}
+
+    public function shouldDiscoverEvents(): bool
+    {
+        return false;
+    }
+}
