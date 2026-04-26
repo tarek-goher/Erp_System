@@ -9,6 +9,7 @@ import { ThemeProvider }   from '../lib/theme'
 import { I18nProvider }    from '../lib/i18n'
 import { ToastProvider }   from '../context/ToastContext'
 import { ConfirmProvider } from '../components/ui/ConfirmDialog'
+import AppShell from '../components/layout/AppShell'
 import '@fortawesome/fontawesome-svg-core/styles.css'
 import '../styles/globals.css'
 
@@ -56,12 +57,32 @@ export const viewport: Viewport = {
 }
 
 // ── Service Worker Registration ───────────────────────────
-const swScript = `
+const swScript = process.env.NODE_ENV === 'production'
+  ? `
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('/sw.js', { scope: '/' })
       .then(function(reg) { console.log('[PWA] SW registered:', reg.scope) })
       .catch(function(err) { console.warn('[PWA] SW failed:', err) })
+  })
+}
+`
+  : `
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.getRegistrations()
+      .then(function(registrations) {
+        return Promise.all(registrations.map(function(reg) { return reg.unregister() }))
+      })
+      .then(function() {
+        if ('caches' in window) {
+          return caches.keys().then(function(keys) {
+            return Promise.all(keys.map(function(key) { return caches.delete(key) }))
+          })
+        }
+      })
+      .then(function() { console.log('[PWA] Dev mode: service workers unregistered and caches cleared') })
+      .catch(function(err) { console.warn('[PWA] Dev cleanup failed:', err) })
   })
 }
 `
@@ -89,7 +110,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <AuthProvider>
               <ToastProvider>
                 <ConfirmProvider>
-                  {children}
+                  <AppShell>{children}</AppShell>
                 </ConfirmProvider>
               </ToastProvider>
             </AuthProvider>
