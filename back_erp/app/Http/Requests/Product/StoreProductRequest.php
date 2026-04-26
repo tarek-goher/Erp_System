@@ -11,6 +11,18 @@ class StoreProductRequest extends FormRequest
 {
     public function authorize(): bool { return true; }
 
+    protected function prepareForValidation(): void
+    {
+        $cost = $this->input('cost', $this->input('purchase_price'));
+        $price = $this->input('price', $this->input('sell_price', $this->input('retail_price')));
+
+        $this->merge(array_filter([
+            'cost' => $cost,
+            'purchase_price' => $this->input('purchase_price', $cost),
+            'price' => $price,
+        ], fn ($value) => $value !== null));
+    }
+
     public function rules(): array
     {
         $productId = $this->route('product')?->id;
@@ -22,6 +34,9 @@ class StoreProductRequest extends FormRequest
             'category_id'  => 'required|exists:categories,id',
             'price'        => 'required|numeric|min:0',
             'cost'         => 'nullable|numeric|min:0',
+            'purchase_price' => 'nullable|numeric|min:0',
+            'sell_price'   => 'nullable|numeric|min:0',
+            'retail_price' => 'nullable|numeric|min:0',
             'qty'          => 'nullable|numeric|min:0',
             'min_qty'      => 'nullable|numeric|min:0',
             'unit'         => 'nullable|string|max:50',

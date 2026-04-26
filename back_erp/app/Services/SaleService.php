@@ -119,12 +119,15 @@ class SaleService
                             ],
                             ['qty' => 0]
                         );
-                  if ($location->qty < $qty) {
-    throw new \App\Exceptions\InsufficientStockException($location->qty, $qty);
-}
+                        if ($location->qty < $qty) {
+                            throw new \App\Exceptions\InsufficientStockException($location->qty, $qty);
+                        }
                         $location->decrement('qty', $qty);
                     }
 
+                    if ($qtyBefore < $qty) {
+                        throw new \App\Exceptions\InsufficientStockException($qtyBefore, $qty);
+                    }
                     $product->decrement('qty', $qty);
 
                     StockMovement::create([
@@ -219,6 +222,54 @@ class SaleService
     // إحصائيات المبيعات
     // Fix #6: الـ fields اتغيرت عشان تتوافق مع الفرونت
     // ══════════════════════════════════════════════════════════
+public function deleteSale(Sale $sale): void
+{
+    DB::transaction(function () use ($sale) {
+        $sale->loadMissing('items');
+
+        foreach ($sale->items as $item) {
+            $product = Product::withoutGlobalScopes()->find($item->product_id);
+            if (!$product) {
+                continue;
+            }
+
+            $qtyBefore = (float) $product->qty;
+            $warehouseId = $item->warehouse_id ?? $product->warehouse_id ?? null;
+
+            if ($warehouseId) {
+                $location = \App\Models\ProductLocation::firstOrCreate(
+                    [
+                        'product_id'   => $item->product_id,
+                        'warehouse_id' => $warehouseId,
+                        'company_id'   => $sale->company_id,
+                    ],
+                    ['qty' => 0]
+                );
+                $location->increment('qty', $item->quantity);
+            }
+
+            $product->increment('qty', $item->quantity);
+
+            StockMovement::create([
+                'company_id'     => $sale->company_id,
+                'product_id'     => $item->product_id,
+                'warehouse_id'   => $warehouseId,
+                'user_id'        => auth()->id(),
+                'type'           => 'in',
+                'qty'            => $item->quantity,
+                'qty_before'     => $qtyBefore,
+                'qty_after'      => $qtyBefore + $item->quantity,
+                'reference_type' => Sale::class,
+                'reference_id'   => $sale->id,
+                'notes'          => "[Deleted Sale] {$sale->invoice_number}",
+            ]);
+        }
+
+        $sale->items()->delete();
+        $sale->delete();
+    });
+}
+
    public function getStats(?int $companyId): array
 {
     $base = Sale::withoutGlobalScopes()

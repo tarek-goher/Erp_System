@@ -17,7 +17,7 @@ import { useI18n } from '../../lib/i18n'
 type PurchaseItem = { id: number; product_id?: number; product?: { id: number; name: string }; qty: number; cost: number; total: number; warehouse_id?: number; warehouse?: { id: number; name: string } }
 type Purchase = { id: number; order_number: string; po_number?: string; supplier?: { id: number; name: string }; subtotal?: number; tax?: number; discount?: number; total: number; status: string; created_at: string; notes?: string; expected_at?: string; items?: PurchaseItem[] }
 type Stats = { total_orders: number; total_amount: number; received_amount: number; pending_amount: number }
-type Supplier  = { id: number; name: string }; type TaxRate = { id: number; name: string; rate: number }; type Product = { id: number; name: string; cost?: number; purchase_price?: number }; type Warehouse = { id: number; name: string }
+type Supplier  = { id: number; name: string }; type Product = { id: number; name: string; cost?: number; purchase_price?: number }; type Warehouse = { id: number; name: string }
 const STATUSES = ['draft', 'pending', 'approved', 'received', 'cancelled']
 type OrderItem = { product_id: string; name: string; qty: number; cost: number; warehouse_id: string }
 
@@ -33,7 +33,6 @@ export default function PurchasesPage() {
   const [items, setItems] = useState<Purchase[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
-  const [taxRates, setTaxRates] = useState<TaxRate[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [warehouses, setWarehouses] = useState<Warehouse[]>([])
   const [loading, setLoading] = useState(true)
@@ -65,12 +64,12 @@ export default function PurchasesPage() {
   const [newCatName, setNewCatName] = useState('')
   const [savingCat, setSavingCat] = useState(false)
 
-  const [form, setForm] = useState({ supplier_id: '', status: 'draft', notes: '', tax_rate_id: '', expected_at: '' })
+  const [form, setForm] = useState({ supplier_id: '', status: 'draft', notes: '', tax: '', expected_at: '' })
   const [orderItems, setOrderItems] = useState<OrderItem[]>([{ product_id: '', name: '', qty: 1, cost: 0, warehouse_id: '' }])
 
   // ... الدوال المساعدة (Reset, Fetch, etc.) تبقى كما هي ...
   const resetForm = () => {
-    setForm({ supplier_id: '', status: 'draft', notes: '', tax_rate_id: '', expected_at: '' })
+    setForm({ supplier_id: '', status: 'draft', notes: '', tax: '', expected_at: '' })
     setOrderItems([{ product_id: '', name: '', qty: 1, cost: 0, warehouse_id: '' }])
     setShowAddSupplier(false); setFormErr(''); setEditId(null); setAddProductIdx(null)
   }
@@ -85,7 +84,6 @@ export default function PurchasesPage() {
   useEffect(() => {
     fetchStats()
     api.get<any>('/suppliers?per_page=200').then(r => setSuppliers(extractArray(r?.data) || []))
-    api.get<any>('/tax-rates').then(r => setTaxRates(extractArray(r?.data) || []))
     api.get<any>('/products?per_page=200').then(r => setProducts(extractArray(r?.data) || []))
     api.get<any>('/categories?per_page=100').then(r => setCategories(extractArray(r?.data) || []))
     api.get<any>('/warehouses?per_page=100').then(r => { const d = r.data?.data ?? r.data; if (Array.isArray(d)) setWarehouses(d); else if (d) setWarehouses([d]) })
@@ -98,7 +96,7 @@ export default function PurchasesPage() {
     const res = await api.get<any>(`/purchases/${id}`)
     if (res.data) {
       const p = res.data?.data ?? res.data
-      setForm({ supplier_id: String(p.supplier?.id || ''), status: p.status || 'draft', notes: p.notes || '', tax_rate_id: '', expected_at: p.expected_at || '' })
+      setForm({ supplier_id: String(p.supplier?.id || ''), status: p.status || 'draft', notes: p.notes || '', tax: String(p.tax ?? ''), expected_at: p.expected_at || '' })
       setOrderItems(p.items?.length > 0 ? p.items.map((i: PurchaseItem) => ({ product_id: String(i.product?.id || i.product_id || ''), name: i.product?.name || '', qty: Number(i.qty), cost: Number(i.cost), warehouse_id: String(i.warehouse?.id || i.warehouse_id || '') })) : [{ product_id: '', name: '', qty: 1, cost: 0, warehouse_id: '' }])
     }
     setEditLoading(false)
@@ -115,7 +113,7 @@ export default function PurchasesPage() {
     setSuppliers(prev => [...prev, newS]); setForm(prev => ({ ...prev, supplier_id: String(newS.id) })); setShowAddSupplier(false); setNewSupplierName(''); setNewSupplierEmail(''); setNewSupplierPhone('')
   }
 
-  const subtotal = orderItems.reduce((s, i) => s + (i.qty * i.cost), 0); const selectedTax = taxRates.find(tx => String(tx.id) === form.tax_rate_id); const taxAmount = selectedTax ? Math.round(subtotal * selectedTax.rate) / 100 : 0; const grandTotal = subtotal + taxAmount
+  const subtotal = orderItems.reduce((s, i) => s + (i.qty * i.cost), 0); const taxAmount = Number(form.tax) || 0; const grandTotal = subtotal + taxAmount
 
   const addItem = () => setOrderItems(prev => [...prev, { product_id: '', name: '', qty: 1, cost: 0, warehouse_id: '' }]); const removeItem = (idx: number) => setOrderItems(prev => prev.filter((_, i) => i !== idx))
   const updateItem = (idx: number, field: keyof OrderItem, val: any) => {
@@ -131,7 +129,7 @@ export default function PurchasesPage() {
     if (!form.supplier_id) { setFormErr(ar ? 'يجب اختيار المورد' : 'Supplier is required'); return }
     const validItems = orderItems.filter(i => i.product_id && Number(i.product_id) > 0 && Number(i.qty) > 0 && Number(i.cost) >= 0)
     setSaving(true)
-    const payload = { supplier_id: Number(form.supplier_id), status: form.status, notes: form.notes, expected_at: form.expected_at || undefined, items: validItems.map(i => ({ product_id: Number(i.product_id), quantity: i.qty, unit_price: i.cost, warehouse_id: i.warehouse_id ? Number(i.warehouse_id) : undefined })), ...(form.tax_rate_id && { tax_rate_id: Number(form.tax_rate_id) }) }
+    const payload = { supplier_id: Number(form.supplier_id), status: form.status, notes: form.notes, expected_at: form.expected_at || undefined, items: validItems.map(i => ({ product_id: Number(i.product_id), quantity: i.qty, unit_price: i.cost, warehouse_id: i.warehouse_id ? Number(i.warehouse_id) : undefined })), ...(form.tax !== '' && { tax: Number(form.tax) || 0 }) }
     const res = editId ? await api.put(`/purchases/${editId}`, payload) : await api.post('/purchases', payload)
     setSaving(false)
     if (res.error) { setFormErr(res.error); return }
@@ -304,10 +302,7 @@ export default function PurchasesPage() {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
                       <label className="input-label">{ar ? 'الضريبة' : 'Tax'}</label>
-                      <select className="input" value={form.tax_rate_id} onChange={e => setForm({ ...form, tax_rate_id: e.target.value })}>
-                        <option value="">{ar ? 'بدون' : 'None'}</option>
-                        {taxRates.map(tx => <option key={tx.id} value={tx.id}>{tx.name} ({tx.rate}%)</option>)}
-                      </select>
+                      <input className="input" type="number" min="0" step="0.01" placeholder={ar ? 'قيمة الضريبة' : 'Tax value'} value={form.tax} onChange={e => setForm({ ...form, tax: e.target.value })} />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
                       <label className="input-label">{ar ? 'تاريخ التوريد' : 'Expected'}</label>

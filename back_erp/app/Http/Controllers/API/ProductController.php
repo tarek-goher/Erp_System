@@ -47,6 +47,13 @@ class ProductController extends BaseController
     {
         $data = $request->validated();
 
+        if (isset($data['purchase_price']) && !isset($data['cost'])) {
+            $data['cost'] = $data['purchase_price'];
+        }
+        if (isset($data['cost']) && !isset($data['purchase_price'])) {
+            $data['purchase_price'] = $data['cost'];
+        }
+
         if (empty($data['sku'])) {
             do {
                 $data['sku'] = 'SKU-' . strtoupper(uniqid());
@@ -66,7 +73,16 @@ class ProductController extends BaseController
     public function update(UpdateProductRequest $request, Product $product): JsonResponse
     {
         $this->authorizeProduct($product);
-        $product->update($request->validated());
+        $data = $request->validated();
+
+        if (isset($data['purchase_price']) && !isset($data['cost'])) {
+            $data['cost'] = $data['purchase_price'];
+        }
+        if (isset($data['cost']) && !isset($data['purchase_price'])) {
+            $data['purchase_price'] = $data['cost'];
+        }
+
+        $product->update($data);
         return $this->success(new ProductResource($product->fresh('category')), 'تم تحديث المنتج.');
     }
 

@@ -56,7 +56,7 @@ class StoreSaleRequest extends FormRequest
 
             // الضريبة
             'tax'                        => 'nullable|numeric|min:0',
-            'tax_rate_id'                => 'nullable|exists:taxes,id',
+            'tax_rate_id'                => 'nullable|exists:tax_rates,id',
 
             // خصم على مستوى الفاتورة (نسبة مئوية 0-100)
             // Fix #3: max:100 عشان نسبة مئوية
