@@ -7,6 +7,7 @@ use App\Models\JournalEntry;
 use App\Models\JournalEntryLine;
 use App\Models\Account;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class PurchaseObserver
 {
@@ -23,14 +24,25 @@ class PurchaseObserver
         $exists = JournalEntry::where('ref', 'AUTO-PUR-' . $purchase->id)->exists();
         if ($exists) return;
 
-        DB::transaction(function () use ($purchase) {
-            $inventoryAccount = Account::where('company_id', $purchase->company_id)->where('code', '1200')->first();
-            $payableAccount   = Account::where('company_id', $purchase->company_id)->where('code', '2101')->first();
+        // ✅ التحقق من الحسابات قبل الـ transaction عشان الـ return يشتغل صح
+        $inventoryAccount = Account::where('company_id', $purchase->company_id)
+            ->where('code', '1200')
+            ->first();
 
-            if (!$inventoryAccount || !$payableAccount) {
-                throw new \Exception('Missing required accounts for company ' . $purchase->company_id);
-            }
+        $payableAccount = Account::where('company_id', $purchase->company_id)
+            ->where('code', '2101')
+            ->first();
 
+        if (!$inventoryAccount || !$payableAccount) {
+            Log::warning("Missing required accounts for company {$purchase->company_id}", [
+                'purchase_id'       => $purchase->id,
+                'inventory_found'   => (bool) $inventoryAccount,
+                'payable_found'     => (bool) $payableAccount,
+            ]);
+            return; // ✅ return صح دلوقتي — برا الـ transaction
+        }
+
+        DB::transaction(function () use ($purchase, $inventoryAccount, $payableAccount) {
             $entry = JournalEntry::create([
                 'company_id'     => $purchase->company_id,
                 'ref'            => 'AUTO-PUR-' . $purchase->id,
@@ -38,7 +50,7 @@ class PurchaseObserver
                 'description'    => 'مشتريات - أمر ' . $purchase->po_number,
                 'type'           => 'auto',
                 'status'         => 'posted',
-                'user_id' => $purchase->user_id,
+                'user_id'        => $purchase->user_id,
                 'reference_type' => Purchase::class,
                 'reference_id'   => $purchase->id,
             ]);

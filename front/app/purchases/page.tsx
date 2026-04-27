@@ -142,11 +142,22 @@ const [savingCat,  setSavingCat]  = useState(false)
 }).catch(() => {})
   }, [])
 
-  const handleReceive = async (id: number) => {
+const handleReceive = async (id: number) => {
     setReceiving(id)
+    setFormErr('') // Clear any previous errors
+    
+    // Call the dedicated receive endpoint using PATCH
     const res = await api.patch(`/purchases/${id}/receive`, {})
+    
     setReceiving(null)
-    if (!res.error) { fetchItems(); fetchStats() }
+    
+    if (res.error) {
+      // If there is an error, show it in the form error box
+      setFormErr(res.error)
+    } else {
+      fetchItems()
+      fetchStats()
+    }
   }
 
   const handleEdit = async (id: number) => {

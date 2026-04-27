@@ -3,12 +3,10 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-// الـ imports - شيل faFileExcel
 import {
   faArrowLeft, faCheck, faPenToSquare, faTrash, faPrint,
   faBoxOpen, faCircleExclamation, faTruck, faBan,
 } from '@fortawesome/free-solid-svg-icons'
-//                                          ^^^^ زيادة
 import ERPLayout from '../../../components/layout/ERPLayout'
 import { api } from '../../../lib/api'
 import { useI18n } from '../../../lib/i18n'
@@ -52,6 +50,7 @@ export default function PurchaseDetailPage() {
   const [purchase,   setPurchase]   = useState<Purchase | null>(null)
   const [loading,    setLoading]    = useState(true)
   const [error,      setError]      = useState('')
+  const [actionError, setActionError] = useState('') // New state for action errors
   const [receiving,  setReceiving]  = useState(false)
   const [cancelling, setCancelling] = useState(false)
   const [deleting,   setDeleting]   = useState(false)
@@ -72,25 +71,43 @@ export default function PurchaseDetailPage() {
 
   const handleReceive = async () => {
     setReceiving(true)
+    setActionError('') // Clear previous errors
     const res = await api.patch(`/purchases/${id}/receive`, {})
     setReceiving(false)
-    if (!res.error) fetchPurchase()
+    
+    if (res.error) {
+      setActionError(res.error) // Display backend error (e.g., missing accounts)
+    } else {
+      fetchPurchase()
+    }
   }
 
   const handleCancel = async () => {
     setCancelling(true)
+    setActionError('')
     const res = await api.put(`/purchases/${id}`, { status: 'cancelled' })
-
     setCancelling(false)
-    setShowCancel(false)
-    if (!res.error) fetchPurchase()
+    
+    if (res.error) {
+      setActionError(res.error)
+    } else {
+      setShowCancel(false)
+      fetchPurchase()
+    }
   }
 
   const handleDelete = async () => {
     setDeleting(true)
-    await api.delete(`/purchases/${id}`)
+    setActionError('')
+    const res = await api.delete(`/purchases/${id}`)
     setDeleting(false)
-    router.push('/purchases')
+    
+    if (res.error) {
+      setActionError(res.error)
+      setShowDelete(false)
+    } else {
+      router.push('/purchases')
+    }
   }
 
   const handlePrint = () => window.print()
@@ -205,6 +222,16 @@ export default function PurchaseDetailPage() {
             )}
           </div>
         </div>
+
+        {/* ══ Action Error Alert ══ */}
+        {actionError && (
+          <div className="no-print" style={{ marginBottom: '1.5rem', padding: '1rem 1.25rem', background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.25)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <FontAwesomeIcon icon={faCircleExclamation} style={{ color: '#dc2626', fontSize: '1.25rem' }} />
+            <div style={{ fontWeight: 600, color: '#dc2626', fontSize: '0.95rem' }}>
+              {actionError}
+            </div>
+          </div>
+        )}
 
         {/* ══ Info Cards ══ */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
