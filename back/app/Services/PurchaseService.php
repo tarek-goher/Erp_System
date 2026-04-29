@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Events\PurchaseConfirmed;
 use App\Models\Product;
 use App\Models\ProductLocation;
 use App\Models\Purchase;
@@ -9,9 +10,6 @@ use App\Models\PurchaseItem;
 use App\Models\StockMovement;
 use App\Models\SupplierLedger;
 use App\Models\TaxRate;
-use App\Models\Account;
-use App\Models\JournalEntry;
-use App\Models\JournalEntryLine;
 use Illuminate\Support\Facades\DB;
 
 class PurchaseService
@@ -89,10 +87,8 @@ class PurchaseService
 // ✅ FIX C: تسجيل دين المورد تلقائياً في supplier_ledger
 $this->recordSupplierDebt($purchase);
 
-          
-
-            // ✅ FIX D: تسجيل قيد محاسبي تلقائياً للمشتريات
-            $this->recordPurchaseJournal($purchase);
+// ✅ طلّق الـ Event — الـ Listener بيعمل الـ journal وإشعار
+PurchaseConfirmed::dispatch($purchase);
 
             return $purchase->load('items.product', 'supplier');
         });
@@ -203,7 +199,8 @@ $this->recordSupplierDebt($purchase);
     // ✅ FIX C: لو الشراء اتسجل مباشرة كـ received → سجّل الدين فوراً
             if ($isReceived) {
                 $this->recordSupplierDebt($purchase);
-                $this->recordPurchaseJournal($purchase);
+                // ✅ طلّق الـ Event — الـ Listener بيعمل الـ journal وإشعار
+                PurchaseConfirmed::dispatch($purchase);
                 // ✅ أضف هنا
                 \App\Models\PurchaseInvoice::create([
                     'company_id'   => $purchase->company_id,
@@ -352,7 +349,8 @@ $this->recordSupplierDebt($purchase);
             // ✅ FIX C: لو التعديل غيّر الحالة لـ received → سجّل الدين
             if (!$wasReceived && $isReceived) {
                 $this->recordSupplierDebt($purchase);
-                $this->recordPurchaseJournal($purchase);
+                // ✅ طلّق الـ Event — الـ Listener بيعمل الـ journal وإشعار
+                PurchaseConfirmed::dispatch($purchase);
             }
 
             return $purchase->load('items.product', 'items.warehouse', 'supplier', 'user');
@@ -455,66 +453,5 @@ $this->recordSupplierDebt($purchase);
         }
         return (float) ($data['tax'] ?? 0);
     }
-
+ }
     // ══════════════════════════════════════════════════════════
-    // ✅ Helper: تسجيل قيد محاسبي تلقائياً للمشتريات
-    //
-    // بيتاستدعى بعد استلام المشتريات لتسجيل:
-    //   - مدين: حساب المخزون (Inventory/Goods)
-    //   - دائن: حساب المورد (Accounts Payable)
-    // ══════════════════════════════════════════════════════════
-    private function recordPurchaseJournal(Purchase $purchase): void
-    {
-        try {
-            // البحث عن الحسابات المطلوبة
-            $inventoryAccount = Account::where('company_id', $purchase->company_id)
-                ->where('code', 'LIKE', '%1300%') // Inventory/Goods
-                ->first();
-
-            $apAccount = Account::where('company_id', $purchase->company_id)
-                ->where('code', 'LIKE', '%2100%') // Accounts Payable
-                ->first();
-
-            // إذا لم نجد الحسابات، لا نسجل القيد
-            if (!$inventoryAccount || !$apAccount) {
-                return;
-            }
-
-            // إنشاء Journal Entry
-            $journalEntry = JournalEntry::create([
-                'company_id'     => $purchase->company_id,
-                'ref'            => JournalEntry::generateRef(),
-                'date'           => $purchase->created_at->toDateString(),
-                'description'    => "شراء مخزون - أمر #" . $purchase->po_number,
-                'status'         => 'draft',
-                'type'           => 'purchase',
-                'user_id'        => $purchase->user_id,
-                'reference_type' => Purchase::class,
-                'reference_id'   => $purchase->id,
-            ]);
-
-            // إضافة السطور:
-            // 1. مدين: حساب المخزون
-            JournalEntryLine::create([
-                'journal_entry_id' => $journalEntry->id,
-                'account_id'       => $inventoryAccount->id,
-                'debit'            => $purchase->total,
-                'credit'           => 0,
-                'description'      => "أمر شراء {$purchase->po_number}",
-            ]);
-
-            // 2. دائن: حساب المورد
-            JournalEntryLine::create([
-                'journal_entry_id' => $journalEntry->id,
-                'account_id'       => $apAccount->id,
-                'debit'            => 0,
-                'credit'           => $purchase->total,
-                'description'      => "أمر شراء {$purchase->po_number}",
-            ]);
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::warning(
-                "Failed to create journal entry for purchase #{$purchase->id}: " . $e->getMessage()
-            );
-        }
-    }
-     }

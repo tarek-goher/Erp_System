@@ -102,6 +102,7 @@ export default function InventoryPage() {
 
   // ── Modals ────────────────────────────────────────────
   const [modal,       setModal]       = useState(false)
+  const [editProductId, setEditProductId] = useState<number | null>(null)
   const [actionModal, setActionModal] = useState<{ product: Product; type: ActionType } | null>(null)
   const [deleteId,    setDeleteId]    = useState<number | null>(null)
   const [detailModal, setDetailModal] = useState<Product | null>(null)
@@ -172,13 +173,16 @@ export default function InventoryPage() {
   }, [])
 
   // ── Reset form ────────────────────────────────────────
-  const resetForm = () => setForm({
-    name: '', sku: '', barcode: '', price: '',
-    purchase_price: '', qty: '', min_qty: '',
-    category_id: '', unit: '', description: '',
-    warehouse_id: '',
-    is_active: true,
-  })
+  const resetForm = () => {
+    setEditProductId(null)
+    setForm({
+      name: '', sku: '', barcode: '', price: '',
+      purchase_price: '', qty: '', min_qty: '',
+      category_id: '', unit: '', description: '',
+      warehouse_id: '',
+      is_active: true,
+    })
+  }
 
   // ── Add product ───────────────────────────────────────
   const handleSubmit = async (e: FormEvent) => {
@@ -220,7 +224,9 @@ export default function InventoryPage() {
     if (form.min_qty)            payload.min_qty      = Number(form.min_qty)
     if (form.warehouse_id)       payload.warehouse_id = Number(form.warehouse_id)
 
-    const res = await api.post('/products', payload)
+    const res = editProductId
+      ? await api.put(`/products/${editProductId}`, payload)
+      : await api.post('/products', payload)
     setSaving(false)
     if (res.error) { setFormErr(res.error); return }
     setModal(false); resetForm(); fetchItems()
@@ -558,7 +564,29 @@ export default function InventoryPage() {
                               </button>
                               <button type="button" className="btn btn-sm" onClick={() => setActionModal({ product: item, type: 'adjustment' })}
                                 style={{ background: '#ede9fe', color: '#7c3aed', border: 'none', borderRadius: 5, padding: '3px 8px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600 }}>
-                                ⚙️ {ar ? 'تعديل' : 'Adjust'}
+                                ⚙️ {ar ? 'تعديل مخزون' : 'Adjust'}
+                              </button>
+                              <button type="button" className="btn btn-sm" onClick={() => {
+                                setEditProductId(item.id)
+                                setForm({
+                                  name:           item.name || '',
+                                  sku:            item.sku || '',
+                                  barcode:        item.barcode || '',
+                                  price:          String(item.price || ''),
+                                  purchase_price: String(item.cost ?? item.purchase_price ?? ''),
+                                  qty:            String(item.qty || ''),
+                                  min_qty:        String(item.min_qty || ''),
+                                  category_id:    String(item.category?.id || ''),
+                                  unit:           item.unit || '',
+                                  description:    item.description || '',
+                                  warehouse_id:   String(item.warehouse?.id || ''),
+                                  is_active:      item.is_active ?? true,
+                                })
+                                setFormErr('')
+                                setModal(true)
+                              }}
+                                style={{ background: '#fef3c7', color: '#d97706', border: 'none', borderRadius: 5, padding: '3px 8px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600 }}>
+                                ✏️ {ar ? 'تعديل' : 'Edit'}
                               </button>
                               <button type="button" className="btn btn-danger btn-sm" onClick={() => setDeleteId(item.id)}>
                                 {t('delete')}
@@ -688,7 +716,7 @@ export default function InventoryPage() {
         <div style={overlayStyle} onClick={() => setModal(false)}>
           <div style={{ ...modalStyle, maxWidth: 620 }} onClick={e => e.stopPropagation()}>
             <div style={modalHeaderStyle}>
-              <h3 style={modalTitleStyle}>{ar ? '➕ منتج جديد' : '➕ New Product'}</h3>
+              <h3 style={modalTitleStyle}>{editProductId ? (ar ? '✏️ تعديل منتج' : '✏️ Edit Product') : (ar ? '➕ منتج جديد' : '➕ New Product')}</h3>
               <button type="button" onClick={() => setModal(false)} style={closeButtonStyle}>✕</button>
             </div>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>

@@ -9,19 +9,28 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-   public function up(): void
+ public function up(): void
 {
-    Schema::table('purchase_items', function (Blueprint $table) {
-        $table->foreignId('warehouse_id')->nullable()->after('product_id');
-        $table->decimal('discount', 10, 2)->default(0)->after('unit_price');
+    Schema::table('sales', function (Blueprint $table) {
+        $table->unsignedBigInteger('tax_rate_id')
+              ->nullable()
+              ->after('notes');
+        $table->foreign('tax_rate_id')
+              ->references('id')
+              ->on('tax_rates')
+              ->nullOnDelete();
+
+        $table->date('due_date')
+              ->nullable()
+              ->after('tax_rate_id');
     });
 }
 
 public function down(): void
 {
-    Schema::table('purchase_items', function (Blueprint $table) {
-        $table->dropForeign(['warehouse_id']);
-        $table->dropColumn(['warehouse_id', 'discount']);
+    Schema::table('sales', function (Blueprint $table) {
+        $table->dropForeign(['tax_rate_id']);
+        $table->dropColumn(['tax_rate_id', 'due_date']);
     });
 }
 };

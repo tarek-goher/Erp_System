@@ -135,7 +135,7 @@ async function request<T = any>(
     if (res.status === 403) errorMessage = 'ليس لديك صلاحية الوصول لهذه البيانات'
     if (res.status === 429) errorMessage = 'طلبات كثيرة جداً، انتظر لحظة'
     // 500: use API message if available, fallback only if empty
-    if (res.status === 500 && !json?.message && !json?.error) errorMessage = 'خطأ في الخادم'
+    if (res.status === 500) errorMessage = json?.error || json?.message || 'خطأ في الخادم'
 
     // رسائل خاصة بـ login (401 / 404 / 422) — لا نعمل override بـ generic
     const isLoginEndpoint = endpoint.includes('/auth/login')

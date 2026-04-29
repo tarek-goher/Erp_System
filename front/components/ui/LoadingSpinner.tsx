@@ -80,3 +80,4 @@ export function LoadingSpinner({
 
   return content
 }
+export default LoadingSpinner

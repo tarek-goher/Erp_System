@@ -133,8 +133,16 @@ class AccountRepository
             ['code' => '1101', 'name' => 'النقدية بالصندوق',     'type' => 'asset',     'normal_balance' => 'debit',  'parent_code' => '1100'],
             ['code' => '1102', 'name' => 'البنك',                 'type' => 'asset',     'normal_balance' => 'debit',  'parent_code' => '1100'],
             ['code' => '1103', 'name' => 'المدينون',              'type' => 'asset',     'normal_balance' => 'debit',  'parent_code' => '1100'],
+            ['code' => '1104', 'name' => 'مدينون - عملاء',        'type' => 'asset',     'normal_balance' => 'debit',  'parent_code' => '1100'],
+            ['code' => '1105', 'name' => 'مدينون - أخرى',         'type' => 'asset',     'normal_balance' => 'debit',  'parent_code' => '1100'],
             ['code' => '1200', 'name' => 'المخزون',               'type' => 'asset',     'normal_balance' => 'debit',  'parent_code' => '1000'],
+            ['code' => '1201', 'name' => 'مخزون البضاعة',         'type' => 'asset',     'normal_balance' => 'debit',  'parent_code' => '1200'],
+            ['code' => '1202', 'name' => 'مخزون المواد الخام',    'type' => 'asset',     'normal_balance' => 'debit',  'parent_code' => '1200'],
             ['code' => '1300', 'name' => 'الأصول الثابتة',       'type' => 'asset',     'normal_balance' => 'debit',  'parent_code' => '1000'],
+            ['code' => '1310', 'name' => 'الممتلكات والآلات',    'type' => 'asset',     'normal_balance' => 'debit',  'parent_code' => '1300'],
+            ['code' => '1320', 'name' => 'الأثاث والتجهيزات',    'type' => 'asset',     'normal_balance' => 'debit',  'parent_code' => '1300'],
+            ['code' => '1330', 'name' => 'المركبات',              'type' => 'asset',     'normal_balance' => 'debit',  'parent_code' => '1300'],
+            ['code' => '1340', 'name' => 'الأصول غير الملموسة',  'type' => 'asset',     'normal_balance' => 'debit',  'parent_code' => '1300'],
 
             // ══════════════════════════════
             // الخصوم — Liabilities
@@ -144,6 +152,9 @@ class AccountRepository
             ['code' => '2101', 'name' => 'الموردون',              'type' => 'liability', 'normal_balance' => 'credit', 'parent_code' => '2100'],
             ['code' => '2102', 'name' => 'مصاريف مستحقة',        'type' => 'liability', 'normal_balance' => 'credit', 'parent_code' => '2100'],
             ['code' => '2103', 'name' => 'ضريبة القيمة المضافة', 'type' => 'liability', 'normal_balance' => 'credit', 'parent_code' => '2100'],
+            ['code' => '2104', 'name' => 'رسوم الجمرك',           'type' => 'liability', 'normal_balance' => 'credit', 'parent_code' => '2100'],
+            ['code' => '2200', 'name' => 'الخصوم طويلة الأجل',   'type' => 'liability', 'normal_balance' => 'credit', 'parent_code' => '2000'],
+            ['code' => '2201', 'name' => 'القروض طويلة الأجل',   'type' => 'liability', 'normal_balance' => 'credit', 'parent_code' => '2200'],
 
             // ══════════════════════════════
             // حقوق الملكية — Equity
@@ -151,6 +162,7 @@ class AccountRepository
             ['code' => '3000', 'name' => 'حقوق الملكية',         'type' => 'equity',    'normal_balance' => 'credit', 'parent_code' => null],
             ['code' => '3001', 'name' => 'رأس المال',             'type' => 'equity',    'normal_balance' => 'credit', 'parent_code' => '3000'],
             ['code' => '3002', 'name' => 'الأرباح المحتجزة',     'type' => 'equity',    'normal_balance' => 'credit', 'parent_code' => '3000'],
+            ['code' => '3003', 'name' => 'أرباح العام',           'type' => 'equity',    'normal_balance' => 'credit', 'parent_code' => '3000'],
 
             // ══════════════════════════════
             // الإيرادات — Revenue
@@ -158,6 +170,8 @@ class AccountRepository
             ['code' => '4000', 'name' => 'الإيرادات',             'type' => 'revenue',   'normal_balance' => 'credit', 'parent_code' => null],
             ['code' => '4001', 'name' => 'إيرادات المبيعات',     'type' => 'revenue',   'normal_balance' => 'credit', 'parent_code' => '4000'],
             ['code' => '4002', 'name' => 'إيرادات أخرى',         'type' => 'revenue',   'normal_balance' => 'credit', 'parent_code' => '4000'],
+            ['code' => '4003', 'name' => 'إيرادات الفوائد',      'type' => 'revenue',   'normal_balance' => 'credit', 'parent_code' => '4000'],
+            ['code' => '4004', 'name' => 'عائدات الاستثمار',     'type' => 'revenue',   'normal_balance' => 'credit', 'parent_code' => '4000'],
 
             // ══════════════════════════════
             // المصاريف — Expenses
@@ -168,6 +182,12 @@ class AccountRepository
             ['code' => '5003', 'name' => 'مصاريف الرواتب',       'type' => 'expense',   'normal_balance' => 'debit',  'parent_code' => '5000'],
             ['code' => '5004', 'name' => 'مصاريف إدارية',        'type' => 'expense',   'normal_balance' => 'debit',  'parent_code' => '5000'],
             ['code' => '5005', 'name' => 'مصاريف تسويق',         'type' => 'expense',   'normal_balance' => 'debit',  'parent_code' => '5000'],
+            ['code' => '5006', 'name' => 'مصاريف الكهرباء والماء', 'type' => 'expense',   'normal_balance' => 'debit',  'parent_code' => '5000'],
+            ['code' => '5007', 'name' => 'مصاريف الاتصالات',     'type' => 'expense',   'normal_balance' => 'debit',  'parent_code' => '5000'],
+            ['code' => '5008', 'name' => 'مصاريف النقل والتوزيع', 'type' => 'expense',   'normal_balance' => 'debit',  'parent_code' => '5000'],
+            ['code' => '5009', 'name' => 'مصاريف إصلاح وصيانة',  'type' => 'expense',   'normal_balance' => 'debit',  'parent_code' => '5000'],
+            ['code' => '5010', 'name' => 'مصاريف تأمين',          'type' => 'expense',   'normal_balance' => 'debit',  'parent_code' => '5000'],
+            ['code' => '5011', 'name' => 'مصاريف مالية وفوائد',  'type' => 'expense',   'normal_balance' => 'debit',  'parent_code' => '5000'],
         ];
 
         // المرحلة الأولى: أنشئ الحسابات الأب أولاً (parent_code = null)

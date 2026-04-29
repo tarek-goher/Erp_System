@@ -49,6 +49,7 @@ use App\Http\Controllers\API\PurchaseInvoiceController;
 use App\Http\Controllers\API\QuotationController;
 use App\Http\Controllers\API\RecruitmentController;
 use App\Http\Controllers\API\ReportController;
+use App\Http\Controllers\API\ReturnController;
 use App\Http\Controllers\API\RoleController;
 use App\Http\Controllers\API\SaleController;
 use App\Http\Controllers\API\SalePaymentController;
@@ -147,6 +148,12 @@ Route::middleware(['auth:sanctum', 'company.active', 'throttle:120,1'])->group(f
         Route::get('/',            'index');
         Route::post('/',           'store');
         Route::delete('{payment}', 'destroy');
+    });
+
+    // ── Sales Returns ────────────────────────────────────────
+    Route::prefix('returns')->controller(ReturnController::class)->group(function () {
+        Route::patch('{return}/accept', 'acceptReturn');
+        Route::patch('{return}/reject', 'rejectReturn');
     });
 
     // ── Quotations ───────────────────────────────────────────
@@ -339,6 +346,10 @@ Route::prefix('recruitment')->group(function () {
     // ── Accounting ───────────────────────────────────────────
     Route::prefix('accounting')->group(function () {
         Route::apiResource('journal-entries', JournalEntryController::class);
+        Route::post('journal-entries/{journalEntry}/post', [JournalEntryController::class, 'post']);
+        Route::put('journal-entries/{journalEntry}', [JournalEntryController::class, 'update']);
+        // ✅ الـ trial balance تحت accounting مباشرة (للفرونت)
+        Route::get('trial-balance', [AccountController::class, 'trialBalance']);
         Route::get('accounts/trial-balance', [AccountController::class, 'trialBalance']);
         Route::apiResource('accounts',        AccountController::class);
         // ── General Ledger ───────────────────────────────────────
@@ -347,6 +358,8 @@ Route::prefix('recruitment')->group(function () {
     });
     // Legacy aliases (backward compat for other pages using routes without prefix)
     Route::apiResource('journal-entries', JournalEntryController::class);
+    Route::post('journal-entries/{journalEntry}/post', [JournalEntryController::class, 'post']);
+    Route::put('journal-entries/{journalEntry}', [JournalEntryController::class, 'update']);
     Route::get('accounts/trial-balance', [AccountController::class, 'trialBalance']);
     Route::apiResource('accounts',        AccountController::class);
     Route::get('general-ledger',             [GeneralLedgerController::class, 'index']);

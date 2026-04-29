@@ -4,6 +4,9 @@ namespace App\Providers;
 
 use App\Events\CompanySettingsUpdated;
 use App\Events\PayrollGenerated;
+use App\Events\PayrollPaid;
+use App\Events\ProductionCompleted;
+use App\Events\PurchaseConfirmed;
 use App\Events\SaleCreated;
 use App\Events\StockLowAlert;
 use App\Events\TicketAssigned;
@@ -12,7 +15,10 @@ use App\Listeners\InvalidateSlaCache;
 use App\Listeners\NotifyAdminTicketCreated;
 use App\Listeners\NotifyPayrollGenerated;
 use App\Listeners\NotifyTicketAssignee;
+use App\Listeners\RecordPayrollJournal;
 use App\Listeners\SendLowStockAlert;
+use App\Listeners\SendProductionNotification;
+use App\Listeners\SendPurchaseNotification;
 use App\Listeners\SendSaleNotification;
 use App\Listeners\TicketNotificationListener;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
@@ -26,6 +32,15 @@ class EventServiceProvider extends ServiceProvider
     protected $listen = [
         SaleCreated::class => [
             SendSaleNotification::class,
+        ],
+        PurchaseConfirmed::class => [
+            SendPurchaseNotification::class,
+        ],
+        ProductionCompleted::class => [
+            SendProductionNotification::class,
+        ],
+        PayrollPaid::class => [
+            RecordPayrollJournal::class,
         ],
         StockLowAlert::class => [
             SendLowStockAlert::class,

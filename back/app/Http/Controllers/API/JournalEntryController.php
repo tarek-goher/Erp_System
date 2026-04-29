@@ -53,30 +53,33 @@ class JournalEntryController extends BaseController
 
         if (round($totalDebit, 2) !== round($totalCredit, 2)) {
             return $this->error(
-                'Journal entry is not balanced. Debit: ' . $totalDebit . ' Credit: ' . $totalCredit,
+                sprintf('غير متوازن — المدين: %s، الدائن: %s',
+                    number_format($totalDebit, 2),
+                    number_format($totalCredit, 2)
+                ),
                 422
             );
         }
 
         DB::beginTransaction();
+
         try {
-            // ✅ إنشاء الـ header
             $entry = JournalEntry::create([
-                'company_id'  => $this->companyId(),
+                'company_id'  => auth()->user()->company_id,
                 'ref'         => JournalEntry::generateRef(),
                 'date'        => $data['date'],
                 'description' => $data['description'],
-                'type'        => $data['type'] ?? 'manual',
                 'status'      => 'draft',
+                'type'        => $data['type'] ?? 'manual',
                 'user_id'     => auth()->id(),
             ]);
 
-            // ✅ إنشاء الـ lines
+            // إضافة الأسطر
             foreach ($data['lines'] as $line) {
                 JournalEntryLine::create([
                     'journal_entry_id' => $entry->id,
                     'account_id'       => $line['account_id'],
-                    'debit'            => $line['debit']  ?? 0,
+                    'debit'            => $line['debit'] ?? 0,
                     'credit'           => $line['credit'] ?? 0,
                     'description'      => $line['description'] ?? null,
                 ]);
@@ -105,34 +108,86 @@ class JournalEntryController extends BaseController
 
     public function update(Request $request, JournalEntry $journalEntry): JsonResponse
     {
-        // ✅ الـ update بيُستخدم للـ Post فقط (status: posted)
-        if ($request->has('status') && $request->status === 'posted') {
-            if ($journalEntry->status === 'posted') {
-                return $this->error('Entry is already posted', 422);
-            }
-
-            $posted = $journalEntry->post();
-
-            if (!$posted) {
-                return $this->error('Cannot post — entry is not balanced', 422);
-            }
-
-            return $this->success($journalEntry->fresh()->load('lines.account'), 'Entry posted successfully');
-        }
-
-        // ✅ تعديل entry مسودة فقط
+        // التحقق من أن القيد لا يزال في حالة draft
         if ($journalEntry->status === 'posted') {
-            return $this->error('Cannot edit a posted entry', 422);
+            return $this->error('Cannot modify a posted entry', 422);
         }
 
         $data = $request->validate([
             'date'        => 'sometimes|date',
             'description' => 'sometimes|string|max:500',
+            'lines'       => 'sometimes|array|min:2',
+            'lines.*.account_id' => 'required_with:lines|exists:accounts,id',
+            'lines.*.debit'      => 'required_with:lines|numeric|min:0',
+            'lines.*.credit'     => 'required_with:lines|numeric|min:0',
+            'lines.*.description' => 'nullable|string|max:200',
         ]);
 
-        $journalEntry->update($data);
+        if (isset($data['lines'])) {
+            // التحقق من التوازن
+            $totalDebit = collect($data['lines'])->sum('debit');
+            $totalCredit = collect($data['lines'])->sum('credit');
+
+            if (abs($totalDebit - $totalCredit) > 0.01) {
+                return $this->error('Debit and credit must be equal', 422);
+            }
+
+            // حذف السطور القديمة وإضافة الجديدة
+            $journalEntry->lines()->delete();
+
+            foreach ($data['lines'] as $line) {
+                JournalEntryLine::create([
+                    'journal_entry_id' => $journalEntry->id,
+                    'account_id'       => $line['account_id'],
+                    'debit'            => $line['debit'],
+                    'credit'           => $line['credit'],
+                    'description'      => $line['description'] ?? null,
+                ]);
+            }
+        }
+
+        if (isset($data['date']) || isset($data['description'])) {
+            $journalEntry->update($data);
+        }
 
         return $this->success($journalEntry->load('lines.account'), 'Entry updated');
+    }
+
+    /**
+     * ترحيل قيد من draft إلى posted
+     */
+    public function post(JournalEntry $journalEntry): JsonResponse
+    {
+        if ($journalEntry->status === 'posted') {
+            return $this->error('Entry is already posted', 422);
+        }
+
+        // التحقق من التوازن
+        $totalDebit = $journalEntry->lines->sum('debit');
+        $totalCredit = $journalEntry->lines->sum('credit');
+
+        if (abs($totalDebit - $totalCredit) > 0.01) {
+            return $this->error('Debit and credit must be equal', 422);
+        }
+
+        DB::transaction(function () use ($journalEntry) {
+            $journalEntry->update(['status' => 'posted']);
+
+            // تحديث أرصدة الحسابات
+            foreach ($journalEntry->lines as $line) {
+                $account = $line->account;
+                
+                if ($account->normal_balance === 'debit') {
+                    $account->balance += ($line->debit - $line->credit);
+                } else {
+                    $account->balance += ($line->credit - $line->debit);
+                }
+                
+                $account->save();
+            }
+        });
+
+        return $this->success($journalEntry->load('lines.account'), 'Entry posted successfully');
     }
 
     public function destroy(JournalEntry $journalEntry): JsonResponse

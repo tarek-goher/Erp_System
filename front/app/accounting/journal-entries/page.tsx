@@ -116,6 +116,18 @@ export default function JournalEntriesPage() {
     setItems(prev => prev.filter(i => i.id !== deleteId))
   }
 
+  const handlePostJournal = async (entryId: number) => {
+    setSaving(true)
+    const res = await api.patch(`/accounting/journal-entries/${entryId}/post`, {})
+    setSaving(false)
+    if (res.error) {
+      setFormErr(res.error)
+      return
+    }
+    setItems(prev => prev.map(i => i.id === entryId ? { ...i, status: 'posted' } : i))
+    setViewItem(null)
+  }
+
   const fmt = (n?: number) => n != null ? new Intl.NumberFormat(ar ? 'ar-EG' : 'en-US', { minimumFractionDigits: 2 }).format(n) : '—'
   const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString(ar ? 'ar-EG' : 'en-US') : '—'
 
@@ -174,6 +186,11 @@ export default function JournalEntriesPage() {
                     <td><span className={`badge ${statusBadge(item.status)}`}>{ar ? statusLabel[item.status]?.ar : statusLabel[item.status]?.en || item.status}</span></td>
                     <td style={{ display: 'flex', gap: 6 }}>
                       <button className="btn btn-secondary btn-sm" onClick={() => setViewItem(item)}>{t('view')}</button>
+                      {item.status === 'draft' && (
+                        <button className="btn btn-success btn-sm" onClick={() => handlePostJournal(item.id)}>
+                          {ar ? 'ترحيل' : 'Post'}
+                        </button>
+                      )}
                       <button className="btn btn-danger btn-sm" onClick={() => setDeleteId(item.id)}>{t('delete')}</button>
                     </td>
                   </tr>
