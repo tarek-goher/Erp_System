@@ -1,7 +1,7 @@
 'use client'
 
 interface StatCardProps {
-  icon?: string
+  icon?: React.ReactNode
   label: string
   value: string | number
   accent?: string
