@@ -4,13 +4,14 @@ namespace App\Listeners;
 
 use App\Events\SaleCreated;
 use App\Services\NotificationService;
-use Illuminate\Contracts\Queue\ShouldQueue;
 
 /**
  * SendSaleNotification — يُرسل إشعار داخلي بعد كل فاتورة
- * ShouldQueue = يشتغل في الـ background queue
+ * ملاحظة: كان listener مُعرّف كـ ShouldQueue، وده كان بيحاول يستخدم Redis/Horizon.
+ * على بيئات dev اللي مفيهاش PHP Redis extension كان بيكسر إنشاء الفاتورة بـ 500.
+ * لذلك بنخليه synchronous (بدون queue) عشان ما يمنعش إنشاء البيع.
  */
-class SendSaleNotification implements ShouldQueue
+class SendSaleNotification
 {
     public function __construct(private NotificationService $notifications) {}
 

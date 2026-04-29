@@ -337,7 +337,7 @@ export default function SaleDetailPage() {
           {canConfirm && (
             <button
               className="btn btn-primary btn-sm"
-              onClick={() => updateStatus('completed')}
+              onClick={() => updateStatus('confirmed')}   // ← fix here
               disabled={confirmLoading}
             >
               {confirmLoading ? '⏳...' : `✅ ${lang === 'ar' ? 'تأكيد الفاتورة' : 'Confirm'}`}

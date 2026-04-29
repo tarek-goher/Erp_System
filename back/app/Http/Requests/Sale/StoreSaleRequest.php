@@ -56,7 +56,7 @@ class StoreSaleRequest extends FormRequest
 
             // الضريبة
             'tax'                        => 'nullable|numeric|min:0',
-            'tax_rate_id'                => 'nullable|exists:taxes,id',
+            'tax_rate_id'                => 'nullable|exists:tax_rates,id',
 
             // خصم على مستوى الفاتورة (نسبة مئوية 0-100)
             // Fix #3: max:100 عشان نسبة مئوية
@@ -64,7 +64,7 @@ class StoreSaleRequest extends FormRequest
 
             // بيانات الفاتورة
             'payment_method'             => 'nullable|in:cash,card,bank_transfer,credit',
-            'status'                     => 'nullable|in:completed,pending,draft,quotation,cancelled',
+            'status'                     => 'nullable|in:completed,pending,draft,quotation,cancelled,confirmed,refunded,sent',
             'notes'                      => 'nullable|string|max:1000',
 
             // Fix #1: due_date
