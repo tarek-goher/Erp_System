@@ -62,17 +62,21 @@ type SaleItem = {
   unit_price:   number
   warehouse_id: string
   discount:     number
+  max_qty?:     number
+  cost_price?:  number
 }
 
 // ✅ Component للـ Searchable Product Input
 function ProductSearchInput({
   value,
   products,
+  warehouses,
   lang,
   onChange,
 }: {
   value: SaleItem
-  products: { id: number; name: string; price?: number; sell_price?: number }[]
+  products: { id: number; name: string; price?: number; sell_price?: number; qty?: number; cost?: number }[]
+  warehouses: { id: number; name: string }[]
   lang: string
   onChange: (field: string, val: any) => void
 }) {
@@ -102,14 +106,18 @@ function ProductSearchInput({
         p.name.toLowerCase().includes(query.toLowerCase())
       ).slice(0, 8)
 
-  const handleSelect = (p: typeof products[0]) => {
-    onChange('product_id', String(p.id))
-    onChange('name',       p.name)
-    onChange('unit_price', p.sell_price || p.price || 0)
-    setQuery(p.name)
-    setOpen(false)
-    setFocused(false)
-  }
+const handleSelect = (p: typeof products[0]) => {
+  onChange('product_id', String(p.id))
+  onChange('name',       p.name)
+  onChange('unit_price', p.sell_price ?? p.price ?? 0)
+  onChange('qty',        1)
+  onChange('max_qty',    p.qty ?? 0)
+  onChange('cost_price', p.cost ?? 0)
+  onChange('warehouse_id', warehouses[0] ? String(warehouses[0].id) : '') // ✅ أضف ده
+  setQuery(p.name)
+  setOpen(false)
+  setFocused(false)
+}
 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     setQuery(e.target.value)
@@ -179,9 +187,14 @@ function ProductSearchInput({
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
               <span>{p.name}</span>
-              <span style={{ color: 'var(--color-primary)', fontWeight: 600, fontSize: 12 }}>
-                {new Intl.NumberFormat().format(p.sell_price || p.price || 0)}
-              </span>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                <span style={{ color: 'var(--color-primary)', fontWeight: 600, fontSize: 12 }}>
+                  {new Intl.NumberFormat().format(p.sell_price || p.price || 0)}
+                </span>
+                <span style={{ color: (p.qty ?? 0) > 0 ? 'var(--color-success, #16a34a)' : 'var(--color-danger, #dc2626)', fontSize: 11 }}>
+                  {lang === 'ar' ? `المخزون: ${p.qty ?? 0}` : `Stock: ${p.qty ?? 0}`}
+                </span>
+              </div>
             </div>
           ))}
         </div>
@@ -233,7 +246,7 @@ export default function SalesPage() {
   const [formError,   setFormError]   = useState('')
   const [formLoading, setFormLoading] = useState(false)
   const [taxRates,    setTaxRates]    = useState<{id:number;name:string;rate:number}[]>([])
-  const [products,    setProducts]    = useState<{id:number;name:string;price?:number;sell_price?:number}[]>([])
+  const [products,    setProducts]    = useState<{id:number;name:string;price?:number;sell_price?:number;qty?:number;cost?:number}[]>([])
   const [warehouses,  setWarehouses]  = useState<{id:number;name:string}[]>([])
 
   // أصناف الفاتورة
@@ -435,60 +448,60 @@ export default function SalesPage() {
     }
 
     setFormLoading(true)
+    try {
+      // ✅ لو Edit نبعت PUT بالـ metadata فقط
+      if (editId) {
+        const payload: Record<string, any> = {
+          customer_id:    Number(form.customer_id),
+          status:         form.status,
+          payment_method: form.payment_method,
+          notes:          form.notes,
+        }
+        if (form.discount !== undefined) payload.discount = Number(form.discount)
 
-    // ✅ لو Edit نبعت PUT بالـ metadata فقط
-    if (editId) {
-      const payload: Record<string, any> = {
-        customer_id:    Number(form.customer_id),
-        status:         form.status,
-        payment_method: form.payment_method,
-        notes:          form.notes,
+        const res = await api.put(`/sales/${editId}`, payload)
+        if (res.error) { show(res.error, 'error'); return }
+        show(lang === 'ar' ? 'تم تعديل الفاتورة ✅' : 'Sale updated ✅')
+        setModalOpen(false)
+        resetForm()
+        fetchSales()
+        fetchStats()
+        return
       }
-      if (form.discount !== undefined) payload.discount = Number(form.discount)
 
-      const res = await api.put(`/sales/${editId}`, payload)
-      setFormLoading(false)
+      // ── إنشاء جديد ────────────────────────────────────
+      const validItems = saleItems.filter(i => i.product_id && i.qty > 0)
+
+      if (validItems.length === 0) {
+        setFormError(lang === 'ar' ? 'أضف منتجاً واحداً على الأقل' : 'Add at least one item')
+        return
+      }
+
+      const res = await api.post('/sales', {
+        customer_id:    Number(form.customer_id),
+        notes:          form.notes,
+        status:         form.status,
+        payment_method: form.payment_method || 'cash',
+        discount:       form.discount || 0,
+        due_date:       form.due_date || undefined,
+        items: validItems.map(i => ({
+          product_id:   Number(i.product_id),
+          qty:          i.qty,
+          unit_price:   i.unit_price,
+          discount:     i.discount || 0,
+          warehouse_id: i.warehouse_id ? Number(i.warehouse_id) : null, // ✅ Bug 2 fix
+        })),
+        ...(form.tax_rate_id && { tax_rate_id: Number(form.tax_rate_id) }),
+      })
       if (res.error) { show(res.error, 'error'); return }
-      show(lang === 'ar' ? 'تم تعديل الفاتورة ✅' : 'Sale updated ✅')
+      show(lang === 'ar' ? 'تم تسجيل عملية البيع ✅' : 'Sale created ✅')
       setModalOpen(false)
       resetForm()
       fetchSales()
       fetchStats()
-      return
-    }
-
-    // ── إنشاء جديد ────────────────────────────────────
-    const validItems = saleItems.filter(i => i.product_id && i.qty > 0)
-
-    if (validItems.length === 0) {
-      setFormError(lang === 'ar' ? 'أضف منتجاً واحداً على الأقل' : 'Add at least one item')
+    } finally {
       setFormLoading(false)
-      return
     }
-
-    const res = await api.post('/sales', {
-      customer_id:    Number(form.customer_id),
-      notes:          form.notes,
-      status:         form.status,
-      payment_method: form.payment_method || 'cash',
-      discount:       form.discount || 0,
-      due_date:       form.due_date || undefined,
-      items: validItems.map(i => ({
-        product_id:   Number(i.product_id),
-        qty:          i.qty,
-        unit_price:   i.unit_price,
-        discount:     i.discount || 0,
-        warehouse_id: i.warehouse_id ? Number(i.warehouse_id) : null, // ✅ Bug 2 fix
-      })),
-      ...(form.tax_rate_id && { tax_rate_id: Number(form.tax_rate_id) }),
-    })
-    setFormLoading(false)
-    if (res.error) { show(res.error, 'error'); return }
-    show(lang === 'ar' ? 'تم تسجيل عملية البيع ✅' : 'Sale created ✅')
-    setModalOpen(false)
-    resetForm()
-    fetchSales()
-    fetchStats()
   }
 
   const resetForm = () => {
@@ -901,6 +914,7 @@ export default function SalesPage() {
                               <ProductSearchInput
                                 value={item}
                                 products={products}
+                                warehouses={warehouses}
                                 lang={lang}
                                 onChange={(field, val) => updateSaleItem(idx, field, val)}
                               />

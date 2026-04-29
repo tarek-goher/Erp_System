@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Events\PayrollGenerated;
+use App\Events\PayrollPaid;
 use App\Models\Attendance;
 use App\Models\Employee;
 use App\Models\Payroll;
@@ -104,8 +105,14 @@ class PayrollService
      */
     public function markAsPaid(Payroll $payroll): Payroll
     {
-        $payroll->update(['status' => 'paid', 'paid_at' => now()]);
-        return $payroll->fresh('employee');
+        return DB::transaction(function () use ($payroll) {
+            $payroll->update(['status' => 'paid', 'paid_at' => now()]);
+            
+            // ✅ طلّق الـ Event — الـ Listener بيعمل الـ journal
+            PayrollPaid::dispatch($payroll);
+            
+            return $payroll->fresh('employee');
+        });
     }
 
     /**

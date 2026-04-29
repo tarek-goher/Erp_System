@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\Account;
+use App\Models\JournalEntry;
+use App\Models\JournalEntryLine;
 use App\Models\Sale;
 use App\Models\SaleReturn;
 use App\Models\Product;
@@ -45,43 +48,8 @@ class ReturnService
                         'total'       => $lineTotal,
                     ]);
 
-                    // إضافة المخزون من المرتجع
-                    $product = Product::where('company_id', $companyId)
-                        ->find($item['product_id']);
-
-                    if ($product) {
-                        $qtyBefore   = (float) $product->qty;
-                        $warehouseId = $product->warehouse_id ?? null;
-
-                        if ($warehouseId) {
-                            $location = ProductLocation::firstOrCreate(
-                                [
-                                    'product_id'   => $item['product_id'],
-                                    'warehouse_id' => $warehouseId,
-                                    'company_id'   => $companyId,
-                                ],
-                                ['qty' => 0]
-                            );
-                            $location->increment('qty', $qty);
-                        }
-
-                        $product->increment('qty', $qty);
-
-                        // تسجيل حركة المخزون
-                        StockMovement::create([
-                            'company_id'     => $companyId,
-                            'product_id'     => $item['product_id'],
-                            'warehouse_id'   => $warehouseId ?? null,
-                            'user_id'        => auth()->id(),
-                            'type'           => 'in', // إضافة
-                            'qty'            => $qty,
-                            'qty_before'     => $qtyBefore,
-                            'qty_after'      => $qtyBefore + $qty,
-                            'reference_type' => SaleReturn::class,
-                            'reference_id'   => $return->id,
-                            'notes'          => "مرتجع من فاتورة #{$data['sale_id']}",
-                        ]);
-                    }
+                    // لا نضيف المخزون هنا - سيتم إضافته عند قبول المرتجع (acceptReturn)
+                    // هذا فقط تسجيل المرتجع في حالة pending
 
                     $totalAmount += $lineTotal;
                 }
@@ -100,17 +68,6 @@ class ReturnService
     public function acceptReturn(SaleReturn $return): SaleReturn
     {
         return DB::transaction(function () use ($return) {
-            $return->update(['status' => 'accepted']);
-            return $return;
-        });
-    }
-
-    // ══════════════════════════════════════════════════════════
-    // رفض المرتجع مع إرجاع المخزون
-    // ══════════════════════════════════════════════════════════
-    public function rejectReturn(SaleReturn $return): void
-    {
-        DB::transaction(function () use ($return) {
             // إرجاع المخزون
             foreach ($return->items as $item) {
                 $product = Product::where('company_id', $return->company_id)
@@ -129,27 +86,100 @@ class ReturnService
                             ],
                             ['qty' => 0]
                         );
-                        $location->decrement('qty', $item->quantity);
+                        $location->increment('qty', $item->quantity);
                     }
 
-                    $product->decrement('qty', $item->quantity);
+                    $product->increment('qty', $item->quantity);
 
                     StockMovement::create([
                         'company_id'     => $return->company_id,
                         'product_id'     => $item->product_id,
                         'warehouse_id'   => $warehouseId ?? null,
                         'user_id'        => auth()->id(),
-                        'type'           => 'out',
+                        'type'           => 'in',
                         'qty'            => $item->quantity,
                         'qty_before'     => $qtyBefore,
-                        'qty_after'      => $qtyBefore - $item->quantity,
+                        'qty_after'      => $qtyBefore + $item->quantity,
                         'reference_type' => SaleReturn::class,
                         'reference_id'   => $return->id,
-                        'notes'          => "رفض مرتجع - إرجاع من المخزون",
+                        'notes'          => "قبول مرتجع - إضافة للمخزون",
                     ]);
                 }
             }
 
+            $return->update(['status' => 'accepted']);
+            
+            // تسجيل القيد المحاسبي: إيرادات المبيعات (عكسي) - المدينون
+            $this->recordReturnJournal($return);
+            
+            return $return;
+        });
+    }
+
+    /**
+     * تسجيل القيد المحاسبي للمرتجع
+     * مدين: إيرادات المبيعات (عكسي - 4001)
+     * دائن: المدينون (1103)
+     */
+    private function recordReturnJournal(SaleReturn $return): void
+    {
+        try {
+            $revenueAccount = Account::where('company_id', $return->company_id)
+                ->where('account_type', 'revenue')
+                ->where('code', '4001')
+                ->first();
+
+            $arAccount = Account::where('company_id', $return->company_id)
+                ->where('account_type', 'receivable')
+                ->first();
+
+            if (!$revenueAccount || !$arAccount) {
+                return;
+            }
+
+            $journalEntry = JournalEntry::create([
+                'company_id'     => $return->company_id,
+                'ref'            => JournalEntry::generateRef(),
+                'date'           => now()->toDateString(),
+                'description'    => "مرتجع من المبيعات - الفاتورة #{$return->sale_id}",
+                'status'         => 'posted',
+                'type'           => 'auto',
+                'reference_type' => 'SaleReturn',
+                'reference_id'   => $return->id,
+                'user_id'        => auth()->id() ?? 1,
+            ]);
+
+            // مدين: إيرادات المبيعات (عكسي)
+            JournalEntryLine::create([
+                'journal_entry_id' => $journalEntry->id,
+                'account_id'       => $revenueAccount->id,
+                'debit'            => $return->total_amount,
+                'credit'           => 0,
+                'description'      => "استرجاع إيراد المبيعات",
+            ]);
+
+            // دائن: المدينون
+            JournalEntryLine::create([
+                'journal_entry_id' => $journalEntry->id,
+                'account_id'       => $arAccount->id,
+                'debit'            => 0,
+                'credit'           => $return->total_amount,
+                'description'      => "استرجاع من العميل",
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Return Journal Error: ' . $e->getMessage());
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // رفض المرتجع — بدون تعديل مخزون
+    // ══════════════════════════════════════════════════════════
+    public function rejectReturn(SaleReturn $return): void
+    {
+        DB::transaction(function () use ($return) {
+            // ✅ FIX: لا نعدّل المخزون — المرتجع لم يُضف للمخزون أصلاً في createSaleReturn()
+            // فقط نغيّر الحالة لـ rejected
+            
             $return->update(['status' => 'rejected']);
         });
     }

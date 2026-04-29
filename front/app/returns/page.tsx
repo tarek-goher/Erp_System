@@ -408,6 +408,40 @@ export default function ReturnsPage() {
   }
 
   // ══════════════════════════════════════════════════════
+  // قبول مرتجع
+  // ══════════════════════════════════════════════════════
+  const handleAcceptReturn = async (returnId: number) => {
+    setSaving(true)
+    const res = await api.patch(`/returns/${returnId}/accept`, {})
+    setSaving(false)
+    if (res.error) {
+      show(res.error, 'error')
+      return
+    }
+    show(ar ? 'تم قبول المرتجع بنجاح ✓' : 'Return accepted successfully ✓', 'success')
+    setPage(1)
+    fetchReturns(1)
+    fetchStats()
+  }
+
+  // ══════════════════════════════════════════════════════
+  // رفض مرتجع
+  // ══════════════════════════════════════════════════════
+  const handleRejectReturn = async (returnId: number) => {
+    setSaving(true)
+    const res = await api.patch(`/returns/${returnId}/reject`, {})
+    setSaving(false)
+    if (res.error) {
+      show(res.error, 'error')
+      return
+    }
+    show(ar ? 'تم رفض المرتجع بنجاح ✓' : 'Return rejected successfully ✓', 'success')
+    setPage(1)
+    fetchReturns(1)
+    fetchStats()
+  }
+
+  // ══════════════════════════════════════════════════════
   // مساعدات تنسيق
   // ══════════════════════════════════════════════════════
   const fmt = (n: number) =>
@@ -580,6 +614,26 @@ export default function ReturnsPage() {
                             >
                               👁 {ar ? 'عرض' : 'View'}
                             </button>
+                            {ret.status === 'pending' && (
+                              <>
+                                <button
+                                  className="btn btn-success"
+                                  style={{ padding: '4px 10px', fontSize: 12 }}
+                                  onClick={() => handleAcceptReturn(ret.id)}
+                                  title={ar ? 'قبول المرتجع' : 'Accept Return'}
+                                >
+                                  ✓ {ar ? 'قبول' : 'Accept'}
+                                </button>
+                                <button
+                                  className="btn btn-danger"
+                                  style={{ padding: '4px 10px', fontSize: 12 }}
+                                  onClick={() => handleRejectReturn(ret.id)}
+                                  title={ar ? 'رفض المرتجع' : 'Reject Return'}
+                                >
+                                  ✕ {ar ? 'رفض' : 'Reject'}
+                                </button>
+                              </>
+                            )}
                             <button
                               className="btn btn-outline"
                               style={{ padding: '4px 10px', fontSize: 12 }}

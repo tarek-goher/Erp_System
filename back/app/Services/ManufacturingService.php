@@ -2,11 +2,12 @@
 
 namespace App\Services;
 
-use App\Models\Product;
-use App\Models\WorkOrder;
+use App\Events\ProductionCompleted;
 use App\Models\BomItem;
+use App\Models\Product;
 use App\Models\StockMovement;
 use App\Models\ProductLocation;
+use App\Models\WorkOrder;
 use Illuminate\Support\Facades\DB;
 
 class ManufacturingService
@@ -101,6 +102,9 @@ class ManufacturingService
 
             // ── 3. تحديث حالة أمر الإنتاج ────────────────
             $workOrder->update(['status' => 'completed']);
+            
+            // ── 4. طلّق الـ Event — الـ Listener بيعمل الـ journal وإشعار
+            ProductionCompleted::dispatch($workOrder);
 
             return $workOrder->load('product');
         });

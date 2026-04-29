@@ -3,9 +3,6 @@
 namespace App\Services;
 
 use App\Events\SaleCreated;
-use App\Models\Account;
-use App\Models\JournalEntry;
-use App\Models\JournalEntryLine;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleItem;
@@ -113,20 +110,25 @@ class SaleService
                     $warehouseId = $item['warehouse_id'] ?? $product->warehouse_id ?? null;
                     $qtyBefore   = (float) $product->qty;
 
-                    if ($warehouseId) {
-                        $location = \App\Models\ProductLocation::firstOrCreate(
-                            [
-                                'product_id'   => $item['product_id'],
-                                'warehouse_id' => $warehouseId,
-                                'company_id'   => $companyId,
-                            ],
-                            ['qty' => 0]
-                        );
-                  if ($location->qty < $qty) {
-    throw new \App\Exceptions\InsufficientStockException($location->qty, $qty);
-}
-                        $location->decrement('qty', $qty);
+                    // Fix: check المخزون الكلي دايماً حتى لو مفيش warehouse
+                    if ($product->qty < $qty) {
+                        throw new \App\Exceptions\InsufficientStockException($product->qty, $qty);
                     }
+
+             if ($warehouseId) {
+    $location = \App\Models\ProductLocation::firstOrCreate(
+        [
+            'product_id'   => $item['product_id'],
+            'warehouse_id' => $warehouseId,
+            'company_id'   => $companyId,
+        ],
+        ['qty' => $product->qty]  // ✅ لو مش موجود خد الكمية من المنتج
+    );
+    if ($location->qty < $qty) {
+        throw new \App\Exceptions\InsufficientStockException($location->qty, $qty);
+    }
+    $location->decrement('qty', $qty);
+}
 
                     $product->decrement('qty', $qty);
 
@@ -149,8 +151,8 @@ class SaleService
             SaleCreated::dispatch($sale);
             \Illuminate\Support\Facades\Cache::forget("dashboard:summary:{$companyId}");
 
-            // ✅ FIX: تسجيل قيد محاسبي تلقائياً للمبيعات
-            $this->recordSaleJournal($sale);
+            // ✅ FIX: القيد المحاسبي الآن يتم في الـ Listener (SendSaleNotification)
+            // لا نستدعيها هنا عشان نتجنب تسجيل القيد مرتين
 
             return $sale->load('items.product', 'customer', 'user');
         });
@@ -261,65 +263,53 @@ class SaleService
 }
 
     // ══════════════════════════════════════════════════════════
-    // ✅ Helper: تسجيل قيد محاسبي تلقائياً للمبيعات
-    //
-    // بيتاستدعى بعد إنشاء الفاتورة لتسجيل:
-    //   - مدين: حساب العملاء (Accounts Receivable) أو حساب الصندوق
-    //   - دائن: إيراد المبيعات (Sales Revenue)
+    // حذف فاتورة مبيعات مع إرجاع المخزون
     // ══════════════════════════════════════════════════════════
-    private function recordSaleJournal(Sale $sale): void
+    public function deleteSale(Sale $sale): void
     {
-        try {
-            // البحث عن الحسابات المطلوبة
-            $arAccount = Account::where('company_id', $sale->company_id)
-                ->where('code', 'LIKE', '%1200%') // Accounts Receivable
-                ->first();
+        DB::transaction(function () use ($sale) {
 
-            $revenueAccount = Account::where('company_id', $sale->company_id)
-                ->where('code', 'LIKE', '%4000%') // Sales Revenue
-                ->first();
+            foreach ($sale->items as $item) {
+                $product = Product::withoutGlobalScopes()->find($item->product_id);
+                if ($product) {
+                    $warehouseId = $item->warehouse_id ?? $product->warehouse_id ?? null;
+                    $qtyBefore   = (float) $product->qty;
 
-            // إذا لم نجد الحسابات، لا نسجل القيد (ربما المخطط المحاسبي لم يتم إعداده بعد)
-            if (!$arAccount || !$revenueAccount) {
-                return;
+                    // إرجاع الكمية للمستودع
+                    if ($warehouseId) {
+                        $location = \App\Models\ProductLocation::firstOrCreate(
+                            [
+                                'product_id'   => $item->product_id,
+                                'warehouse_id' => $warehouseId,
+                                'company_id'   => $sale->company_id,
+                            ],
+                            ['qty' => 0]
+                        );
+                        $location->increment('qty', $item->quantity);
+                    }
+
+                    // إرجاع الكمية للمنتج
+                    $product->increment('qty', $item->quantity);
+
+                    // تسجيل حركة المخزون
+                    StockMovement::create([
+                        'company_id'     => $sale->company_id,
+                        'product_id'     => $item->product_id,
+                        'warehouse_id'   => $warehouseId ?? null,
+                        'user_id'        => auth()->id(),
+                        'type'           => 'in',
+                        'qty'            => $item->quantity,
+                        'qty_before'     => $qtyBefore,
+                        'qty_after'      => $qtyBefore + $item->quantity,
+                        'reference_type' => Sale::class,
+                        'reference_id'   => $sale->id,
+                        'notes'          => "[حذف فاتورة] {$sale->invoice_number}",
+                    ]);
+                }
             }
 
-            // إنشاء Journal Entry
-            $journalEntry = JournalEntry::create([
-                'company_id'     => $sale->company_id,
-                'ref'            => JournalEntry::generateRef(),
-                'date'           => $sale->created_at->toDateString(),
-                'description'    => "إيراد مبيعات - فاتورة #{$sale->id}",
-                'status'         => 'draft', // ننشئه كـ draft حتى يتم مراجعته
-                'type'           => 'sales',
-                'user_id'        => $sale->user_id,
-                'reference_type' => Sale::class,
-                'reference_id'   => $sale->id,
-            ]);
-
-            // إضافة السطور:
-            // 1. مدين: حساب العملاء (Accounts Receivable)
-            JournalEntryLine::create([
-                'journal_entry_id' => $journalEntry->id,
-                'account_id'       => $arAccount->id,
-                'debit'            => $sale->total,
-                'credit'           => 0,
-                'description'      => "فاتورة مبيعات #{$sale->id}",
-            ]);
-
-            // 2. دائن: إيراد المبيعات (Sales Revenue)
-            JournalEntryLine::create([
-                'journal_entry_id' => $journalEntry->id,
-                'account_id'       => $revenueAccount->id,
-                'debit'            => 0,
-                'credit'           => $sale->total,
-                'description'      => "فاتورة مبيعات #{$sale->id}",
-            ]);
-        } catch (\Exception $e) {
-            // تسجيل الخطأ بدون إيقاف العملية
-            \Illuminate\Support\Facades\Log::warning(
-                "Failed to create journal entry for sale #{$sale->id}: " . $e->getMessage()
-            );
-        }
+            \Illuminate\Support\Facades\Cache::forget("dashboard:summary:{$sale->company_id}");
+            $sale->delete();
+        });
     }
 }

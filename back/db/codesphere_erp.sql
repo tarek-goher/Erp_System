@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Apr 25, 2026 at 11:50 PM
+-- Generation Time: Apr 29, 2026 at 06:12 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -34,6 +34,7 @@ CREATE TABLE `accounts` (
   `name` varchar(255) NOT NULL,
   `name_en` varchar(255) DEFAULT NULL,
   `type` enum('asset','liability','equity','revenue','expense') NOT NULL,
+  `account_type` varchar(255) DEFAULT NULL,
   `tax_type` varchar(255) DEFAULT NULL,
   `normal_balance` enum('debit','credit') NOT NULL,
   `balance` decimal(14,2) NOT NULL DEFAULT 0.00,
@@ -42,6 +43,86 @@ CREATE TABLE `accounts` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `accounts`
+--
+
+INSERT INTO `accounts` (`id`, `company_id`, `code`, `name`, `name_en`, `type`, `account_type`, `tax_type`, `normal_balance`, `balance`, `parent_id`, `is_active`, `created_at`, `updated_at`) VALUES
+(1, 1, '1100', 'نقد بالصندوق', 'Cash in Hand', 'asset', 'cash', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:12', '2026-04-27 18:53:12'),
+(2, 1, '1102', 'البنك', 'Bank Account', 'asset', 'bank', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:12', '2026-04-27 18:53:12'),
+(3, 1, '1103', 'المدينون', 'Accounts Receivable', 'asset', 'receivable', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:12', '2026-04-27 18:53:12'),
+(4, 1, '1200', 'المخزون', 'Inventory', 'asset', 'inventory', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:12', '2026-04-27 18:53:12'),
+(5, 1, '1300', 'الأراضي والعقارات', 'Land & Buildings', 'asset', 'fixed_asset', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:12', '2026-04-27 18:53:12'),
+(6, 1, '1310', 'الآلات والمعدات', 'Machinery & Equipment', 'asset', 'fixed_asset', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:12', '2026-04-27 18:53:12'),
+(7, 1, '1320', 'السيارات', 'Vehicles', 'asset', 'fixed_asset', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:12', '2026-04-27 18:53:12'),
+(8, 1, '1400', 'الإهلاك المتراكم - الأراضي', 'Accumulated Depreciation - Buildings', 'asset', 'accumulated_depreciation', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:12', '2026-04-27 18:53:12'),
+(9, 1, '1410', 'الإهلاك المتراكم - الآلات', 'Accumulated Depreciation - Machinery', 'asset', 'accumulated_depreciation', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:12', '2026-04-27 18:53:12'),
+(10, 1, '2100', 'الدائنون', 'Accounts Payable', 'liability', 'payable', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:12', '2026-04-27 18:53:12'),
+(11, 1, '2200', 'أوراق الدفع', 'Notes Payable', 'liability', 'payable', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:12', '2026-04-27 18:53:12'),
+(12, 1, '2300', 'ضرائب مستحقة', 'Taxes Payable', 'liability', 'tax_payable', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:12', '2026-04-27 18:53:12'),
+(13, 1, '2400', 'مستحقات الموظفين', 'Wages Payable', 'liability', 'payroll_payable', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:12', '2026-04-27 18:53:12'),
+(14, 1, '3100', 'رأس المال', 'Capital', 'equity', 'capital', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:12', '2026-04-27 18:53:12'),
+(15, 1, '3200', 'الأرباح المحتجزة', 'Retained Earnings', 'equity', 'retained_earnings', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:12', '2026-04-27 18:53:12'),
+(16, 1, '4001', 'إيرادات المبيعات', 'Sales Revenue', 'revenue', 'revenue', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:12', '2026-04-27 18:53:12'),
+(17, 1, '4100', 'خصومات المبيعات', 'Sales Discounts', 'revenue', 'revenue_contra', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:12', '2026-04-27 18:53:12'),
+(18, 1, '4200', 'إيرادات أخرى', 'Other Income', 'revenue', 'revenue', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:12', '2026-04-27 18:53:12'),
+(19, 1, '5001', 'تكلفة البضاعة المباعة', 'Cost of Goods Sold', 'expense', 'cogs', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:12', '2026-04-27 18:53:12'),
+(20, 1, '5003', 'مصاريف الرواتب', 'Salaries Expense', 'expense', 'expense_salary', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:12', '2026-04-27 18:53:12'),
+(21, 1, '5004', 'مصاريف الكهرباء والماء', 'Utilities Expense', 'expense', 'expense', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:12', '2026-04-27 18:53:12'),
+(22, 1, '5005', 'مصاريف الإهلاك', 'Depreciation Expense', 'expense', 'expense', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:12', '2026-04-27 18:53:12'),
+(23, 1, '5010', 'مصاريف النقل والتوزيع', 'Transportation Expense', 'expense', 'expense', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:12', '2026-04-27 18:53:12'),
+(24, 1, '5020', 'مصاريف الإعلان والتسويق', 'Advertising Expense', 'expense', 'expense', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:12', '2026-04-27 18:53:12'),
+(25, 1, '5030', 'مصاريف إدارية', 'Administrative Expenses', 'expense', 'expense', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:12', '2026-04-27 18:53:12'),
+(26, 1, '1104', 'أوراق القبض', 'Notes Receivable', 'asset', 'receivable', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:12', '2026-04-27 18:53:12'),
+(27, 1, '1105', 'الضرائب المدفوعة مقدماً', 'Prepaid Taxes', 'asset', 'prepaid', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:12', '2026-04-27 18:53:12'),
+(28, 1, '1106', 'المصاريف المدفوعة مقدماً', 'Prepaid Expenses', 'asset', 'prepaid', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:12', '2026-04-27 18:53:12'),
+(29, 1, '1150', 'السلف المدفوعة للموظفين', 'Employee Advances', 'asset', 'receivable', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:12', '2026-04-27 18:53:12'),
+(30, 1, '1210', 'المخزون - مواد نصف مصنعة', 'Work in Progress', 'asset', 'inventory', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:12', '2026-04-27 18:53:12'),
+(31, 1, '1220', 'المخزون - منتجات تامة', 'Finished Goods', 'asset', 'inventory', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(32, 1, '1420', 'الإهلاك المتراكم - السيارات', 'Accumulated Depreciation - Vehicles', 'asset', 'accumulated_depreciation', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(33, 1, '1430', 'مخصص الديون المشكوك فيها', 'Allowance for Doubtful Accounts', 'asset', 'contra_asset', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(34, 1, '2101', 'الدائنون - موردون', 'Accounts Payable - Suppliers', 'liability', 'payable', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(35, 1, '2102', 'الدائنون - آخرون', 'Accounts Payable - Others', 'liability', 'payable', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(36, 1, '2201', 'أوراق الدفع - قصيرة الأجل', 'Notes Payable - Short Term', 'liability', 'payable', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(37, 1, '2202', 'أوراق الدفع - طويلة الأجل', 'Notes Payable - Long Term', 'liability', 'payable', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(38, 1, '2301', 'ضرائب الدخل المستحقة', 'Income Tax Payable', 'liability', 'tax_payable', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(39, 1, '2302', 'ضرائب المبيعات المستحقة', 'Sales Tax Payable', 'liability', 'tax_payable', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(40, 1, '2310', 'اشتراكات الضمان الاجتماعي', 'Social Insurance Payable', 'liability', 'payroll_payable', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(41, 1, '2401', 'راتب الموظفين المستحق', 'Accrued Salaries', 'liability', 'payroll_payable', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(42, 1, '2402', 'مكافآت الموظفين المستحقة', 'Accrued Bonuses', 'liability', 'payroll_payable', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(43, 1, '2500', 'الإيجار المستحق', 'Accrued Rent', 'liability', 'accrued_expense', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(44, 1, '2501', 'الفوائد المستحقة', 'Accrued Interest', 'liability', 'accrued_expense', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(45, 1, '3101', 'رأس المال - المالك الأول', 'Capital - Owner 1', 'equity', 'capital', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(46, 1, '3102', 'رأس المال - المالك الثاني', 'Capital - Owner 2', 'equity', 'capital', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(47, 1, '3201', 'الأرباح الموزعة', 'Dividends', 'equity', 'dividend', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(48, 1, '3300', 'الاحتياطي النظامي', 'Statutory Reserve', 'equity', 'reserve', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(49, 1, '4002', 'إيرادات المبيعات - محلي', 'Domestic Sales', 'revenue', 'revenue', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(50, 1, '4003', 'إيرادات المبيعات - تصدير', 'Export Sales', 'revenue', 'revenue', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(51, 1, '4010', 'إيرادات الخدمات', 'Service Revenue', 'revenue', 'revenue', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(52, 1, '4110', 'خصومات - تجارية', 'Trade Discounts', 'revenue', 'revenue_contra', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(53, 1, '4120', 'خصومات - نقدية', 'Cash Discounts', 'revenue', 'revenue_contra', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(54, 1, '4210', 'إيرادات الفوائد', 'Interest Income', 'revenue', 'revenue', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(55, 1, '4220', 'إيرادات الإيجار', 'Rent Income', 'revenue', 'revenue', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(56, 1, '4230', 'إيرادات العمولات', 'Commission Income', 'revenue', 'revenue', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(57, 1, '4240', 'إيرادات أرباح الأسهم', 'Dividend Income', 'revenue', 'revenue', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(58, 1, '5002', 'تكلفة المواد المستهلكة', 'Raw Materials Consumed', 'expense', 'cogs', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(59, 1, '5006', 'مصاريف الشحن والنقل', 'Shipping Expenses', 'expense', 'expense', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(60, 1, '5007', 'مصاريف التأمين', 'Insurance Expense', 'expense', 'expense', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(61, 1, '5008', 'مصاريف الصيانة والإصلاح', 'Maintenance Expense', 'expense', 'expense', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(62, 1, '5011', 'مصاريف الاتصالات', 'Telephone Expense', 'expense', 'expense', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(63, 1, '5012', 'مصاريف المكتب والأدوات', 'Office Supplies Expense', 'expense', 'expense', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(64, 1, '5013', 'مصاريف الإيجار', 'Rent Expense', 'expense', 'expense', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(65, 1, '5014', 'مصاريف الفائدة', 'Interest Expense', 'expense', 'expense', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(66, 1, '5015', 'مصاريف الضرائب', 'Tax Expense', 'expense', 'expense', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(67, 1, '5021', 'مصاريف البحث والتطوير', 'Research & Development', 'expense', 'expense', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(68, 1, '5022', 'مصاريف التدريب والتطوير', 'Training Expense', 'expense', 'expense', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(69, 1, '5031', 'مصاريف المراجعة والاستشارات', 'Audit & Consulting', 'expense', 'expense', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(70, 1, '5032', 'مصاريف قانونية', 'Legal Fees', 'expense', 'expense', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(71, 1, '5040', 'خسائر العملات الأجنبية', 'Foreign Exchange Loss', 'expense', 'other_expense', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(72, 1, '5050', 'مصاريف متنوعة', 'Miscellaneous Expense', 'expense', 'expense', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(73, 1, '6100', 'الدخل غير العادي', 'Extraordinary Income', 'revenue', 'revenue', NULL, 'credit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13'),
+(74, 1, '6200', 'الخسائر غير العادية', 'Extraordinary Loss', 'expense', 'expense', NULL, 'debit', 0.00, NULL, 1, '2026-04-27 18:53:13', '2026-04-27 18:53:13');
 
 -- --------------------------------------------------------
 
@@ -1062,7 +1143,8 @@ CREATE TABLE `customers` (
 --
 
 INSERT INTO `customers` (`id`, `company_id`, `name`, `email`, `phone`, `address`, `tax_number`, `credit_limit`, `balance`, `loyalty_points`, `notes`, `is_active`, `deleted_at`, `created_at`, `updated_at`) VALUES
-(1, 4, 'tarek', NULL, NULL, NULL, NULL, 0.00, 0.00, 0, NULL, 1, NULL, '2026-04-25 18:09:54', '2026-04-25 18:09:54');
+(1, 4, 'tarek', NULL, NULL, NULL, NULL, 0.00, 0.00, 0, NULL, 1, NULL, '2026-04-25 18:09:54', '2026-04-25 18:09:54'),
+(2, 4, 'ahmed', NULL, NULL, NULL, NULL, 0.00, 0.00, 0, NULL, 1, NULL, '2026-04-27 10:10:38', '2026-04-27 10:10:38');
 
 -- --------------------------------------------------------
 
@@ -1109,6 +1191,22 @@ CREATE TABLE `erp_notifications` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `erp_notifications`
+--
+
+INSERT INTO `erp_notifications` (`id`, `company_id`, `user_id`, `type`, `title`, `body`, `data`, `icon`, `url`, `read_at`, `created_at`, `updated_at`) VALUES
+(5, 4, 9, 'success', 'فاتورة مبيعات جديدة', 'تم إنشاء فاتورة INV-20260427-0002 بقيمة 1.00 ج.م', NULL, NULL, NULL, NULL, '2026-04-27 17:04:39', '2026-04-27 17:04:39'),
+(6, 4, 9, 'success', 'فاتورة مبيعات جديدة', 'تم إنشاء فاتورة INV-20260427-0003 بقيمة 10.00 ج.م', NULL, NULL, NULL, NULL, '2026-04-27 17:05:18', '2026-04-27 17:05:18'),
+(7, 4, 9, 'success', 'فاتورة مبيعات جديدة', 'تم إنشاء فاتورة INV-20260427-0004 بقيمة 100,000.00 ج.م', NULL, NULL, NULL, NULL, '2026-04-27 17:14:57', '2026-04-27 17:14:57'),
+(8, 4, 9, 'success', 'فاتورة مبيعات جديدة', 'تم إنشاء فاتورة INV-20260427-0005 بقيمة 1.00 ج.م', NULL, NULL, NULL, NULL, '2026-04-27 17:28:35', '2026-04-27 17:28:35'),
+(9, 4, 9, 'success', 'فاتورة مبيعات جديدة', 'تم إنشاء فاتورة INV-20260427-0006 بقيمة 2.00 ج.م', NULL, NULL, NULL, NULL, '2026-04-27 17:29:19', '2026-04-27 17:29:19'),
+(10, 4, 9, 'success', 'فاتورة مبيعات جديدة', 'تم إنشاء فاتورة INV-20260427-0007 بقيمة 2.00 ج.م', NULL, NULL, NULL, NULL, '2026-04-27 18:01:26', '2026-04-27 18:01:26'),
+(11, 4, 9, 'success', 'فاتورة مبيعات جديدة', 'تم إنشاء فاتورة INV-20260427-0008 بقيمة 1.00 ج.م', NULL, NULL, NULL, NULL, '2026-04-27 18:02:20', '2026-04-27 18:02:20'),
+(12, 4, 9, 'success', 'فاتورة مبيعات جديدة', 'تم إنشاء فاتورة INV-20260427-0009 بقيمة 2.00 ج.م', NULL, NULL, NULL, NULL, '2026-04-27 19:03:03', '2026-04-27 19:03:03'),
+(13, 4, 9, 'success', 'فاتورة مبيعات جديدة', 'تم إنشاء فاتورة INV-20260428-0001 بقيمة 2.00 ج.م', NULL, NULL, NULL, NULL, '2026-04-28 13:05:09', '2026-04-28 13:05:09'),
+(14, 4, 9, 'success', 'فاتورة مبيعات جديدة', 'تم إنشاء فاتورة INV-20260428-0001 بقيمة 2.00 ج.م', NULL, NULL, NULL, NULL, '2026-04-28 13:21:48', '2026-04-28 13:21:48');
 
 -- --------------------------------------------------------
 
@@ -1825,7 +1923,9 @@ INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES
 (89, '2026_04_25_140846_fix_currencies_table_columns', 1),
 (90, '2026_04_25_163805_add_created_by_to_knowledge_articles', 1),
 (91, '2026_04_25_164013_alter_canned_responses_table', 1),
-(92, '2026_04_25_175001_add_currency_to_companies_table', 2);
+(92, '2026_04_25_175001_add_currency_to_companies_table', 2),
+(93, '2026_04_26_000001_add_account_type_and_defaults', 3),
+(94, '2026_04_27_000001_expand_accounts_chart', 3);
 
 -- --------------------------------------------------------
 
@@ -2034,7 +2134,8 @@ INSERT INTO `personal_access_tokens` (`id`, `tokenable_type`, `tokenable_id`, `n
 (1, 'App\\Models\\User', 1, 'api-token', '7b5e09e059b881050c1b40669248544747afddc6f82d361c33653e29a5d4e7a5', '[\"*\"]', '2026-04-25 14:47:43', NULL, '2026-04-25 14:43:32', '2026-04-25 14:47:43'),
 (8, 'App\\Models\\User', 1, 'api-token', 'f9e0f7e3459e7656053dc192f1dac13046e7000727b44d3743cf99eda0587e69', '[\"*\"]', '2026-04-25 15:07:45', NULL, '2026-04-25 15:06:39', '2026-04-25 15:07:45'),
 (9, 'App\\Models\\User', 1, 'api-token', 'bbb3ba1052e1d9fd4a73f27946f1b177da589d2ea7d82dc67228e92a50e47319', '[\"*\"]', '2026-04-25 15:17:26', NULL, '2026-04-25 15:08:49', '2026-04-25 15:17:26'),
-(13, 'App\\Models\\User', 9, 'api-token', '3d8cf9d54a96e27cfc600e11f7e51b23551460e0bb60988845970a6dd4bc6cfa', '[\"*\"]', '2026-04-25 18:43:15', NULL, '2026-04-25 18:06:41', '2026-04-25 18:43:15');
+(13, 'App\\Models\\User', 9, 'api-token', '3d8cf9d54a96e27cfc600e11f7e51b23551460e0bb60988845970a6dd4bc6cfa', '[\"*\"]', '2026-04-29 12:46:58', NULL, '2026-04-25 18:06:41', '2026-04-29 12:46:58'),
+(14, 'App\\Models\\User', 9, 'api-token', '71afbdb9fbcc1a9ff8e67d4c3f51a514c89d5f0745e2d494b9484b1cb12b8777', '[\"*\"]', '2026-04-29 13:10:40', NULL, '2026-04-29 12:47:13', '2026-04-29 13:10:40');
 
 -- --------------------------------------------------------
 
@@ -2318,7 +2419,9 @@ CREATE TABLE `products` (
 
 INSERT INTO `products` (`id`, `company_id`, `category_id`, `warehouse_id`, `name`, `name_en`, `sku`, `barcode`, `unit`, `price`, `cost`, `purchase_price`, `qty`, `min_qty`, `tax_rate`, `description`, `image_url`, `image`, `is_active`, `deleted_at`, `created_at`, `updated_at`) VALUES
 (1, 4, 1, NULL, 'lap top', NULL, 'SKU-69ED2D2756AD3', NULL, 'piece', 0.00, 0.00, 0.00, 0.000, 0.000, 0.00, NULL, NULL, NULL, 1, '2026-04-25 18:08:36', '2026-04-25 18:07:51', '2026-04-25 18:08:36'),
-(2, 4, 1, NULL, 'lap top', NULL, 'SKU-69ED2D6C1E8AF', NULL, 'piece', 0.00, 0.00, 0.00, 0.000, 0.000, 0.00, NULL, NULL, NULL, 1, NULL, '2026-04-25 18:09:00', '2026-04-25 18:09:00');
+(2, 4, 1, NULL, 'lap top', NULL, 'SKU-69ED2D6C1E8AF', NULL, 'piece', 18000.00, 13181.82, 0.00, 11.000, 0.000, 0.00, 'تم', NULL, NULL, 1, '2026-04-27 17:24:58', '2026-04-25 18:09:00', '2026-04-27 17:25:13'),
+(3, 4, 1, NULL, 'lap top', NULL, 'SKU-69EFC65D467D6', NULL, 'piece', 2.00, 1.00, 0.00, 12.000, 2.000, 0.00, 'ok', NULL, NULL, 1, '2026-04-27 18:54:43', '2026-04-27 17:26:05', '2026-04-27 18:54:43'),
+(4, 4, 1, NULL, 'lap top', NULL, 'SKU-69EFDBBDBC053', NULL, 'piece', 2.00, 1.00, 0.00, 6.000, 2.000, 0.00, 'تم', NULL, NULL, 1, NULL, '2026-04-27 18:57:17', '2026-04-28 13:21:48');
 
 -- --------------------------------------------------------
 
@@ -2335,6 +2438,15 @@ CREATE TABLE `product_locations` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `product_locations`
+--
+
+INSERT INTO `product_locations` (`id`, `company_id`, `product_id`, `warehouse_id`, `qty`, `created_at`, `updated_at`) VALUES
+(11, 4, 2, 1, 11.000, '2026-04-27 11:06:01', '2026-04-27 17:25:13'),
+(22, 4, 3, 1, 12.000, '2026-04-27 18:01:26', '2026-04-27 18:54:12'),
+(23, 4, 4, 1, 8.000, '2026-04-27 18:57:57', '2026-04-28 13:05:09');
 
 -- --------------------------------------------------------
 
@@ -2436,7 +2548,11 @@ CREATE TABLE `purchases` (
 --
 
 INSERT INTO `purchases` (`id`, `order_number`, `company_id`, `supplier_id`, `user_id`, `po_number`, `subtotal`, `tax_amount`, `tax`, `discount`, `total`, `status`, `expected_at`, `received_at`, `notes`, `deleted_at`, `created_at`, `updated_at`) VALUES
-(1, NULL, 4, 1, 9, 'PO-20260425-0001', 75000.00, 0.00, 0.00, 0.00, 75000.00, 'approved', '2026-04-27', NULL, 'تم', NULL, '2026-04-25 18:09:10', '2026-04-25 18:09:10');
+(1, NULL, 4, 1, 9, 'PO-20260425-0001', 75000.00, 0.00, 0.00, 0.00, 75000.00, 'received', '2026-04-27', NULL, 'تم', NULL, '2026-04-25 18:09:10', '2026-04-27 11:06:13'),
+(2, NULL, 4, 1, 9, 'PO-20260427-0002', 70000.00, 0.00, 0.00, 0.00, 70000.00, 'received', '2026-04-28', NULL, NULL, NULL, '2026-04-27 10:13:29', '2026-04-27 11:06:01'),
+(3, NULL, 4, 1, 9, 'PO-20260427-0003', 11.00, 0.00, 0.00, 0.00, 11.00, 'received', '2026-04-27', NULL, NULL, NULL, '2026-04-27 17:26:14', '2026-04-27 17:27:02'),
+(4, NULL, 4, 1, 9, 'PO-20260427-0004', 1.00, 0.00, 0.00, 0.00, 1.00, 'received', '2026-04-29', NULL, NULL, NULL, '2026-04-27 18:57:25', '2026-04-27 18:57:57'),
+(5, NULL, 4, 1, 9, 'PO-20260428-0005', 10.00, 0.00, 0.00, 0.00, 10.00, 'received', '2026-04-29', NULL, NULL, NULL, '2026-04-28 12:46:30', '2026-04-28 12:46:33');
 
 -- --------------------------------------------------------
 
@@ -2474,6 +2590,14 @@ CREATE TABLE `purchase_invoices` (
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `purchase_invoices`
+--
+
+INSERT INTO `purchase_invoices` (`id`, `company_id`, `purchase_id`, `supplier_id`, `invoice_number`, `invoice_date`, `due_date`, `amount`, `tax`, `discount`, `total`, `tax_amount`, `total_amount`, `status`, `notes`, `reference`, `po_matched`, `receipt_matched`, `invoice_matched`, `po_amount`, `received_amount`, `variance`, `discrepancy_notes`, `matched_at`, `matched_by`, `created_at`, `updated_at`) VALUES
+(4, 4, 4, 1, NULL, '2026-04-27', NULL, 1.00, 0.00, 0.00, 1.00, 0.00, 0.00, 'draft', 'فاتورة شراء تلقائية - PO-20260427-0004', 'PO-20260427-0004', 0, 0, 0, 0.00, 0.00, 0.00, NULL, NULL, NULL, '2026-04-27 18:57:57', '2026-04-27 18:57:57'),
+(5, 4, 5, 1, NULL, '2026-04-28', NULL, 10.00, 0.00, 0.00, 10.00, 0.00, 0.00, 'draft', 'فاتورة شراء تلقائية - PO-20260428-0005', 'PO-20260428-0005', 0, 0, 0, 0.00, 0.00, 0.00, NULL, NULL, NULL, '2026-04-28 12:46:33', '2026-04-28 12:46:33');
+
 -- --------------------------------------------------------
 
 --
@@ -2499,7 +2623,11 @@ CREATE TABLE `purchase_items` (
 --
 
 INSERT INTO `purchase_items` (`id`, `purchase_id`, `product_id`, `warehouse_id`, `name`, `quantity`, `unit_price`, `discount`, `total`, `created_at`, `updated_at`) VALUES
-(1, 1, 2, 1, NULL, 1.000, 75000.00, 0.00, 75000.00, '2026-04-25 18:09:10', '2026-04-25 18:09:10');
+(1, 1, 2, 1, NULL, 1.000, 75000.00, 0.00, 75000.00, '2026-04-25 18:09:10', '2026-04-25 18:09:10'),
+(2, 2, 2, 1, NULL, 10.000, 7000.00, 0.00, 70000.00, '2026-04-27 10:13:29', '2026-04-27 10:13:29'),
+(3, 3, 3, NULL, NULL, 11.000, 1.00, 0.00, 11.00, '2026-04-27 17:26:14', '2026-04-27 17:26:14'),
+(5, 4, 4, 1, NULL, 1.000, 1.00, 0.00, 1.00, '2026-04-27 18:57:54', '2026-04-27 18:57:54'),
+(6, 5, 4, NULL, NULL, 10.000, 1.00, 0.00, 10.00, '2026-04-28 12:46:30', '2026-04-28 12:46:30');
 
 -- --------------------------------------------------------
 
@@ -2677,11 +2805,29 @@ CREATE TABLE `sales` (
   `valid_until` date DEFAULT NULL,
   `converted_from_id` bigint(20) UNSIGNED DEFAULT NULL,
   `notes` text DEFAULT NULL,
+  `tax_rate_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `due_date` date DEFAULT NULL,
   `sale_date` date DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `sales`
+--
+
+INSERT INTO `sales` (`id`, `project_id`, `opportunity_id`, `company_id`, `customer_id`, `user_id`, `invoice_number`, `subtotal`, `tax`, `discount`, `total`, `paid_amount`, `status`, `sale_type`, `payment_method`, `payment_terms`, `valid_until`, `converted_from_id`, `notes`, `tax_rate_id`, `due_date`, `sale_date`, `deleted_at`, `created_at`, `updated_at`) VALUES
+(1, NULL, NULL, 4, 1, 9, 'INV-20260427-0001', 15.00, 0.00, 0.00, 15.00, 0.00, 'completed', 'invoice', 'cash', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-04-27 16:58:35', '2026-04-27 16:52:18', '2026-04-27 16:58:35'),
+(4, NULL, NULL, 4, 1, 9, 'INV-20260427-0002', 1.00, 0.00, 0.00, 1.00, 0.00, 'completed', 'invoice', 'cash', NULL, NULL, NULL, NULL, NULL, '2026-04-27', NULL, '2026-04-27 17:12:51', '2026-04-27 17:04:39', '2026-04-27 17:12:51'),
+(7, NULL, NULL, 4, 2, 9, 'INV-20260427-0003', 10.00, 0.00, 0.00, 10.00, 0.00, 'completed', 'invoice', 'cash', NULL, NULL, NULL, NULL, NULL, '2026-04-27', NULL, '2026-04-27 17:12:48', '2026-04-27 17:05:18', '2026-04-27 17:12:48'),
+(8, NULL, NULL, 4, 1, 9, 'INV-20260427-0004', 100000.00, 0.00, 0.00, 100000.00, 0.00, 'completed', 'invoice', 'cash', NULL, NULL, NULL, NULL, NULL, '2026-04-27', NULL, '2026-04-27 17:25:13', '2026-04-27 17:14:57', '2026-04-27 17:25:13'),
+(9, NULL, NULL, 4, 1, 9, 'INV-20260427-0005', 1.00, 0.00, 0.00, 1.00, 0.00, 'completed', 'invoice', 'cash', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-04-27 17:39:01', '2026-04-27 17:28:35', '2026-04-27 17:39:01'),
+(10, NULL, NULL, 4, 1, 9, 'INV-20260427-0006', 2.00, 0.00, 0.00, 2.00, 0.00, 'refunded', 'invoice', 'cash', NULL, NULL, NULL, '[مرتجع RTN-260427-8379] defective', NULL, '2026-04-27', NULL, '2026-04-27 17:38:58', '2026-04-27 17:29:19', '2026-04-27 17:38:58'),
+(21, NULL, NULL, 4, 2, 9, 'INV-20260427-0007', 2.00, 0.00, 0.00, 2.00, 0.00, 'completed', 'invoice', 'cash', NULL, NULL, NULL, NULL, NULL, '2026-04-29', NULL, '2026-04-27 18:03:00', '2026-04-27 18:01:26', '2026-04-27 18:03:00'),
+(22, NULL, NULL, 4, 1, 9, 'INV-20260427-0008', 1.00, 0.00, 0.00, 1.00, 0.00, 'completed', 'invoice', 'cash', NULL, NULL, NULL, NULL, NULL, '2026-04-29', NULL, '2026-04-27 18:54:12', '2026-04-27 18:02:20', '2026-04-27 18:54:12'),
+(23, NULL, NULL, 4, 1, 9, 'INV-20260427-0009', 2.00, 0.00, 0.00, 2.00, 0.00, 'completed', 'invoice', 'cash', NULL, NULL, NULL, NULL, NULL, '2026-04-29', NULL, NULL, '2026-04-27 19:03:03', '2026-04-27 19:03:03'),
+(29, NULL, NULL, 4, 2, 9, 'INV-20260428-0001', 2.00, 0.00, 0.00, 2.00, 0.00, 'completed', 'invoice', 'cash', NULL, NULL, NULL, NULL, NULL, '2026-04-28', NULL, NULL, '2026-04-28 13:05:09', '2026-04-28 13:05:09');
 
 -- --------------------------------------------------------
 
@@ -2702,6 +2848,22 @@ CREATE TABLE `sale_items` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `sale_items`
+--
+
+INSERT INTO `sale_items` (`id`, `sale_id`, `product_id`, `warehouse_id`, `name`, `quantity`, `unit_price`, `discount`, `total`, `created_at`, `updated_at`) VALUES
+(1, 1, 2, NULL, NULL, 15.000, 1.00, 0.00, 15.00, '2026-04-27 16:52:18', '2026-04-27 16:52:18'),
+(4, 4, 2, 1, NULL, 1.000, 1.00, 0.00, 1.00, '2026-04-27 17:04:39', '2026-04-27 17:04:39'),
+(7, 7, 2, NULL, NULL, 10.000, 1.00, 0.00, 10.00, '2026-04-27 17:05:18', '2026-04-27 17:05:18'),
+(8, 8, 2, 1, NULL, 1.000, 100000.00, 0.00, 100000.00, '2026-04-27 17:14:57', '2026-04-27 17:14:57'),
+(9, 9, 3, NULL, NULL, 1.000, 1.00, 0.00, 1.00, '2026-04-27 17:28:35', '2026-04-27 17:28:35'),
+(10, 10, 3, NULL, NULL, 1.000, 2.00, 0.00, 2.00, '2026-04-27 17:29:19', '2026-04-27 17:29:19'),
+(21, 21, 3, 1, NULL, 1.000, 2.00, 0.00, 2.00, '2026-04-27 18:01:26', '2026-04-27 18:01:26'),
+(22, 22, 3, 1, NULL, 1.000, 1.00, 0.00, 1.00, '2026-04-27 18:02:20', '2026-04-27 18:02:20'),
+(23, 23, 4, 1, NULL, 1.000, 2.00, 0.00, 2.00, '2026-04-27 19:03:03', '2026-04-27 19:03:03'),
+(29, 29, 4, 1, NULL, 1.000, 2.00, 0.00, 2.00, '2026-04-28 13:05:09', '2026-04-28 13:05:09');
 
 -- --------------------------------------------------------
 
@@ -2863,6 +3025,38 @@ CREATE TABLE `stock_movements` (
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `stock_movements`
+--
+
+INSERT INTO `stock_movements` (`id`, `company_id`, `product_id`, `warehouse_id`, `user_id`, `type`, `qty`, `qty_before`, `qty_after`, `cost`, `reference_type`, `reference_id`, `notes`, `created_at`, `updated_at`) VALUES
+(1, 4, 2, NULL, 9, 'out', 15.000, -9995.000, -10010.000, 0.00, 'App\\Models\\Sale', 1, 'فاتورة INV-20260427-0001', '2026-04-27 16:52:18', '2026-04-27 16:52:18'),
+(2, 4, 2, NULL, 9, 'in', 15.000, 11.000, 26.000, 0.00, 'App\\Models\\Sale', 1, '[حذف فاتورة] INV-20260427-0001', '2026-04-27 16:58:35', '2026-04-27 16:58:35'),
+(3, 4, 2, 1, 9, 'out', 1.000, 11.000, 10.000, 0.00, 'App\\Models\\Sale', 4, 'فاتورة INV-20260427-0002', '2026-04-27 17:04:39', '2026-04-27 17:04:39'),
+(4, 4, 2, NULL, 9, 'out', 10.000, 10.000, 0.000, 0.00, 'App\\Models\\Sale', 7, 'فاتورة INV-20260427-0003', '2026-04-27 17:05:18', '2026-04-27 17:05:18'),
+(5, 4, 2, NULL, 9, 'in', 10.000, 11.000, 21.000, 0.00, 'App\\Models\\Sale', 7, '[حذف فاتورة] INV-20260427-0003', '2026-04-27 17:12:48', '2026-04-27 17:12:48'),
+(6, 4, 2, 1, 9, 'in', 1.000, 21.000, 22.000, 0.00, 'App\\Models\\Sale', 4, '[حذف فاتورة] INV-20260427-0002', '2026-04-27 17:12:51', '2026-04-27 17:12:51'),
+(7, 4, 2, 1, 9, 'out', 1.000, 11.000, 10.000, 0.00, 'App\\Models\\Sale', 8, 'فاتورة INV-20260427-0004', '2026-04-27 17:14:57', '2026-04-27 17:14:57'),
+(8, 4, 2, 1, 9, 'in', 1.000, 10.000, 11.000, 0.00, 'App\\Models\\Sale', 8, '[حذف فاتورة] INV-20260427-0004', '2026-04-27 17:25:13', '2026-04-27 17:25:13'),
+(9, 4, 3, NULL, 9, 'in', 11.000, 0.000, 11.000, 0.00, 'App\\Models\\Purchase', 3, 'استلام أمر شراء PO-20260427-0003', '2026-04-27 17:27:02', '2026-04-27 17:27:02'),
+(10, 4, 3, NULL, 9, 'out', 1.000, 11.000, 10.000, 0.00, 'App\\Models\\Sale', 9, 'فاتورة INV-20260427-0005', '2026-04-27 17:28:35', '2026-04-27 17:28:35'),
+(11, 4, 3, NULL, 9, 'out', 1.000, 10.000, 9.000, 0.00, 'App\\Models\\Sale', 10, 'فاتورة INV-20260427-0006', '2026-04-27 17:29:19', '2026-04-27 17:29:19'),
+(12, 4, 3, NULL, 9, 'in', 1.000, 9.000, 10.000, 0.00, 'App\\Models\\Sale', 10, '[مرتجع] [مرتجع RTN-260427-8379] defective', '2026-04-27 17:36:48', '2026-04-27 17:36:48'),
+(13, 4, 3, NULL, 9, 'in', 1.000, 10.000, 11.000, 0.00, 'App\\Models\\Sale', 10, '[حذف فاتورة] INV-20260427-0006', '2026-04-27 17:38:57', '2026-04-27 17:38:57'),
+(14, 4, 3, NULL, 9, 'in', 1.000, 11.000, 12.000, 0.00, 'App\\Models\\Sale', 9, '[حذف فاتورة] INV-20260427-0005', '2026-04-27 17:39:01', '2026-04-27 17:39:01'),
+(15, 4, 3, 1, 9, 'out', 1.000, 12.000, 11.000, 0.00, 'App\\Models\\Sale', 21, 'فاتورة INV-20260427-0007', '2026-04-27 18:01:26', '2026-04-27 18:01:26'),
+(16, 4, 3, 1, 9, 'out', 1.000, 11.000, 10.000, 0.00, 'App\\Models\\Sale', 22, 'فاتورة INV-20260427-0008', '2026-04-27 18:02:20', '2026-04-27 18:02:20'),
+(17, 4, 3, 1, 9, 'in', 1.000, 10.000, 11.000, 0.00, 'App\\Models\\Sale', 21, '[حذف فاتورة] INV-20260427-0007', '2026-04-27 18:03:00', '2026-04-27 18:03:00'),
+(18, 4, 3, 1, 9, 'in', 1.000, 11.000, 12.000, 0.00, 'App\\Models\\Sale', 22, '[حذف فاتورة] INV-20260427-0008', '2026-04-27 18:54:12', '2026-04-27 18:54:12'),
+(19, 4, 4, 1, 9, 'in', 1.000, 0.000, 1.000, 0.00, 'App\\Models\\Purchase', 4, 'استلام أمر شراء PO-20260427-0004', '2026-04-27 18:57:57', '2026-04-27 18:57:57'),
+(20, 4, 4, 1, 9, 'out', 1.000, 1.000, 0.000, 0.00, 'App\\Models\\Sale', 23, 'فاتورة INV-20260427-0009', '2026-04-27 19:03:03', '2026-04-27 19:03:03'),
+(21, 4, 4, NULL, 9, 'out', 1.000, 0.000, -1.000, 0.00, 'Sale', 23, 'مبيعات - فاتورة INV-20260427-0009', '2026-04-27 19:03:03', '2026-04-27 19:03:03'),
+(22, 4, 4, NULL, 9, 'in', 10.000, -1.000, 9.000, 0.00, 'App\\Models\\Purchase', 5, 'استلام أمر شراء PO-20260428-0005', '2026-04-28 12:46:33', '2026-04-28 12:46:33'),
+(23, 4, 4, 1, 9, 'adjustment', 0.000, 0.000, 9.000, 0.00, NULL, NULL, NULL, '2026-04-28 13:04:49', '2026-04-28 13:04:49'),
+(24, 4, 4, 1, 9, 'out', 1.000, 9.000, 8.000, 0.00, 'App\\Models\\Sale', 29, 'فاتورة INV-20260428-0001', '2026-04-28 13:05:09', '2026-04-28 13:05:09'),
+(25, 4, 4, NULL, 9, 'out', 1.000, 8.000, 7.000, 0.00, 'Sale', 29, 'مبيعات - فاتورة INV-20260428-0001', '2026-04-28 13:05:09', '2026-04-28 13:05:09'),
+(26, 4, 4, NULL, 9, 'out', 1.000, 7.000, 6.000, 0.00, 'Sale', 29, 'مبيعات - فاتورة INV-20260428-0001', '2026-04-28 13:21:48', '2026-04-28 13:21:48');
+
 -- --------------------------------------------------------
 
 --
@@ -2971,6 +3165,17 @@ CREATE TABLE `supplier_ledger` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `supplier_ledger`
+--
+
+INSERT INTO `supplier_ledger` (`id`, `supplier_id`, `company_id`, `type`, `amount`, `direction`, `balance_after`, `reference`, `notes`, `created_by`, `created_at`, `updated_at`) VALUES
+(1, 1, 4, 'invoice', 70000.00, 'debit', 70000.00, 'PO-20260427-0002', 'فاتورة شراء PO-20260427-0002', 9, '2026-04-27 11:06:01', '2026-04-27 11:06:01'),
+(2, 1, 4, 'invoice', 75000.00, 'debit', 145000.00, 'PO-20260425-0001', 'فاتورة شراء PO-20260425-0001', 9, '2026-04-27 11:06:13', '2026-04-27 11:06:13'),
+(3, 1, 4, 'invoice', 11.00, 'debit', 145011.00, 'PO-20260427-0003', 'فاتورة شراء PO-20260427-0003', 9, '2026-04-27 17:27:02', '2026-04-27 17:27:02'),
+(4, 1, 4, 'invoice', 1.00, 'debit', 145012.00, 'PO-20260427-0004', 'فاتورة شراء PO-20260427-0004', 9, '2026-04-27 18:57:57', '2026-04-27 18:57:57'),
+(5, 1, 4, 'invoice', 10.00, 'debit', 145022.00, 'PO-20260428-0005', 'فاتورة شراء PO-20260428-0005', 9, '2026-04-28 12:46:33', '2026-04-28 12:46:33');
 
 -- --------------------------------------------------------
 
@@ -3161,7 +3366,7 @@ INSERT INTO `users` (`id`, `company_id`, `name`, `email`, `phone`, `email_verifi
 (5, 1, 'سارة كاشير', 'sara@codesphere.io', NULL, NULL, '$2y$12$VMjaYwiyOVr7H7YPt4ToCeUa2ksMFGbDTR1keyMKnWP9wS80/v5RO', 1, NULL, 0, NULL, '2026-04-25 14:43:02', '2026-04-25 14:43:02', NULL, 0),
 (6, 1, 'خالد مبيعات', 'khaled@codesphere.io', NULL, NULL, '$2y$12$QskMhcrYM8LnM0vOAdLVYuKpx6Unnau57oyVl5F2VdfTJVHsMRj3.', 1, NULL, 0, NULL, '2026-04-25 14:43:02', '2026-04-25 14:43:02', NULL, 0),
 (8, 3, 'tarek', 'goher@gmail.com', NULL, NULL, '$2y$12$O71Hfplk8LiF.TqL.ujDMupHehsI9tz9IMA8cEaZppqT6w45vly0K', 1, '2026-04-25 15:01:19', 0, NULL, '2026-04-25 14:59:11', '2026-04-25 15:01:19', NULL, 0),
-(9, 4, 'goher', 'goher22@gmail.com', NULL, NULL, '$2y$12$AC0r8aNMrCmC41staEwS1eigAJNM5z3zMRGCbIqRM/jeuwMZg7MoO', 1, '2026-04-25 18:06:41', 0, NULL, '2026-04-25 15:23:11', '2026-04-25 18:06:41', NULL, 0);
+(9, 4, 'goher', 'goher22@gmail.com', NULL, NULL, '$2y$12$AC0r8aNMrCmC41staEwS1eigAJNM5z3zMRGCbIqRM/jeuwMZg7MoO', 1, '2026-04-29 12:47:13', 0, NULL, '2026-04-25 15:23:11', '2026-04-29 12:47:13', NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -4562,7 +4767,7 @@ ALTER TABLE `work_orders`
 -- AUTO_INCREMENT for table `accounts`
 --
 ALTER TABLE `accounts`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=76;
 
 --
 -- AUTO_INCREMENT for table `api_keys`
@@ -4838,7 +5043,7 @@ ALTER TABLE `currencies`
 -- AUTO_INCREMENT for table `customers`
 --
 ALTER TABLE `customers`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `employees`
@@ -4850,7 +5055,7 @@ ALTER TABLE `employees`
 -- AUTO_INCREMENT for table `erp_notifications`
 --
 ALTER TABLE `erp_notifications`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT for table `escalation_rules`
@@ -5030,7 +5235,7 @@ ALTER TABLE `marketing_contact_lists`
 -- AUTO_INCREMENT for table `migrations`
 --
 ALTER TABLE `migrations`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=93;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=95;
 
 --
 -- AUTO_INCREMENT for table `notification_preferences`
@@ -5066,7 +5271,7 @@ ALTER TABLE `permissions`
 -- AUTO_INCREMENT for table `personal_access_tokens`
 --
 ALTER TABLE `personal_access_tokens`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT for table `pipeline_stages`
@@ -5138,13 +5343,13 @@ ALTER TABLE `pos_shifts`
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `product_locations`
 --
 ALTER TABLE `product_locations`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- AUTO_INCREMENT for table `product_lots`
@@ -5168,19 +5373,19 @@ ALTER TABLE `project_tasks`
 -- AUTO_INCREMENT for table `purchases`
 --
 ALTER TABLE `purchases`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `purchase_invoices`
 --
 ALTER TABLE `purchase_invoices`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `purchase_items`
 --
 ALTER TABLE `purchase_items`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `recruitments`
@@ -5198,13 +5403,13 @@ ALTER TABLE `roles`
 -- AUTO_INCREMENT for table `sales`
 --
 ALTER TABLE `sales`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=30;
 
 --
 -- AUTO_INCREMENT for table `sale_items`
 --
 ALTER TABLE `sale_items`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=30;
 
 --
 -- AUTO_INCREMENT for table `sale_payments`
@@ -5246,7 +5451,7 @@ ALTER TABLE `social_media_settings`
 -- AUTO_INCREMENT for table `stock_movements`
 --
 ALTER TABLE `stock_movements`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
 
 --
 -- AUTO_INCREMENT for table `stock_transfers`
@@ -5270,7 +5475,7 @@ ALTER TABLE `suppliers`
 -- AUTO_INCREMENT for table `supplier_ledger`
 --
 ALTER TABLE `supplier_ledger`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `support_tickets`

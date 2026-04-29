@@ -1,5 +1,8 @@
 back/vendor/
 front/node_modules/
 front/.next/
+back/bootstrap/cache/*.php
+back/storage/framework/cache/**
+back/storage/logs/**
 .env
 *.log
