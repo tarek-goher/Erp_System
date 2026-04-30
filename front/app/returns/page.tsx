@@ -1,16 +1,5 @@
 'use client'
 
-// ══════════════════════════════════════════════════════════
-// app/returns/page.tsx — صفحة المرتجعات (Returns)
-// ══════════════════════════════════════════════════════════
-// API endpoints المستخدمة:
-//   GET  /api/sales?status=refunded,partial  → فواتير مرتجعة
-//   GET  /api/sales/{id}                     → تفاصيل فاتورة
-//   PUT  /api/sales/{id}                     → تحديث حالة الفاتورة
-//   POST /api/stock-movements                → إرجاع المخزون
-//   GET  /api/customers                      → قائمة العملاء
-// ══════════════════════════════════════════════════════════
-
 import { useState, useEffect, useCallback, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import ERPLayout from '../../components/layout/ERPLayout'
