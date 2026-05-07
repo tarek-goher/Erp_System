@@ -1,13 +1,5 @@
 'use client'
 
-// ══════════════════════════════════════════════════════════
-// app/dashboard/page.tsx — لوحة التحكم الرئيسية (FIXED)
-// ══════════════════════════════════════════════════════════
-// API endpoints:
-//   GET /api/reports/dashboard  → الإحصائيات الرئيسية
-//   GET /api/sales?per_page=5   → آخر 5 مبيعات
-// ══════════════════════════════════════════════════════════
-
 import { useState, useEffect } from 'react'
 import ERPLayout from '../../components/layout/ERPLayout'
 import { api } from '../../lib/api'
@@ -56,7 +48,6 @@ export default function DashboardPage() {
 
         if (dashRes.data) setData(dashRes.data)
         
-        // Handle multiple possible API response formats
         let salesData: Sale[] = []
         
         if (salesRes && salesRes.data) {
@@ -101,18 +92,17 @@ export default function DashboardPage() {
   }
 
   const statCards = [
-    { label: lang === 'ar' ? 'مبيعات اليوم'     : 'Today\'s Sales',       value: fmt(data?.sales_today       ?? 0), icon: '💰', color: 'stat-blue'   },
-    { label: lang === 'ar' ? 'مبيعات الشهر'     : 'Monthly Sales',        value: fmt(data?.sales_month       ?? 0), icon: '📈', color: 'stat-green'  },
-    { label: lang === 'ar' ? 'مشتريات الشهر'    : 'Monthly Purchases',    value: fmt(data?.purchases_month   ?? 0), icon: '🛒', color: 'stat-purple' },
-    { label: lang === 'ar' ? 'موظفون نشطون'     : 'Active Employees',     value: fmt(data?.active_employees  ?? 0), icon: '👥', color: 'stat-orange' },
-    { label: lang === 'ar' ? 'فواتير معلقة'     : 'Pending Invoices',     value: fmt(data?.pending_invoices  ?? 0), icon: '📋', color: 'stat-yellow' },
-    { label: lang === 'ar' ? 'منتجات أوشكت تخلص': 'Low Stock Products',   value: fmt(data?.low_stock_count   ?? 0), icon: '⚠️', color: 'stat-red'    },
+    { label: lang === 'ar' ? 'مبيعات اليوم'     : 'Today\'s Sales',       value: fmt(data?.sales_today       ?? 0), icon: '', color: 'stat-blue'   },
+    { label: lang === 'ar' ? 'مبيعات الشهر'     : 'Monthly Sales',        value: fmt(data?.sales_month       ?? 0), icon: '', color: 'stat-green'  },
+    { label: lang === 'ar' ? 'مشتريات الشهر'    : 'Monthly Purchases',    value: fmt(data?.purchases_month   ?? 0), icon: '', color: 'stat-purple' },
+    { label: lang === 'ar' ? 'موظفون نشطون'     : 'Active Employees',     value: fmt(data?.active_employees  ?? 0), icon: '', color: 'stat-orange' },
+    { label: lang === 'ar' ? 'فواتير معلقة'     : 'Pending Invoices',     value: fmt(data?.pending_invoices  ?? 0), icon: '', color: 'stat-yellow' },
+    { label: lang === 'ar' ? 'منتجات أوشكت تخلص': 'Low Stock Products',   value: fmt(data?.low_stock_count   ?? 0), icon: '', color: 'stat-red'    },
   ]
 
-  return (
+  return (  
     <ERPLayout pageTitle={t('dashboard')}>
 
-      {/* ── ترحيب ──────────────────────────────────────── */}
       <div className="dashboard-welcome">
         <div>
           <h2 className="dashboard-welcome-title">
@@ -124,7 +114,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ── كروت الإحصائيات ──────────────────────────── */}
       <div className="dashboard-stats" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
         {loading
           ? Array(6).fill(0).map((_, i) => (
@@ -148,15 +137,14 @@ export default function DashboardPage() {
         }
       </div>
 
-      {/* ── روابط سريعة ──────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '0.75rem', marginBottom: '1.5rem' }}>
         {[
-          { href: '/sales',     icon: '💰', label: lang === 'ar' ? 'مبيعات جديدة'  : 'New Sale'      },
-          { href: '/purchases', icon: '🛒', label: lang === 'ar' ? 'طلب شراء'       : 'New Purchase'  },
-          { href: '/inventory', icon: '📦', label: lang === 'ar' ? 'المخزون'         : 'Inventory'     },
-          { href: '/hr',        icon: '👥', label: lang === 'ar' ? 'الموارد البشرية' : 'HR'            },
-          { href: '/accounting',icon: '📒', label: lang === 'ar' ? 'المحاسبة'        : 'Accounting'    },
-          { href: '/reports',   icon: '📊', label: lang === 'ar' ? 'التقارير'        : 'Reports'       },
+          { href: '/sales',     icon: '', label: lang === 'ar' ? 'مبيعات جديدة'  : 'New Sale'      },
+          { href: '/purchases', icon: '', label: lang === 'ar' ? 'طلب شراء'       : 'New Purchase'  },
+          { href: '/inventory', icon: '', label: lang === 'ar' ? 'المخزون'         : 'Inventory'     },
+          { href: '/hr',        icon: '', label: lang === 'ar' ? 'الموارد البشرية' : 'HR'            },
+          { href: '/accounting',icon: '', label: lang === 'ar' ? 'المحاسبة'        : 'Accounting'    },
+          { href: '/reports',   icon: '', label: lang === 'ar' ? 'التقارير'        : 'Reports'       },
         ].map(link => (
           <a
             key={link.href}
@@ -177,7 +165,6 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* ── آخر المبيعات ─────────────────────────────── */}
       <div className="card">
         <div className="flex-between" style={{ marginBottom: '1rem' }}>
           <h3 className="fw-bold">{t('recent_sales')}</h3>
@@ -227,7 +214,7 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="empty-state">
-            <div className="empty-state-icon">📋</div>
+            <div className="empty-state-icon"></div>
             <p className="empty-state-text">{t('no_data')}</p>
           </div>
         )}

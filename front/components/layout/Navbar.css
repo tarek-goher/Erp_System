@@ -45,23 +45,67 @@
     flex-shrink: 0
 }
 
+.navbar-action-btn {
+    min-width: 36px;
+    height: 36px;
+    border: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--bg-card) 88%, #fff 12%) 0%, color-mix(in srgb, var(--bg-hover) 85%, transparent) 100%);
+    color: var(--text-secondary);
+    box-shadow: 0 10px 18px -16px color-mix(in srgb, var(--text-primary) 55%, transparent);
+    isolation: isolate
+}
+
+.navbar-action-btn::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, transparent 15%, color-mix(in srgb, #fff 55%, transparent) 50%, transparent 85%);
+    transform: translateX(-140%);
+    transition: transform .55s ease;
+    pointer-events: none;
+    opacity: .65
+}
+
+.navbar-action-btn:hover {
+    color: var(--text-primary);
+    border-color: color-mix(in srgb, var(--color-info) 28%, var(--border));
+    background: linear-gradient(135deg, color-mix(in srgb, var(--color-info-light) 65%, var(--bg-card)) 0%, color-mix(in srgb, var(--bg-hover) 78%, var(--bg-card)) 100%);
+    box-shadow: 0 14px 28px -18px color-mix(in srgb, var(--color-info) 70%, transparent)
+}
+
+.navbar-action-btn:hover::before {
+    transform: translateX(140%)
+}
+
+.navbar-action-btn:active {
+    transform: translateY(0) scale(.98)
+}
+
+.navbar-theme-btn:hover {
+    color: color-mix(in srgb, var(--color-warning) 76%, var(--text-primary));
+    border-color: color-mix(in srgb, var(--color-warning) 42%, var(--border));
+    background: linear-gradient(135deg, color-mix(in srgb, var(--color-warning-light) 82%, var(--bg-card)) 0%, color-mix(in srgb, var(--bg-hover) 82%, var(--bg-card)) 100%);
+    box-shadow: 0 14px 28px -18px color-mix(in srgb, var(--color-warning) 75%, transparent)
+}
+
+.navbar-notif-btn:hover {
+    color: color-mix(in srgb, var(--color-danger) 80%, var(--text-primary));
+    border-color: color-mix(in srgb, var(--color-danger) 38%, var(--border));
+    background: linear-gradient(135deg, color-mix(in srgb, var(--color-danger-light) 88%, var(--bg-card)) 0%, color-mix(in srgb, var(--bg-hover) 82%, var(--bg-card)) 100%);
+    box-shadow: 0 14px 28px -18px color-mix(in srgb, var(--color-danger) 72%, transparent)
+}
+
 .navbar-lang-btn {
     font-size: .75rem;
     font-weight: 700;
-    min-width: 36px;
-    height: 36px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    background: 0 0;
-    color: var(--text-secondary);
-    cursor: pointer;
-    transition: all var(--transition)
+    letter-spacing: .04em
 }
 
 .navbar-lang-btn:hover {
-    background: var(--bg-hover);
-    color: var(--color-primary);
-    border-color: var(--color-primary)
+    color: color-mix(in srgb, var(--color-success) 78%, var(--text-primary));
+    border-color: color-mix(in srgb, var(--color-success) 38%, var(--border));
+    background: linear-gradient(135deg, color-mix(in srgb, var(--color-success-light) 90%, var(--bg-card)) 0%, color-mix(in srgb, var(--bg-hover) 82%, var(--bg-card)) 100%);
+    box-shadow: 0 14px 28px -18px color-mix(in srgb, var(--color-success) 72%, transparent)
 }
 
 .navbar-notif {
@@ -110,7 +154,9 @@
 }
 
 .navbar-user-btn:hover {
-    background: var(--bg-hover)
+    background: linear-gradient(135deg, color-mix(in srgb, var(--bg-hover) 82%, var(--bg-card)) 0%, color-mix(in srgb, var(--color-primary-light) 76%, var(--bg-card)) 100%);
+    border-color: color-mix(in srgb, var(--color-info) 24%, var(--border));
+    box-shadow: 0 14px 28px -22px color-mix(in srgb, var(--color-info) 60%, transparent)
 }
 
 .navbar-avatar {
@@ -146,7 +192,13 @@
 
 .navbar-chevron {
     font-size: .6rem;
-    color: var(--text-muted)
+    color: var(--text-muted);
+    transition: transform var(--transition), color var(--transition)
+}
+
+.navbar-user-btn:hover .navbar-chevron {
+    color: var(--color-primary);
+    transform: translateY(1px)
 }
 
 .navbar-user-menu {
@@ -155,6 +207,10 @@
 
 .navbar-user-info {
     padding: .75rem 1rem
+}
+
+.navbar-user-menu {
+    overflow: hidden
 }
 
 .navbar-user-info-name {

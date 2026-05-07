@@ -138,7 +138,7 @@
 }
 
 .sidebar-item-text:hover {
-    color: var(--text-primary)
+    color: var(--text-tri)
 }
 
 .sidebar-item:hover .sidebar-item-icon {

@@ -28,6 +28,7 @@
 --bg-modal:#1f232873;
 --text-primary:#1f2328;
 --text-secondary:#57606a;
+--text-tri:#f6f6f6;
 --text-muted:#6e7781;
 --text-inverse:#0a0a0a;
 --text-link:#0969da;
@@ -82,6 +83,7 @@
 --bg-modal:#000000c7;
 --text-primary:#f5f5f5;
 --text-secondary:#c2c2c2;
+--text-tri:#000000;
 --text-muted:#8b8b8b;
 --text-inverse:#f1f1f1;
 --text-link:#f8f8f8;
@@ -228,17 +230,28 @@ padding:.5rem;
 border-radius:var(--radius-md);
 background:transparent;
 color:var(--text-secondary);
-border:none;
+border:1px solid transparent;
 cursor:pointer;
 display:inline-flex;
 align-items:center;
 justify-content:center;
-transition:all var(--transition)
+position:relative;
+overflow:hidden;
+box-shadow:0 0 0 transparent;
+transition:transform var(--transition),background-color var(--transition),color var(--transition),border-color var(--transition),box-shadow var(--transition)
 }
 
 .btn-icon:hover {
 background:var(--bg-hover);
-color:var(--text-primary)
+color:var(--text-primary);
+transform:translateY(-1px);
+box-shadow:var(--shadow-sm)
+}
+
+.btn-icon:focus-visible {
+outline:none;
+border-color:var(--border-focus);
+box-shadow:0 0 0 3px #0000001a
 }
 
 .input {
