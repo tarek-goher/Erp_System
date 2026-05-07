@@ -25,6 +25,8 @@ class Ticket extends Model
 {
     use HasFactory, SoftDeletes, BelongsToCompany;
 
+    protected $table = 'support_tickets';
+
     protected $fillable = [
         'company_id',
         'ticket_number',
@@ -34,6 +36,7 @@ class Ticket extends Model
         'customer_id',
         'assigned_to',
         'subject',
+        'message',
         'description',
         'status',                // open | assigned | in_progress | waiting_user | resolved | closed
         'priority',              // low | medium | high | urgent
@@ -57,6 +60,16 @@ class Ticket extends Model
         'sla_breached'          => 'boolean',
         'form_data'             => 'array',
     ];
+
+    public function getDescriptionAttribute($value): ?string
+    {
+        return $value ?? $this->attributes['message'] ?? null;
+    }
+
+    public function setDescriptionAttribute($value): void
+    {
+        $this->attributes['message'] = $value;
+    }
 
     // ── Boot: توليد ticket_number تلقائي ─────────────────────
 
