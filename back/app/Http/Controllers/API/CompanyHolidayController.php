@@ -67,7 +67,7 @@ class CompanyHolidayController extends Controller
             ]);
 
             // Clear SlaCalculator cache
-            \App\Services\SlaCalculator::clearCache();
+            \App\Services\SlaCalculator::clearCache($companyId);
 
             return response()->json([
                 'success' => true,
@@ -108,7 +108,7 @@ class CompanyHolidayController extends Controller
             $holiday->update($validated);
 
             // Clear SlaCalculator cache
-            \App\Services\SlaCalculator::clearCache();
+            \App\Services\SlaCalculator::clearCache($companyId);
 
             return response()->json([
                 'success' => true,
@@ -141,7 +141,7 @@ class CompanyHolidayController extends Controller
             $holiday->delete();
 
             // Clear SlaCalculator cache
-            \App\Services\SlaCalculator::clearCache();
+           \App\Services\SlaCalculator::clearCache($companyId);
 
             return response()->json([
                 'success' => true,
@@ -181,7 +181,7 @@ class CompanyHolidayController extends Controller
             }
 
             // Clear SlaCalculator cache
-            \App\Services\SlaCalculator::clearCache();
+           \App\Services\SlaCalculator::clearCache($companyId);
 
             return response()->json([
                 'success' => true,
