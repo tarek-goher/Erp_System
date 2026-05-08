@@ -10,6 +10,7 @@ use App\Models\Ticket;
 use App\Models\TicketLog;
 use App\Models\TicketMessage;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * HelpdeskService — MERGED
@@ -24,20 +25,33 @@ class HelpdeskService
     public function createTicket(array $data, ?int $companyId): Ticket
     {
         return DB::transaction(function () use ($data, $companyId) {
-            $ticket = Ticket::create([
-                'company_id'   => $companyId,
-                'customer_id'  => $data['customer_id']  ?? null,
-                'requester_id' => $data['requester_id'] ?? null,
-                'service_id'   => $data['service_id']   ?? null,
-                'form_data'    => $data['form_data']    ?? null,
-                'assigned_to'  => $data['assigned_to']  ?? null,
-                'subject'      => $data['subject'],
-                'description'  => $data['description'],
-                'status'       => 'open',
-                'priority'     => $data['priority'] ?? 'medium',
-                'category'     => $data['category'] ?? null,
-                'sla_due_at'   => now()->addHours($this->getSlaHours($data['priority'] ?? 'medium')),
-            ]);
+            $payload = [
+                'company_id' => $companyId,
+                'subject'    => $data['subject'],
+                'message'    => $data['description'],
+                'status'     => 'open',
+                'priority'   => $data['priority'] ?? 'medium',
+                'category'   => $data['category'] ?? 'general',
+            ];
+
+            $optionalColumns = [
+                'customer_id'           => $data['customer_id'] ?? null,
+                'requester_id'          => $data['requester_id'] ?? null,
+                'service_id'            => $data['service_id'] ?? null,
+                'form_data'             => $data['form_data'] ?? null,
+                'assigned_to'           => $data['assigned_to'] ?? null,
+                'sla_due_at'            => now()->addHours($this->getSlaHours($data['priority'] ?? 'medium')),
+                'first_response_due_at' => now()->addHours(24),
+                'resolution_due_at'     => now()->addHours($this->getSlaHours($data['priority'] ?? 'medium')),
+            ];
+
+            foreach ($optionalColumns as $column => $value) {
+                if (Schema::hasColumn('support_tickets', $column)) {
+                    $payload[$column] = $value;
+                }
+            }
+
+            $ticket = Ticket::create($payload);
 
             TicketLog::create([
                 'ticket_id' => $ticket->id,

@@ -1,7 +1,3 @@
-// ══════════════════════════════════════════════════════════
-// app/layout.tsx — الـ Root Layout
-// ══════════════════════════════════════════════════════════
-
 import type { Metadata, Viewport } from 'next'
 import { config } from '@fortawesome/fontawesome-svg-core'
 import { AuthProvider }    from '../lib/auth'
@@ -14,7 +10,6 @@ import '../styles/globals.css'
 
 config.autoAddCss = false
 
-// ── PWA + SEO Metadata ────────────────────────────────────
 export const metadata: Metadata = {
   title:       'CodeSphere ERP',
   description: 'نظام متكامل لإدارة موارد الشركات — مبيعات، مشتريات، مخزون، موارد بشرية، محاسبة',
@@ -55,7 +50,6 @@ export const viewport: Viewport = {
   userScalable:    true,
 }
 
-// ── Service Worker Registration ───────────────────────────
 const swScript = `
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
@@ -70,7 +64,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html suppressHydrationWarning>
       <head>
-        {/* PWA */}
         <link rel="manifest" href="/manifest.json" />
         <meta name="mobile-web-app-capable"         content="yes" />
         <meta name="apple-mobile-web-app-capable"   content="yes" />
@@ -78,10 +71,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-title"     content="CodeSphere ERP" />
         <meta name="msapplication-TileColor"        content="#2563eb" />
         <meta name="msapplication-tap-highlight"    content="no" />
-
-        {/* Preconnect للـ fonts */}
+        
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
       </head>
       <body>
         <ThemeProvider>
@@ -95,8 +88,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </AuthProvider>
           </I18nProvider>
         </ThemeProvider>
-
-        {/* Service Worker Registration */}
         <script dangerouslySetInnerHTML={{ __html: swScript }} />
       </body>
     </html>

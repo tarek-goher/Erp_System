@@ -41,7 +41,7 @@ export function Badge({ children, color }: { children: React.ReactNode; color?: 
   )
 }
 
-export function EmptyState({ icon, text, title, description }: { icon?: string; text?: string; title?: string; description?: string }) {
+export function EmptyState({ icon, text, title, description }: { icon?: React.ReactNode; text?: string; title?: string; description?: string }) {
   return (
     <div className="empty-state">
       <div className="empty-state-icon">{icon || '📭'}</div>

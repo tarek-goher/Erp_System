@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import ERPLayout from '../../components/layout/ERPLayout'
 import { api, extractArray } from '../../lib/api'
 import { useToast } from '../../hooks/useToast'
-import { StatCard, Badge, EmptyState, SearchInput, Modal, ToastContainer } from '../../components/ui'
+import { Modal, ToastContainer } from '../../components/ui'
 import Link from 'next/link'
 
 type Ticket = {
@@ -15,17 +15,18 @@ type Ticket = {
 }
 type CannedResponse = { id: string; name: string; category: string; body: string }
 
-const STATUS: Record<string, { ar: string; color: any; icon: string }> = {
-  open:        { ar:'مفتوحة',       color:'danger',  icon:'🔴' },
-  in_progress: { ar:'قيد المعالجة', color:'warning', icon:'🟡' },
-  resolved:    { ar:'محلولة',       color:'success', icon:'🟢' },
-  closed:      { ar:'مغلقة',        color:'gray',    icon:'⚫' },
+const STATUS: Record<string, { ar: string; color: string; icon: string }> = {
+  open:        { ar: 'مفتوحة',       color: 'danger',  icon: 'fa-folder-open' },
+  in_progress: { ar: 'قيد المعالجة', color: 'warning', icon: 'fa-bars-progress' },
+  resolved:    { ar: 'محلولة',       color: 'success', icon: 'fa-circle-check' },
+  closed:      { ar: 'مغلقة',        color: 'muted',   icon: 'fa-lock' },
 }
-const PRIORITY: Record<string, { ar: string; color: any }> = {
-  low:    { ar:'منخفضة', color:'info'    },
-  medium: { ar:'متوسطة', color:'warning' },
-  high:   { ar:'عالية',  color:'danger'  },
-  urgent: { ar:'عاجلة',  color:'danger'  },
+
+const PRIORITY: Record<string, { ar: string; color: string; icon: string }> = {
+  low:    { ar: 'منخفضة', color: 'info',    icon: 'fa-arrow-down' },
+  medium: { ar: 'متوسطة', color: 'warning', icon: 'fa-minus' },
+  high:   { ar: 'عالية',  color: 'danger',  icon: 'fa-arrow-up' },
+  urgent: { ar: 'عاجلة',  color: 'danger',  icon: 'fa-bolt' },
 }
 
 export default function HelpdeskPage() {
@@ -48,8 +49,8 @@ export default function HelpdeskPage() {
       api.get('/helpdesk?per_page=100'),
       api.get('/canned-responses?per_page=100'),
     ])
-    if (tRes.data) setTickets(extractArray(tRes.data))
-    if (cRes.data) setCanned(extractArray(cRes.data))
+    if (tRes.data) setTickets(extractArray(tRes.data) || [])
+    if (cRes.data) setCanned(extractArray(cRes.data) || [])
     setLoading(false)
   }
   useEffect(() => { loadAll() }, [])
@@ -57,7 +58,7 @@ export default function HelpdeskPage() {
   const changeStatus = async (id: string, status: string) => {
     const res = await api.patch(`/helpdesk/${id}/status`, { status })
     if (res.error) { show(res.error,'error'); return }
-    show('تم تحديث الحالة')
+    show('تم تحديث الحالة ✅')
     setTickets(p => p.map(t => t.id===id ? {...t, status:status as any} : t))
     if (selected?.id===id) setSelected(t => t ? {...t, status:status as any} : null)
   }
@@ -89,240 +90,265 @@ export default function HelpdeskPage() {
     return ms && mt && mp
   })
 
-  const INP: React.CSSProperties = {
-    width:'100%', padding:'0.6rem 1rem', background:'var(--bg-input)',
-    border:'1px solid var(--border)', borderRadius:'var(--radius-md)',
-    color:'var(--text-primary)', fontSize:'0.875rem', fontFamily:'inherit', outline:'none',
-  }
-
   return (
     <ERPLayout pageTitle="الدعم الفني">
+      {/* Inject FontAwesome safely */}
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" precedence="default" />
       <ToastContainer toasts={toasts} remove={remove} />
 
-      {/* HEADER */}
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">🎧 الدعم الفني</h1>
-          <p className="page-subtitle">إدارة التذاكر ومتابعة طلبات العملاء</p>
+      <div className="page-inner">
+        {/* ══ HEADER ══ */}
+        <div className="page-header">
+          <div>
+            <h1 className="page-title"><i className="fa-solid fa-headset text-primary" style={{ marginInlineEnd: '8px' }}></i>الدعم الفني</h1>
+            <p className="page-subtitle">إدارة التذاكر ومتابعة طلبات العملاء</p>
+          </div>
+          <div className="toolbar-actions">
+            <Link href="/helpdesk/analytics"      className="btn btn-secondary btn-sm"><i className="fa-solid fa-chart-pie"></i> التحليلات</Link>
+            <Link href="/helpdesk/sla-policies"   className="btn btn-secondary btn-sm"><i className="fa-solid fa-stopwatch"></i> سياسات SLA</Link>
+            <Link href="/helpdesk/workflows"      className="btn btn-secondary btn-sm"><i className="fa-solid fa-gears"></i> سير العمل</Link>
+            <Link href="/helpdesk/knowledge-base" className="btn btn-secondary btn-sm"><i className="fa-solid fa-book"></i> قاعدة المعرفة</Link>
+            <button className="btn btn-primary btn-sm" onClick={() => setShowTicketForm(true)}><i className="fa-solid fa-plus"></i> تذكرة جديدة</button>
+          </div>
         </div>
-        <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-          <Link href="/helpdesk/analytics"      className="btn btn-secondary btn-sm">📊 التحليلات</Link>
-          <Link href="/helpdesk/sla-policies"   className="btn btn-secondary btn-sm">⏱️ سياسات SLA</Link>
-          <Link href="/helpdesk/workflows"      className="btn btn-secondary btn-sm">⚙️ سير العمل</Link>
-          <Link href="/helpdesk/knowledge-base" className="btn btn-secondary btn-sm">📚 قاعدة المعرفة</Link>
-          <button className="btn btn-primary btn-sm" onClick={() => setShowTicketForm(true)}>+ تذكرة جديدة</button>
-        </div>
-      </div>
 
-      {/* STATS */}
-      <div className="grid-4" style={{ marginBottom:'1.25rem' }}>
-        <StatCard icon="🎫" label="إجمالي التذاكر"  value={tickets.length} />
-        <StatCard icon="🔴" label="مفتوحة"           value={tickets.filter(t=>t.status==='open').length}     accent="var(--color-danger)" />
-        <StatCard icon="✅" label="محلولة"           value={tickets.filter(t=>t.status==='resolved').length}  accent="var(--color-success)" />
-        <StatCard icon="⚠️" label="SLA منتهكة"      value={tickets.filter(t=>t.is_overdue).length}           accent="var(--color-warning)" />
-      </div>
-
-      {/* FILTERS */}
-      {loading ? (
-        <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-          {Array(5).fill(0).map((_,i) => <div key={i} className="skeleton" style={{ height:80 }} />)}
-        </div>
-      ) : (
-        <div style={{ display:'flex', gap:'1rem' }}>
-          {/* TICKET LIST */}
-          <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ display:'flex', gap:8, marginBottom:'1rem', flexWrap:'wrap' }}>
-              <SearchInput value={search} onChange={setSearch} placeholder="بحث برقم، موضوع، عميل..." />
-              <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)} style={{ ...INP, width:'auto', minWidth:130 }}>
-                <option value="all">كل الحالات</option>
-                {Object.entries(STATUS).map(([k,v]) => <option key={k} value={k}>{v.ar}</option>)}
-              </select>
-              <select value={priorityFilter} onChange={e=>setPriorityFilter(e.target.value)} style={{ ...INP, width:'auto', minWidth:130 }}>
-                <option value="all">كل الأولويات</option>
-                {Object.entries(PRIORITY).map(([k,v]) => <option key={k} value={k}>{v.ar}</option>)}
-              </select>
+        {/* ══ STATS GRID ══ */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+          {[
+            { label: 'إجمالي التذاكر', value: tickets.length, color: '#2563eb', icon: 'fa-ticket' },
+            { label: 'مفتوحة', value: tickets.filter(t=>t.status==='open').length, color: '#dc2626', icon: 'fa-folder-open' },
+            { label: 'محلولة', value: tickets.filter(t=>t.status==='resolved').length, color: '#16a34a', icon: 'fa-circle-check' },
+            { label: 'SLA منتهكة', value: tickets.filter(t=>t.is_overdue).length, color: '#d97706', icon: 'fa-triangle-exclamation' },
+          ].map((s, i) => (
+            <div key={i} className="stat-card" style={{ borderTop: `4px solid ${s.color}` }}>
+              <div className="stat-icon" style={{ backgroundColor: `${s.color}15`, color: s.color }}>
+                <i className={`fa-solid ${s.icon}`}></i>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div className="stat-value" style={{ color: 'var(--text-primary)', fontSize: '1.5rem' }}>{s.value}</div>
+                <div className="stat-label" style={{ fontSize: '0.85rem' }}>{s.label}</div>
+              </div>
             </div>
+          ))}
+        </div>
 
-            {filteredTickets.length===0 ? (
-              <EmptyState icon="🎫" title="لا توجد تذاكر" description="انتظار طلبات الدعم..." />
-            ) : (
-              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-                {filteredTickets.map(t => (
-                  <div
-                    key={t.id}
-                    onClick={() => setSelected(t)}
-                    style={{
-                      padding:'1rem', borderRadius:'var(--radius-lg)', cursor:'pointer',
-                      border:`1px solid ${selected?.id===t.id ? 'var(--color-primary)' : t.is_overdue ? 'var(--color-danger)' : 'var(--border)'}`,
-                      background: selected?.id===t.id ? 'var(--color-primary-light)' : 'var(--bg-card)',
-                      transition:'all 0.15s',
-                    }}
-                  >
-                    <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:8 }}>
-                      <div style={{ flex:1, minWidth:0 }}>
-                        <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:4, flexWrap:'wrap' }}>
-                          <span style={{ fontSize:'0.72rem', fontFamily:'monospace', color:'var(--text-muted)' }}>{t.ref}</span>
-                          <Badge color={STATUS[t.status]?.color??'gray'}>{STATUS[t.status]?.icon} {STATUS[t.status]?.ar}</Badge>
-                          <Badge color={PRIORITY[t.priority]?.color??'gray'}>{PRIORITY[t.priority]?.ar}</Badge>
-                          {t.is_overdue && <Badge color="danger">⚠️ SLA</Badge>}
-                        </div>
-                        <div style={{ fontWeight:700, fontSize:'0.9rem', marginBottom:4 }}>{t.subject}</div>
-                        <div style={{ fontSize:'0.75rem', color:'var(--text-muted)', display:'flex', gap:10, flexWrap:'wrap' }}>
-                          {t.customer?.name   && <span>👤 {t.customer.name}</span>}
-                          {t.category         && <span>🏷️ {t.category}</span>}
-                          {t.assigned_to      && <span>👷 {t.assigned_to.name}</span>}
-                          <span>📅 {new Date(t.created_at).toLocaleDateString('ar-EG')}</span>
+        {/* ══ MAIN CONTENT ══ */}
+        {loading ? (
+          <div className="flex-col gap-2">
+            {Array(5).fill(0).map((_,i) => <div key={i} className="skeleton" style={{ height: 100 }} />)}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+            
+            {/* TICKET LIST */}
+            <div style={{ flex: 1, minWidth: 'min(100%, 500px)' }}>
+              
+              {/* Filters */}
+              <div className="toolbar" style={{ background: 'var(--bg-card)', padding: '0.75rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
+                <div className="search-bar" style={{ flex: 1, minWidth: 200, margin: 0, border: 'none', background: 'var(--bg-hover)' }}>
+                  <i className="fa-solid fa-search text-muted"></i>
+                  <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث برقم، موضوع، عميل..." />
+                </div>
+                <select className="input" value={statusFilter} onChange={e=>setStatusFilter(e.target.value)} style={{ width: 'auto', minWidth: 140 }}>
+                  <option value="all">كل الحالات</option>
+                  {Object.entries(STATUS).map(([k,v]) => <option key={k} value={k}>{v.ar}</option>)}
+                </select>
+                <select className="input" value={priorityFilter} onChange={e=>setPriorityFilter(e.target.value)} style={{ width: 'auto', minWidth: 140 }}>
+                  <option value="all">كل الأولويات</option>
+                  {Object.entries(PRIORITY).map(([k,v]) => <option key={k} value={k}>{v.ar}</option>)}
+                </select>
+              </div>
+
+              {/* List */}
+              {filteredTickets.length === 0 ? (
+                <div className="empty-state card mt-3">
+                  <i className="fa-solid fa-ticket-simple empty-state-icon"></i>
+                  <div className="empty-state-text fw-bold" style={{ fontSize: '1.1rem' }}>لا توجد تذاكر</div>
+                  <div className="empty-state-text">انتظار طلبات الدعم...</div>
+                </div>
+              ) : (
+                <div className="flex-col gap-2 mt-3">
+                  {filteredTickets.map(t => {
+                    const st = STATUS[t.status]
+                    const pr = PRIORITY[t.priority]
+                    const isSel = selected?.id === t.id
+                    
+                    return (
+                      <div
+                        key={t.id}
+                        onClick={() => setSelected(t)}
+                        className="card"
+                        style={{
+                          padding: '1.25rem', cursor: 'pointer',
+                          border: isSel ? '2px solid var(--border-focus)' : t.is_overdue ? '1px solid var(--color-danger)' : '1px solid var(--border)',
+                          boxShadow: isSel ? 'var(--shadow-md)' : 'var(--shadow-sm)',
+                          background: isSel ? 'var(--bg-selected)' : 'var(--bg-card)',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        <div className="flex-between" style={{ alignItems: 'flex-start', gap: '1rem' }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div className="flex" style={{ alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                              <span style={{ fontSize: '0.8rem', fontFamily: 'monospace', color: 'var(--text-muted)', fontWeight: 600 }}>{t.ref}</span>
+                              <span className={`badge badge-${st?.color || 'muted'}`}><i className={`fa-solid ${st?.icon}`} style={{ marginInlineEnd: 4 }}></i> {st?.ar}</span>
+                              <span className={`badge badge-${pr?.color || 'muted'}`}><i className={`fa-solid ${pr?.icon}`} style={{ marginInlineEnd: 4 }}></i> {pr?.ar}</span>
+                              {t.is_overdue && <span className="badge badge-danger"><i className="fa-solid fa-triangle-exclamation" style={{ marginInlineEnd: 4 }}></i> SLA</span>}
+                            </div>
+                            
+                            <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--text-primary)', marginBottom: '8px' }}>{t.subject}</div>
+                            
+                            <div className="flex" style={{ fontSize: '0.8rem', color: 'var(--text-muted)', gap: '12px', flexWrap: 'wrap' }}>
+                              {t.customer?.name && <span><i className="fa-solid fa-user" style={{ marginInlineEnd: 4 }}></i> {t.customer.name}</span>}
+                              {t.category       && <span><i className="fa-solid fa-tag" style={{ marginInlineEnd: 4 }}></i> {t.category}</span>}
+                              {t.assigned_to    && <span><i className="fa-solid fa-user-gear" style={{ marginInlineEnd: 4 }}></i> {t.assigned_to.name}</span>}
+                              <span><i className="fa-solid fa-calendar-day" style={{ marginInlineEnd: 4 }}></i> {new Date(t.created_at).toLocaleDateString('ar-EG')}</span>
+                            </div>
+                          </div>
+                          
+                          {/* Quick Actions */}
+                          {t.status !== 'resolved' && t.status !== 'closed' && (
+                            <div className="flex gap-1" style={{ flexShrink: 0 }}>
+                              <button onClick={e => { e.stopPropagation(); autoAssign(t.id) }} className="btn-icon" style={{ background: 'var(--color-secondary-light)', color: 'var(--color-secondary)' }} title="تعيين تلقائي">
+                                <i className="fa-solid fa-robot"></i>
+                              </button>
+                              <button onClick={e => { e.stopPropagation(); changeStatus(t.id, 'resolved') }} className="btn-icon" style={{ background: 'var(--color-success-light)', color: 'var(--color-success)' }} title="تحديد كمحلول">
+                                <i className="fa-solid fa-check"></i>
+                              </button>
+                              <button onClick={e => { e.stopPropagation(); changeStatus(t.id, 'closed') }} className="btn-icon" style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)', border: '1px solid var(--border)' }} title="إغلاق">
+                                <i className="fa-solid fa-lock"></i>
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
-                      {t.status!=='resolved' && t.status!=='closed' && (
-                        <div style={{ display:'flex', gap:4, flexShrink:0 }}>
-                          <button
-                            onClick={e => { e.stopPropagation(); autoAssign(t.id) }}
-                            className="btn btn-sm"
-                            style={{ background:'var(--color-secondary-light)', color:'var(--color-secondary)' }}
-                            title="تعيين تلقائي"
-                          >🤖</button>
-                          <button
-                            onClick={e => { e.stopPropagation(); changeStatus(t.id,'resolved') }}
-                            className="btn btn-sm"
-                            style={{ background:'var(--color-success-light)', color:'var(--color-success)' }}
-                            title="تحديد كمحلول"
-                          >✅</button>
-                          <button
-                            onClick={e => { e.stopPropagation(); changeStatus(t.id,'closed') }}
-                            className="btn btn-sm"
-                            style={{ background:'var(--bg-hover)', color:'var(--text-muted)', border:'1px solid var(--border)' }}
-                            title="إغلاق"
-                          >⚫</button>
-                        </div>
-                      )}
-                    </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* DETAIL PANEL */}
+            {selected && (
+              <div className="card" style={{
+                width: '100%', maxWidth: 420, flexShrink: 0, padding: 0,
+                display: 'flex', flexDirection: 'column',
+                maxHeight: 'calc(100vh - 120px)', position: 'sticky', top: '80px',
+                overflow: 'hidden'
+              }}>
+                {/* Header */}
+                <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border)', background: 'var(--bg-table-head)' }}>
+                  <div className="flex-between" style={{ alignItems: 'flex-start', marginBottom: '8px' }}>
+                    <div style={{ fontWeight: 700, fontSize: '1.1rem', flex: 1, paddingInlineEnd: '1rem' }}>{selected.subject}</div>
+                    <button onClick={() => setSelected(null)} className="btn-icon text-muted" style={{ flexShrink: 0 }}><i className="fa-solid fa-xmark"></i></button>
                   </div>
-                ))}
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem', fontWeight: 600 }}>
+                    <i className="fa-solid fa-hashtag"></i> {selected.ref} {selected.customer?.name && ` • ${selected.customer.name}`}
+                  </div>
+                  
+                  {/* Status Toggle Buttons */}
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {Object.keys(STATUS).map(s => {
+                      const st = STATUS[s]
+                      const isActive = selected.status === s
+                      return (
+                        <button
+                          key={s}
+                          onClick={() => changeStatus(selected.id, s)}
+                          className={`btn btn-sm ${isActive ? 'btn-primary' : 'btn-secondary'}`}
+                          style={{
+                            background: isActive ? `var(--color-${st.color})` : 'transparent',
+                            borderColor: isActive ? `var(--color-${st.color})` : 'var(--border)',
+                            color: isActive ? '#fff' : 'var(--text-secondary)'
+                          }}
+                        >
+                          <i className={`fa-solid ${st.icon}`}></i> {st.ar}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Description Body */}
+                <div style={{ padding: '1.5rem', background: 'var(--bg-card)', fontSize: '0.95rem', color: 'var(--text-primary)', flex: 1, overflowY: 'auto', lineHeight: 1.7 }}>
+                  <div className="fw-bold mb-2 text-muted" style={{ fontSize: '0.8rem', textTransform: 'uppercase' }}><i className="fa-solid fa-align-left" style={{ marginInlineEnd: 6 }}></i> تفاصيل المشكلة</div>
+                  {selected.description}
+                </div>
+
+                {/* Reply Footer */}
+                <div style={{ padding: '1.25rem', borderTop: '1px solid var(--border)', background: 'var(--bg-table-head)' }}>
+                  {canned.length > 0 && (
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                      {canned.slice(0, 4).map(c => (
+                        <button
+                          key={c.id}
+                          onClick={() => setReplyText(c.body)}
+                          className="badge badge-primary"
+                          style={{ border: 'none', cursor: 'pointer', padding: '4px 10px' }}
+                        >
+                          <i className="fa-solid fa-comment-dots" style={{ marginInlineEnd: 4 }}></i> {c.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <textarea
+                    value={replyText}
+                    onChange={e => setReplyText(e.target.value)}
+                    rows={4}
+                    placeholder="اكتب ردك هنا..."
+                    className="input"
+                    style={{ resize: 'none', marginBottom: '10px' }}
+                  />
+                  <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={sendReply} disabled={saving || !replyText.trim()}>
+                    {saving ? <i className="fa-solid fa-spinner fa-spin"></i> : <><i className="fa-solid fa-paper-plane"></i> إرسال الرد</>}
+                  </button>
+                </div>
               </div>
             )}
           </div>
+        )}
 
-          {/* DETAIL PANEL */}
-          {selected && (
-            <div style={{
-              width:360, flexShrink:0, background:'var(--bg-card)',
-              border:'1px solid var(--border)', borderRadius:'var(--radius-lg)',
-              display:'flex', flexDirection:'column',
-              maxHeight:'calc(100vh - 200px)', position:'sticky', top:80,
-            }}>
-              {/* Panel Header */}
-              <div style={{ padding:'1rem', borderBottom:'1px solid var(--border)' }}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:4 }}>
-                  <div style={{ fontWeight:700, flex:1 }}>{selected.subject}</div>
-                  <button
-                    onClick={() => setSelected(null)}
-                    style={{ background:'none', border:'none', cursor:'pointer', color:'var(--text-muted)', fontSize:'1.1rem', flexShrink:0 }}
-                  >✕</button>
-                </div>
-                <div style={{ fontSize:'0.75rem', color:'var(--text-muted)', marginBottom:10 }}>
-                  {selected.ref}{selected.customer?.name && ` • ${selected.customer.name}`}
-                </div>
-                {/* Status Buttons */}
-                <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
-                  {Object.keys(STATUS).map(s => (
-                    <button
-                      key={s}
-                      onClick={() => changeStatus(selected.id, s)}
-                      className="btn btn-sm"
-                      style={{
-                        background: selected.status===s ? 'var(--color-primary)' : 'transparent',
-                        color:      selected.status===s ? '#fff' : 'var(--text-secondary)',
-                        border:'1px solid var(--border)',
-                      }}
-                    >
-                      {STATUS[s].icon} {STATUS[s].ar}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Description */}
-              <div style={{ padding:'1rem', background:'var(--bg-hover)', fontSize:'0.875rem', color:'var(--text-secondary)', flex:1, overflowY:'auto' }}>
-                {selected.description}
-              </div>
-
-              {/* Reply Box */}
-              <div style={{ padding:'1rem', borderTop:'1px solid var(--border)' }}>
-                {canned.length>0 && (
-                  <div style={{ display:'flex', gap:4, flexWrap:'wrap', marginBottom:8 }}>
-                    {canned.slice(0,4).map(c => (
-                      <button
-                        key={c.id}
-                        onClick={() => setReplyText(c.body)}
-                        style={{
-                          fontSize:'0.72rem', padding:'2px 8px', borderRadius:'var(--radius-full)',
-                          background:'var(--color-primary-light)', color:'var(--color-primary)',
-                          border:'none', cursor:'pointer',
-                        }}
-                      >💬 {c.name}</button>
-                    ))}
-                  </div>
-                )}
-                <textarea
-                  value={replyText}
-                  onChange={e => setReplyText(e.target.value)}
-                  rows={4}
-                  placeholder="اكتب ردك هنا..."
-                  style={{ ...INP, resize:'none' as any, marginBottom:8 }}
-                />
-                <button
-                  className="btn btn-primary"
-                  style={{ width:'100%' }}
-                  onClick={sendReply}
-                  disabled={saving || !replyText.trim()}
-                >
-                  {saving ? '⏳ جارٍ الإرسال...' : '📤 إرسال الرد'}
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* TICKET FORM MODAL */}
-      <Modal
-        open={showTicketForm}
-        onClose={() => setShowTicketForm(false)}
-        title="تذكرة دعم جديدة"
-        footer={
-          <>
-            <button className="btn btn-secondary" onClick={() => setShowTicketForm(false)}>إلغاء</button>
-            <button className="btn btn-primary" onClick={saveTicket} disabled={saving}>{saving ? '⏳...' : 'إنشاء'}</button>
-          </>
-        }
-      >
-        <div className="form-grid">
-          <div className="input-group">
-            <label className="input-label">الموضوع *</label>
-            <input style={INP} value={ticketForm.subject} onChange={e => setTicketForm(p => ({...p, subject:e.target.value}))} />
-          </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1rem' }}>
+        {/* ══ TICKET FORM MODAL ══ */}
+        <Modal
+          open={showTicketForm}
+          onClose={() => setShowTicketForm(false)}
+          title={<><i className="fa-solid fa-ticket text-primary" style={{ marginInlineEnd: 8 }}></i> تذكرة دعم جديدة</>}
+          footer={
+            <>
+              <button className="btn btn-secondary" onClick={() => setShowTicketForm(false)}>إلغاء</button>
+              <button className="btn btn-primary" onClick={saveTicket} disabled={saving}>{saving ? <i className="fa-solid fa-spinner fa-spin"></i> : <><i className="fa-solid fa-check"></i> إنشاء التذكرة</>}</button>
+            </>
+          }
+        >
+          <div className="form-grid">
             <div className="input-group">
-              <label className="input-label">الأولوية</label>
-              <select style={INP} value={ticketForm.priority} onChange={e => setTicketForm(p => ({...p, priority:e.target.value}))}>
-                {Object.entries(PRIORITY).map(([k,v]) => <option key={k} value={k}>{v.ar}</option>)}
-              </select>
+              <label className="input-label">الموضوع *</label>
+              <input className="input" value={ticketForm.subject} onChange={e => setTicketForm(p => ({...p, subject: e.target.value}))} placeholder="وصف مختصر للمشكلة..." />
             </div>
+            
+            <div className="grid-2">
+              <div className="input-group">
+                <label className="input-label">الأولوية</label>
+                <select className="input" value={ticketForm.priority} onChange={e => setTicketForm(p => ({...p, priority: e.target.value}))}>
+                  {Object.entries(PRIORITY).map(([k,v]) => <option key={k} value={k}>{v.ar}</option>)}
+                </select>
+              </div>
+              <div className="input-group">
+                <label className="input-label">الفئة</label>
+                <select className="input" value={ticketForm.category} onChange={e => setTicketForm(p => ({...p, category: e.target.value}))}>
+                  <option value="">اختر فئة...</option>
+                  {['تقني','مالي','شحن','المنتجات','العضوية','أخرى'].map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+            </div>
+
             <div className="input-group">
-              <label className="input-label">الفئة</label>
-              <select style={INP} value={ticketForm.category} onChange={e => setTicketForm(p => ({...p, category:e.target.value}))}>
-                <option value="">اختر فئة</option>
-                {['تقني','مالي','شحن','المنتجات','العضوية','أخرى'].map(c => <option key={c}>{c}</option>)}
-              </select>
+              <label className="input-label">التفاصيل الكاملة *</label>
+              <textarea rows={5} className="input" value={ticketForm.description} onChange={e => setTicketForm(p => ({...p, description: e.target.value}))} placeholder="يرجى كتابة كافة تفاصيل المشكلة هنا..." />
             </div>
           </div>
-          <div className="input-group">
-            <label className="input-label">التفاصيل *</label>
-            <textarea rows={4} style={INP} value={ticketForm.description} onChange={e => setTicketForm(p => ({...p, description:e.target.value}))} />
-          </div>
-        </div>
-      </Modal>
+        </Modal>
+
+      </div>
     </ERPLayout>
   )
 }

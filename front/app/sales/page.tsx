@@ -1,22 +1,13 @@
 'use client'
 
-// ══════════════════════════════════════════════════════════
-// app/sales/page.tsx — صفحة المبيعات (النسخة المحسّنة)
-// ══════════════════════════════════════════════════════════
-// التعديلات الجديدة:
-//  ✅ Edit الفاتورة (metadata فقط: عميل، ستاتوس، دفع، خصم، ملاحظات)
-//  ✅ Searchable Product Input بدل select عادي
-//  ✅ زر "تعديل" في الجدول
-// ══════════════════════════════════════════════════════════
-
 import { useState, useEffect, useRef, FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 import ERPLayout from '../../components/layout/ERPLayout'
 import { api, extractArray } from '../../lib/api'
 import { useToast } from '../../hooks/useToast'
 import { ToastContainer } from '../../components/ui'
 import { useI18n } from '../../lib/i18n'
 
-// ─── أنواع البيانات ────────────────────────────────────
 type Sale = {
   id: number
   invoice_number: string
@@ -42,7 +33,6 @@ type Stats = {
   pending_count?: number
 }
 
-// ─── الحالات الممكنة ──────────────────────────────────
 const STATUSES = ['draft', 'pending', 'completed', 'cancelled', 'refunded']
 
 const PAYMENT_METHODS = [
@@ -52,7 +42,6 @@ const PAYMENT_METHODS = [
   { value: 'credit',        label_ar: 'آجل (دين)',     label_en: 'Credit' },
 ]
 
-// ✅ جديد — نوع الـ SaleItem خارج الـ component عشان يتستخدم في الـ Edit
 type SaleItem = {
   product_id:   string
   name:         string
@@ -64,7 +53,6 @@ type SaleItem = {
   cost_price?:  number
 }
 
-// ✅ جديد — Component للـ Searchable Product Input
 function ProductSearchInput({
   value,
   products,
@@ -83,10 +71,8 @@ function ProductSearchInput({
   const [focused,   setFocused]   = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
 
-  // لما قيمة الـ name تتغير من الخارج (مثلاً عند Reset) نحدث الـ query
   useEffect(() => { setQuery(value.name || '') }, [value.name])
 
-  // إغلاق الـ dropdown لما تضغط برا
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
@@ -111,7 +97,7 @@ const handleSelect = (p: typeof products[0]) => {
   onChange('qty',        1)
   onChange('max_qty',    p.qty ?? 0)
   onChange('cost_price', p.cost ?? 0)
-  onChange('warehouse_id', warehouses[0] ? String(warehouses[0].id) : '') // ✅ أضف ده
+  onChange('warehouse_id', warehouses[0] ? String(warehouses[0].id) : '')
   setQuery(p.name)
   setOpen(false)
   setFocused(false)
@@ -120,7 +106,6 @@ const handleSelect = (p: typeof products[0]) => {
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     setQuery(e.target.value)
     setOpen(true)
-    // لو مسح الاختيار نمسح الـ product_id
     if (!e.target.value) {
       onChange('product_id', '')
       onChange('name',       '')
@@ -141,7 +126,6 @@ const handleSelect = (p: typeof products[0]) => {
           borderColor: value.product_id ? 'var(--color-success, #16a34a)' : undefined,
         }}
       />
-      {/* ✅ مؤشر إن المنتج اتاختار */}
       {value.product_id && (
         <span style={{
           position: 'absolute',
@@ -151,9 +135,8 @@ const handleSelect = (p: typeof products[0]) => {
           color: 'var(--color-success, #16a34a)',
           fontSize: 12,
           pointerEvents: 'none',
-        }}>✓</span>
+        }}><i className="fas fa-check"></i></span>
       )}
-      {/* ✅ Dropdown الاقتراحات */}
       {open && focused && filtered.length > 0 && (
         <div style={{
           position:     'absolute',
@@ -205,14 +188,14 @@ export default function SalesPage() {
   const { show, toasts, remove } = useToast()
   const { t, lang } = useI18n()
 
-  // ─── البيانات ──────────────────────────────────────────
+  const [isMounted, setIsMounted] = useState(false)
+
   const [sales,     setSales]     = useState<Sale[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading,   setLoading]   = useState(true)
   const [total,     setTotal]     = useState(0)
   const [stats,     setStats]     = useState<Stats | null>(null)
 
-  // ─── الـ filters ───────────────────────────────────────
   const [search,         setSearch]         = useState('')
   const [statusFilter,   setStatusFilter]   = useState('')
   const [customerFilter, setCustomerFilter] = useState('')
@@ -221,19 +204,16 @@ export default function SalesPage() {
   const [page,           setPage]           = useState(1)
   const [showFilters,    setShowFilters]    = useState(false)
 
-  // ─── حالة الـ modal ─────────────────────────────────────
   const [modalOpen,      setModalOpen]      = useState(false)
   const [exportLoading,  setExportLoading]  = useState(false)
 
-  // ✅ جديد — Edit states
   const [editId,      setEditId]      = useState<number | null>(null)
   const [editLoading, setEditLoading] = useState(false)
 
-  // ─── بيانات الفورم ────────────────────────────────────
   const [form, setForm] = useState({
     customer_id:    '',
     notes:          '',
-    status:         'completed',
+    status:         'confirmed',
     tax_rate_id:    '',
     payment_method: 'cash',
     discount:       0,
@@ -245,12 +225,10 @@ export default function SalesPage() {
   const [products,    setProducts]    = useState<{id:number;name:string;price?:number;sell_price?:number;qty?:number;cost?:number}[]>([])
   const [warehouses,  setWarehouses]  = useState<{id:number;name:string}[]>([])
 
-  // أصناف الفاتورة
   const [saleItems, setSaleItems] = useState<SaleItem[]>([
     { product_id: '', name: '', qty: 1, unit_price: 0, warehouse_id: '', discount: 0 }
   ])
 
-  // ─── إضافة عميل inline ───────────────────────────────
   const [showAddCustomer, setShowAddCustomer] = useState(false)
   const [newCustomerName,  setNewCustomerName]  = useState('')
   const [newCustomerEmail, setNewCustomerEmail] = useState('')
@@ -258,20 +236,13 @@ export default function SalesPage() {
   const [addingCustomer,   setAddingCustomer]   = useState(false)
   const [addCustomerErr,   setAddCustomerErr]   = useState('')
 
-  // ─── حالة تأكيد الحذف ────────────────────────────────
   const [deleteId, setDeleteId] = useState<number | null>(null)
 
-  // ══════════════════════════════════════════════════════
-  // جلب الإحصائيات
-  // ══════════════════════════════════════════════════════
   const fetchStats = async () => {
     const res = await api.get<Stats>('/sales/stats')
     if (res.data) setStats(res.data as any)
   }
 
-  // ══════════════════════════════════════════════════════
-  // جلب المبيعات
-  // ══════════════════════════════════════════════════════
   const fetchSales = async () => {
     setLoading(true)
     const params = new URLSearchParams({
@@ -299,6 +270,7 @@ export default function SalesPage() {
   useEffect(() => { fetchSales() }, [page, search, statusFilter, customerFilter, dateFrom, dateTo])
 
   useEffect(() => {
+    setIsMounted(true)
     fetchStats()
     fetchCustomers()
     api.get<any>('/tax-rates').then(r => { if (r.data) setTaxRates(extractArray(r.data)) })
@@ -306,9 +278,6 @@ export default function SalesPage() {
     api.get<any>('/warehouses').then(r => { if (r.data) setWarehouses(r.data.data ?? r.data) })
   }, [])
 
-  // ══════════════════════════════════════════════════════
-  // Export Excel
-  // ══════════════════════════════════════════════════════
   const handleExport = async () => {
     setExportLoading(true)
     const params = new URLSearchParams({
@@ -332,16 +301,13 @@ export default function SalesPage() {
       a.download = `sales-export-${new Date().toISOString().slice(0,10)}.xlsx`
       a.click()
       URL.revokeObjectURL(url)
-      show(lang === 'ar' ? 'تم تصدير الملف ✅' : 'File exported ✅')
+      show(lang === 'ar' ? 'تم تصدير الملف' : 'File exported')
     } catch {
       show(lang === 'ar' ? 'فشل التصدير' : 'Export failed', 'error')
     }
     setExportLoading(false)
   }
 
-  // ══════════════════════════════════════════════════════
-  // ✅ جديد — تحميل بيانات الفاتورة للتعديل
-  // ══════════════════════════════════════════════════════
   const handleEdit = async (sale: Sale) => {
     setEditLoading(true)
     setEditId(sale.id)
@@ -376,9 +342,6 @@ export default function SalesPage() {
     setEditLoading(false)
   }
 
-  // ══════════════════════════════════════════════════════
-  // إضافة عميل inline
-  // ══════════════════════════════════════════════════════
   const handleAddCustomer = async (e: FormEvent) => {
     e.preventDefault()
     setAddCustomerErr('')
@@ -401,7 +364,6 @@ export default function SalesPage() {
     setNewCustomerName(''); setNewCustomerEmail(''); setNewCustomerPhone('')
   }
 
-  // ── أصناف الفاتورة helpers ───────────────────────────
   const addSaleItem = () =>
     setSaleItems(prev => [...prev, { product_id: '', name: '', qty: 1, unit_price: 0, warehouse_id: '', discount: 0 }])
 
@@ -416,7 +378,6 @@ export default function SalesPage() {
     })
   }
 
-  // حساب الإجماليات
   const saleSubtotal = saleItems.reduce((s, i) => {
     const lineTotal   = i.qty * i.unit_price
     const lineDiscount = (lineTotal * (i.discount || 0)) / 100
@@ -430,9 +391,6 @@ export default function SalesPage() {
   const saleTaxAmount   = selectedSaleTax ? (afterDiscount * selectedSaleTax.rate) / 100 : 0
   const saleTotal       = afterDiscount + saleTaxAmount
 
-  // ══════════════════════════════════════════════════════
-  // إضافة / تعديل بيع
-  // ══════════════════════════════════════════════════════
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setFormError('')
@@ -442,91 +400,59 @@ export default function SalesPage() {
       return
     }
 
-    // ✅ لو Edit نبعت PUT بالـ metadata فقط
-    if (editId) {
-      setFormLoading(true)
-      const payload: Record<string, any> = {
-        customer_id:    Number(form.customer_id),
-        status:         form.status,
-        payment_method: form.payment_method,
-        notes:          form.notes,
-      }
-      if (form.discount !== undefined) payload.discount = Number(form.discount)
+    setFormLoading(true)
+    try {
+      if (editId) {
+        const payload: Record<string, any> = {
+          customer_id:    Number(form.customer_id),
+          status:         form.status,
+          payment_method: form.payment_method,
+          notes:          form.notes,
+        }
+        if (form.discount !== undefined) payload.discount = Number(form.discount)
 
-      const res = await api.put(`/sales/${editId}`, payload)
-      setFormLoading(false)
+        const res = await api.put(`/sales/${editId}`, payload)
+        if (res.error) { show(res.error, 'error'); return }
+        show(lang === 'ar' ? 'تم تعديل الفاتورة' : 'Sale updated')
+        setModalOpen(false)
+        resetForm()
+        fetchSales()
+        fetchStats()
+        return
+      }
+
+      const validItems = saleItems.filter(i => i.product_id && i.qty > 0)
+
+      if (validItems.length === 0) {
+        setFormError(lang === 'ar' ? 'أضف منتجاً واحداً على الأقل' : 'Add at least one item')
+        return
+      }
+
+      const res = await api.post('/sales', {
+        customer_id:    Number(form.customer_id),
+        notes:          form.notes,
+        status:         form.status,
+        payment_method: form.payment_method || 'cash',
+        discount:       form.discount || 0,
+        due_date:       form.due_date || undefined,
+        items: validItems.map(i => ({
+          product_id:   Number(i.product_id),
+          qty:          i.qty,
+          unit_price:   i.unit_price,
+          discount:     i.discount || 0,
+          warehouse_id: i.warehouse_id ? Number(i.warehouse_id) : null,
+        })),
+        ...(form.tax_rate_id && { tax_rate_id: Number(form.tax_rate_id) }),
+      })
       if (res.error) { show(res.error, 'error'); return }
-      show(lang === 'ar' ? 'تم تعديل الفاتورة ✅' : 'Sale updated ✅')
+      show(lang === 'ar' ? 'تم تسجيل عملية البيع' : 'Sale created')
       setModalOpen(false)
       resetForm()
       fetchSales()
       fetchStats()
-      return
+    } finally {
+      setFormLoading(false)
     }
-
-    // ── إنشاء جديد ────────────────────────────────────
-const validItems = saleItems.filter(i => i.product_id && i.qty > 0)
-
-// ✅ أضف ده هنا
-for (const item of validItems) {
-  if (!item.warehouse_id) {
-    setFormError(
-      lang === 'ar'
-        ? `يجب اختيار مستودع للمنتج: ${item.name}`
-        : `Please select a warehouse for: ${item.name}`
-    )
-    return
-  }
-}
-
-// ✅ FIX: سعر البيع أقل من سعر الشراء — أضفنا شرط unit_price > 0
-for (const item of validItems) {
-  if (item.cost_price && item.cost_price > 0 && item.unit_price > 0 && item.unit_price < item.cost_price) {
-    setFormError(
-      lang === 'ar'
-        ? `❌ سعر البيع (${item.unit_price}) أقل من سعر الشراء (${item.cost_price}) للمنتج: ${item.name}`
-        : `❌ Sell price (${item.unit_price}) is below cost price (${item.cost_price}) for: ${item.name}`
-    )
-    return
-  }
-}
-
-    // ✅ Validation: الكمية أكبر من المخزون — تحذير بس مش منع
-    for (const item of validItems) {
-      if (item.max_qty !== undefined && item.max_qty > 0 && item.qty > item.max_qty) {
-        setFormError(
-          lang === 'ar'
-            ? `⚠️ الكمية المطلوبة (${item.qty}) أكبر من المخزون المتاح (${item.max_qty}) للمنتج: ${item.name}`
-            : `⚠️ Requested qty (${item.qty}) exceeds available stock (${item.max_qty}) for: ${item.name}`
-        )
-        return
-      }
-    }
-
-    setFormLoading(true)
-    const res = await api.post('/sales', {
-      customer_id:    Number(form.customer_id),
-      notes:          form.notes,
-      status:         form.status,
-      payment_method: form.payment_method || 'cash',
-      discount:       form.discount || 0,
-      due_date:       form.due_date || undefined,
-      items: validItems.map(i => ({
-        product_id:   Number(i.product_id),
-        qty:          i.qty,
-        unit_price:   i.unit_price,
-        discount:     i.discount || 0,
-        warehouse_id: i.warehouse_id ? Number(i.warehouse_id) : undefined,
-      })),
-      ...(form.tax_rate_id && { tax_rate_id: Number(form.tax_rate_id) }),
-    })
-    setFormLoading(false)
-    if (res.error) { show(res.error, 'error'); return }
-    show(lang === 'ar' ? 'تم تسجيل عملية البيع ✅' : 'Sale created ✅')
-    setModalOpen(false)
-    resetForm()
-    fetchSales()
-    fetchStats()
   }
 
   const resetForm = () => {
@@ -537,9 +463,6 @@ for (const item of validItems) {
     setFormError('')
   }
 
-  // ══════════════════════════════════════════════════════
-  // حذف بيع
-  // ══════════════════════════════════════════════════════
   const handleDelete = async () => {
     if (!deleteId) return
     const res = await api.delete(`/sales/${deleteId}`)
@@ -549,7 +472,6 @@ for (const item of validItems) {
     fetchStats()
   }
 
-  // ─── Helpers ─────────────────────────────────────────
   const fmt = (n: number) =>
     new Intl.NumberFormat(lang === 'ar' ? 'ar-EG' : 'en-US').format(n || 0)
 
@@ -576,7 +498,6 @@ for (const item of validItems) {
     <ERPLayout pageTitle={t('sales')}>
       <ToastContainer toasts={toasts} remove={remove} />
 
-      {/* ── Stats Cards ─────────────────────────────────── */}
       {stats && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.25rem' }}>
           <div className="card" style={{ padding: '1rem' }}>
@@ -606,11 +527,10 @@ for (const item of validItems) {
         </div>
       )}
 
-      {/* ── Toolbar ─────────────────────────────────────── */}
       <div className="toolbar">
         <div className="toolbar-actions">
           <div className="search-bar">
-            <span>🔍</span>
+            <span><i className="fas fa-search"></i></span>
             <input
               placeholder={lang === 'ar' ? 'بحث في المبيعات...' : 'Search sales...'}
               value={search}
@@ -626,20 +546,19 @@ for (const item of validItems) {
             {STATUSES.map(s => <option key={s} value={s}>{t(s)}</option>)}
           </select>
           <button className="btn btn-secondary btn-sm" onClick={() => setShowFilters(!showFilters)}>
-            🔽 {lang === 'ar' ? 'فلاتر' : 'Filters'}
+            <><i className="fas fa-chevron-down"></i> {lang === 'ar' ? 'فلاتر' : 'Filters'}</>
           </button>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn btn-secondary" onClick={handleExport} disabled={exportLoading}>
-            {exportLoading ? '⏳...' : `📤 ${lang === 'ar' ? 'Excel' : 'Export Excel'}`}
+            {exportLoading ? <><i className="fas fa-spinner fa-spin"></i>...</> : <><i className="fas fa-file-export"></i> {lang === 'ar' ? 'Excel' : 'Export Excel'}</>}
           </button>
           <button className="btn btn-primary" onClick={() => { resetForm(); setModalOpen(true) }}>
-            + {lang === 'ar' ? 'بيع جديد' : 'New Sale'}
+            <><i className="fas fa-plus"></i> {lang === 'ar' ? 'بيع جديد' : 'New Sale'}</>
           </button>
         </div>
       </div>
 
-      {/* ── Advanced Filters ─────────────────────────────── */}
       {showFilters && (
         <div className="card" style={{ marginBottom: '1rem', padding: '1rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', alignItems: 'end' }}>
@@ -662,13 +581,12 @@ for (const item of validItems) {
               setCustomerFilter(''); setDateFrom(''); setDateTo('')
               setStatusFilter(''); setSearch(''); setPage(1)
             }}>
-              🗑️ {lang === 'ar' ? 'مسح الفلاتر' : 'Clear Filters'}
+              <><i className="fas fa-trash"></i> {lang === 'ar' ? 'مسح الفلاتر' : 'Clear Filters'}</>
             </button>
           </div>
         </div>
       )}
 
-      {/* ── الجدول ──────────────────────────────────────── */}
       <div className="card" style={{ padding: 0 }}>
         {loading ? (
           <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -676,7 +594,7 @@ for (const item of validItems) {
           </div>
         ) : sales.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-icon">💰</div>
+            <div className="empty-state-icon"><i className="fas fa-money-bill-wave"></i></div>
             <p className="empty-state-text">{t('no_data')}</p>
           </div>
         ) : (
@@ -719,14 +637,13 @@ for (const item of validItems) {
                         <a href={`/sales/${sale.id}`} className="btn btn-secondary btn-sm">
                           {t('view')}
                         </a>
-                        {/* ✅ جديد — زر التعديل */}
                         {canEdit(sale.status) && (
                           <button
                             className="btn btn-secondary btn-sm"
                             onClick={() => handleEdit(sale)}
                             disabled={editLoading}
                           >
-                            ✏️ {lang === 'ar' ? 'تعديل' : 'Edit'}
+                            <><i className="fas fa-pen"></i> {lang === 'ar' ? 'تعديل' : 'Edit'}</>
                           </button>
                         )}
                         <button className="btn btn-danger btn-sm" onClick={() => setDeleteId(sale.id)}>
@@ -741,7 +658,6 @@ for (const item of validItems) {
           </div>
         )}
 
-        {/* ── Pagination ──────────────────────────────── */}
         {total > 15 && (
           <div className="sales-pagination">
             <button
@@ -749,7 +665,7 @@ for (const item of validItems) {
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page === 1}
             >
-              {lang === 'ar' ? '← السابق' : '← Prev'}
+              <><i className="fas fa-arrow-left"></i> {lang === 'ar' ? 'السابق' : 'Prev'}</>
             </button>
             <span className="text-muted">
               {lang === 'ar' ? `صفحة ${page} من ${Math.ceil(total / 15)}` : `Page ${page} of ${Math.ceil(total / 15)}`}
@@ -759,26 +675,23 @@ for (const item of validItems) {
               onClick={() => setPage(p => p + 1)}
               disabled={sales.length < 15}
             >
-              {lang === 'ar' ? 'التالي →' : 'Next →'}
+              <>{lang === 'ar' ? 'التالي' : 'Next'} <i className="fas fa-arrow-right"></i></>
             </button>
           </div>
         )}
       </div>
 
-      {/* ══════════════════════════════════════════════════
-          Modal: إضافة / تعديل بيع
-      ══════════════════════════════════════════════════ */}
-      {modalOpen && (
-        <div className="modal-overlay" onClick={() => { setModalOpen(false); resetForm() }}>
-          <div className="modal" style={{ maxWidth: 820 }} onClick={e => e.stopPropagation()}>
+      {modalOpen && isMounted && createPortal(
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999999 }} onClick={() => { setModalOpen(false); resetForm() }}>
+          <div style={{ maxWidth: 820, width: '95%', background: 'var(--bg-card, #fff)', color: 'var(--text-color, #000)', borderRadius: 8, display: 'flex', flexDirection: 'column', maxHeight: '90vh', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">
                 {editId
-                  ? (lang === 'ar' ? '✏️ تعديل الفاتورة' : '✏️ Edit Sale')
-                  : (lang === 'ar' ? '🧾 بيع جديد'       : '🧾 New Sale')
+                  ? (lang === 'ar' ? <><i className="fas fa-pen"></i> تعديل الفاتورة</> : <><i className="fas fa-pen"></i> Edit Sale</>)
+                  : (lang === 'ar' ? <><i className="fas fa-file-invoice"></i> بيع جديد</>       : <><i className="fas fa-file-invoice"></i> New Sale</>)
                 }
               </h3>
-              <button className="btn-icon" onClick={() => { setModalOpen(false); resetForm() }}>✕</button>
+              <button className="btn-icon" onClick={() => { setModalOpen(false); resetForm() }}><i className="fas fa-times"></i></button>
             </div>
 
             {editLoading ? (
@@ -788,10 +701,9 @@ for (const item of validItems) {
               </div>
             ) : (
               <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-                <div className="modal-body">
+                <div className="modal-body" style={{ overflowY: 'auto' }}>
                   <div className="form-grid">
 
-                    {/* ── العميل ── */}
                     <div className="input-group">
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
                         <label className="input-label" style={{ marginBottom: 0 }}>{t('customer')} *</label>
@@ -802,8 +714,8 @@ for (const item of validItems) {
                             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px', color: 'var(--color-primary)', fontSize: '0.8rem', fontWeight: 600 }}
                           >
                             {showAddCustomer
-                              ? (lang === 'ar' ? '← رجوع للقائمة' : '← Back to list')
-                              : (lang === 'ar' ? '+ عميل جديد' : '+ New Customer')}
+                              ? (lang === 'ar' ? <><i className="fas fa-arrow-left"></i> رجوع للقائمة</> : <><i className="fas fa-arrow-left"></i> Back to list</>)
+                              : (lang === 'ar' ? <><i className="fas fa-user-plus"></i> عميل جديد</> : <><i className="fas fa-user-plus"></i> New Customer</>)}
                           </button>
                         )}
                       </div>
@@ -813,9 +725,9 @@ for (const item of validItems) {
                             <input className="input" placeholder={lang === 'ar' ? 'الاسم *' : 'Name *'} value={newCustomerName} onChange={e => setNewCustomerName(e.target.value)} autoFocus />
                             <input className="input" placeholder={lang === 'ar' ? 'البريد الإلكتروني (اختياري)' : 'Email (optional)'} type="email" value={newCustomerEmail} onChange={e => setNewCustomerEmail(e.target.value)} />
                             <input className="input" placeholder={lang === 'ar' ? 'رقم الهاتف (اختياري)' : 'Phone (optional)'} value={newCustomerPhone} onChange={e => setNewCustomerPhone(e.target.value)} />
-                            {addCustomerErr && <div style={{ color: 'var(--color-danger)', fontSize: '0.8rem' }}>⚠️ {addCustomerErr}</div>}
+                            {addCustomerErr && <div style={{ color: 'var(--color-danger)', fontSize: '0.8rem' }}><i className="fas fa-exclamation-triangle"></i> {addCustomerErr}</div>}
                             <button type="button" className="btn btn-primary btn-sm" onClick={handleAddCustomer} disabled={addingCustomer} style={{ alignSelf: 'flex-start' }}>
-                              {addingCustomer ? '⏳...' : (lang === 'ar' ? '✓ حفظ العميل' : '✓ Save Customer')}
+                              {addingCustomer ? <><i className="fas fa-spinner fa-spin"></i>...</> : (lang === 'ar' ? <><i className="fas fa-save"></i> حفظ العميل</> : <><i className="fas fa-save"></i> Save Customer</>)}
                             </button>
                           </div>
                         </div>
@@ -827,7 +739,6 @@ for (const item of validItems) {
                       )}
                     </div>
 
-                    {/* ── الحالة ── */}
                     <div className="input-group">
                       <label className="input-label">{t('status')}</label>
                       <select className="input" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
@@ -835,7 +746,6 @@ for (const item of validItems) {
                       </select>
                     </div>
 
-                    {/* ── طريقة الدفع ── */}
                     <div className="input-group">
                       <label className="input-label">{lang === 'ar' ? 'طريقة الدفع' : 'Payment Method'}</label>
                       <select className="input" value={form.payment_method} onChange={e => setForm({ ...form, payment_method: e.target.value })}>
@@ -845,7 +755,6 @@ for (const item of validItems) {
                       </select>
                     </div>
 
-                    {/* ── تاريخ الاستحقاق — بس في Create ── */}
                     {!editId && (
                       <div className="input-group">
                         <label className="input-label">{lang === 'ar' ? 'تاريخ الاستحقاق (اختياري)' : 'Due Date (optional)'}</label>
@@ -853,7 +762,6 @@ for (const item of validItems) {
                       </div>
                     )}
 
-                    {/* ── الضريبة — بس في Create ── */}
                     {!editId && (
                       <div className="input-group">
                         <label className="input-label">{lang === 'ar' ? 'الضريبة (اختياري)' : 'Tax Rate (optional)'}</label>
@@ -864,7 +772,6 @@ for (const item of validItems) {
                       </div>
                     )}
 
-                    {/* ── خصم على الفاتورة ── */}
                     <div className="input-group">
                       <label className="input-label">
                         {lang === 'ar' ? 'خصم على الفاتورة' : 'Invoice Discount'}
@@ -883,12 +790,11 @@ for (const item of validItems) {
                       />
                       {editId && (
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
-                          {lang === 'ar' ? '⚠️ الخصم لا يمكن تغييره بعد الإنشاء' : '⚠️ Discount cannot be changed after creation'}
+                          {lang === 'ar' ? <><i className="fas fa-exclamation-triangle"></i> الخصم لا يمكن تغييره بعد الإنشاء</> : <><i className="fas fa-exclamation-triangle"></i> Discount cannot be changed after creation</>}
                         </div>
                       )}
                     </div>
 
-                    {/* ── أصناف الفاتورة ── */}
                     <div className="input-group" style={{ gridColumn: '1 / -1' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                         <label className="fw-semibold">
@@ -901,12 +807,11 @@ for (const item of validItems) {
                         </label>
                         {!editId && (
                           <button type="button" className="btn btn-secondary btn-sm" onClick={addSaleItem}>
-                            + {lang === 'ar' ? 'صنف' : 'Add Item'}
+                            <><i className="fas fa-plus"></i> {lang === 'ar' ? 'صنف' : 'Add Item'}</>
                           </button>
                         )}
                       </div>
 
-                      {/* ── رأس الجدول ── */}
                       <div style={{ display: 'grid', gridTemplateColumns: editId ? '2fr 1.2fr 0.8fr 1fr 0.8fr' : '2fr 1.2fr 0.8fr 1fr 0.8fr auto', gap: 6, marginBottom: 4 }}>
                         {[
                           lang === 'ar' ? 'المنتج'   : 'Product',
@@ -937,13 +842,13 @@ for (const item of validItems) {
                                 {item.name || '—'}
                               </div>
                             ) : (
-                         <ProductSearchInput
-  value={item}
-  products={products}
-  warehouses={warehouses}  // ✅ أضف ده
-  lang={lang}
-  onChange={(field, val) => updateSaleItem(idx, field, val)}
-/>
+                              <ProductSearchInput
+                                value={item}
+                                products={products}
+                                warehouses={warehouses}
+                                lang={lang}
+                                onChange={(field, val) => updateSaleItem(idx, field, val)}
+                              />
                             )}
                             <select
                               className="input"
@@ -978,13 +883,12 @@ for (const item of validItems) {
                               style={editId ? { background: 'var(--bg-hover)', cursor: 'not-allowed' } : {}}
                             />
                             {!editId && (
-                              <button type="button" className="btn-icon" onClick={() => removeSaleItem(idx)} style={{ color: 'var(--color-danger)' }}>✕</button>
+                              <button type="button" className="btn-icon" onClick={() => removeSaleItem(idx)} style={{ color: 'var(--color-danger)' }}><i className="fas fa-times"></i></button>
                             )}
                           </div>
                         ))}
                       </div>
 
-                      {/* ── ملخص الإجمالي ── */}
                       <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: 'var(--bg-hover)', borderRadius: 'var(--radius-md)', display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
                         <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                           {lang === 'ar' ? 'المجموع الفرعي:' : 'Subtotal:'} <strong>{n(saleSubtotal)}</strong>
@@ -1005,7 +909,6 @@ for (const item of validItems) {
                       </div>
                     </div>
 
-                    {/* ── ملاحظات ── */}
                     <div className="input-group" style={{ gridColumn: '1 / -1' }}>
                       <label className="input-label">{t('notes')}</label>
                       <textarea
@@ -1020,7 +923,7 @@ for (const item of validItems) {
 
                   {formError && (
                     <div className="login-error" style={{ marginTop: '1rem' }}>
-                      <span>⚠️</span> {formError}
+                      <span><i className="fas fa-exclamation-triangle"></i></span> {formError}
                     </div>
                   )}
                 </div>
@@ -1039,7 +942,7 @@ for (const item of validItems) {
                         setTimeout(() => { document.getElementById('submit-sale-btn')?.click() }, 50)
                       }}
                     >
-                      {lang === 'ar' ? '📝 حفظ مسودة' : '📝 Save Draft'}
+                      {lang === 'ar' ? <><i className="fas fa-save"></i> حفظ مسودة</> : <><i className="fas fa-save"></i> Save Draft</>}
                     </button>
                   )}
                   <button
@@ -1051,25 +954,23 @@ for (const item of validItems) {
                     {formLoading
                       ? <><span className="spinner" style={{ width: 14, height: 14 }} /> {t('loading')}</>
                       : editId
-                        ? (lang === 'ar' ? '💾 حفظ التعديلات' : '💾 Save Changes')
-                        : (lang === 'ar' ? '✅ تأكيد البيع'   : '✅ Confirm Sale')
+                        ? (lang === 'ar' ? <><i className="fas fa-save"></i> حفظ التعديلات</> : <><i className="fas fa-save"></i> Save Changes</>)
+                        : (lang === 'ar' ? <><i className="fas fa-check"></i> تأكيد البيع</>   : <><i className="fas fa-check"></i> Confirm Sale</>)
                     }
                   </button>
                 </div>
               </form>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* ══════════════════════════════════════════════════
-          Modal: تأكيد الحذف
-      ══════════════════════════════════════════════════ */}
-      {deleteId && (
-        <div className="modal-overlay" onClick={() => setDeleteId(null)}>
-          <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+      {deleteId && isMounted && createPortal(
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999999 }} onClick={() => setDeleteId(null)}>
+          <div style={{ maxWidth: 400, width: '95%', background: 'var(--bg-card, #fff)', color: 'var(--text-color, #000)', borderRadius: 8, display: 'flex', flexDirection: 'column', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
             <div className="modal-body" style={{ textAlign: 'center', padding: '2rem' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🗑️</div>
+              <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}><i className="fas fa-trash"></i></div>
               <h3 style={{ marginBottom: '0.5rem' }}>{t('confirm_delete')}</h3>
               <p className="text-muted" style={{ fontSize: '0.875rem' }}>
                 {lang === 'ar' ? 'لا يمكن التراجع عن هذا الإجراء' : 'This action cannot be undone'}
@@ -1080,7 +981,8 @@ for (const item of validItems) {
               <button className="btn btn-danger" onClick={handleDelete}>{t('delete')}</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </ERPLayout>

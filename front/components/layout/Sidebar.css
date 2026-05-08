@@ -35,6 +35,7 @@
     padding: 1.25rem;
     height: var(--navbar-height);
     border-bottom: 2px solid var(--border-light);
+    color: var(--text-inverse);
     flex-shrink: 0
 }
 
@@ -118,7 +119,7 @@
     display: flex;
     align-items: center;
     gap: .85rem;
-    padding: .75rem 1rem;
+    padding: 1.50rem 1rem;
     border-radius: var(--radius-sm);
     color: var(--sidebar-item-color);
     text-decoration: none;
@@ -137,7 +138,7 @@
 }
 
 .sidebar-item-text:hover {
-    color: var(--text-primary)
+    color: var(--text-tri)
 }
 
 .sidebar-item:hover .sidebar-item-icon {

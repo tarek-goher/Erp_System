@@ -1,5 +1,16 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import {
+  faAddressBook,
+  faBuilding,
+  faPenToSquare,
+  faPlus,
+  faSpinner,
+  faTrash,
+  faUser,
+  faUsers,
+} from '@fortawesome/free-solid-svg-icons'
 import ERPLayout from '../../components/layout/ERPLayout'
 import { api } from '../../lib/api'
 import { useToast } from '../../hooks/useToast'
@@ -73,13 +84,22 @@ export default function ContactsPage() {
     <ERPLayout pageTitle="جهات الاتصال">
       <ToastContainer toasts={toasts} remove={remove} />
       <div className="page-header">
-        <div><h1 className="page-title">📇 جهات الاتصال</h1><p className="page-subtitle">العملاء والموردون في مكان واحد</p></div>
-        <button className="btn btn-primary btn-sm" onClick={openAdd}>+ إضافة جهة اتصال</button>
+        <div>
+          <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <FontAwesomeIcon icon={faAddressBook} />
+            جهات الاتصال
+          </h1>
+          <p className="page-subtitle">العملاء والموردون في مكان واحد</p>
+        </div>
+        <button className="btn btn-primary btn-sm" onClick={openAdd}>
+          <FontAwesomeIcon icon={faPlus} />
+          إضافة جهة اتصال
+        </button>
       </div>
       <div className="grid-3" style={{marginBottom:'1.25rem'}}>
-        <StatCard icon="📇" label="إجمالي جهات الاتصال" value={contacts.length} />
-        <StatCard icon="👤" label="عملاء"  value={contacts.filter(c=>c.type==='customer').length} accent="var(--color-primary)" />
-        <StatCard icon="🏭" label="موردون" value={contacts.filter(c=>c.type==='supplier').length} accent="var(--color-secondary)" />
+        <StatCard icon={<FontAwesomeIcon icon={faAddressBook} />} label="إجمالي جهات الاتصال" value={contacts.length} />
+        <StatCard icon={<FontAwesomeIcon icon={faUser} />} label="عملاء"  value={contacts.filter(c=>c.type==='customer').length} accent="var(--color-primary)" />
+        <StatCard icon={<FontAwesomeIcon icon={faBuilding} />} label="موردون" value={contacts.filter(c=>c.type==='supplier').length} accent="var(--color-secondary)" />
       </div>
       <div style={{display:'flex',gap:8,marginBottom:'1rem',flexWrap:'wrap'}}>
         <SearchInput value={search} onChange={setSearch} placeholder="بحث بالاسم أو البريد..." />
@@ -93,7 +113,7 @@ export default function ContactsPage() {
         <div style={{display:'flex',flexDirection:'column',gap:10}}>
           {Array(6).fill(0).map((_,i) => <div key={i} className="skeleton" style={{height:52}} />)}
         </div>
-      ) : filtered.length===0 ? <EmptyState icon="📇" title="لا توجد جهات اتصال" /> : (
+      ) : filtered.length===0 ? <EmptyState icon={<FontAwesomeIcon icon={faUsers} />} title="لا توجد جهات اتصال" /> : (
         <div className="table-container">
           <table className="table">
             <thead><tr><th>الاسم</th><th>البريد الإلكتروني</th><th>الهاتف</th><th>الشركة</th><th>النوع</th><th>إجراءات</th></tr></thead>
@@ -114,8 +134,14 @@ export default function ContactsPage() {
                   <td><Badge color={c.type==='customer'?'info':'purple'}>{c.type==='customer'?'عميل':'مورد'}</Badge></td>
                   <td>
                     <div style={{display:'flex',gap:6}}>
-                      <button className="btn btn-secondary btn-sm" onClick={()=>openEdit(c)}>تعديل</button>
-                      <button className="btn btn-danger btn-sm" onClick={()=>setDeleteId(c.id)}>حذف</button>
+                      <button className="btn btn-secondary btn-sm" onClick={()=>openEdit(c)}>
+                        <FontAwesomeIcon icon={faPenToSquare} />
+                        تعديل
+                      </button>
+                      <button className="btn btn-danger btn-sm" onClick={()=>setDeleteId(c.id)}>
+                        <FontAwesomeIcon icon={faTrash} />
+                        حذف
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -126,7 +152,9 @@ export default function ContactsPage() {
       )}
       <Modal open={showAdd} onClose={()=>setShowAdd(false)} title={editItem?'تعديل جهة الاتصال':'إضافة جهة اتصال جديدة'} size="md"
         footer={<><button className="btn btn-secondary" onClick={()=>setShowAdd(false)}>إلغاء</button>
-          <button className="btn btn-primary" onClick={handleSave} disabled={saving}>{saving?'⏳...':'حفظ'}</button></>}>
+          <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+            {saving ? <><FontAwesomeIcon icon={faSpinner} spin />...</> : 'حفظ'}
+          </button></>}>
         <div className="form-grid form-grid-2">
           <div className="input-group"><label className="input-label">الاسم *</label>
             <input style={INP} value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} /></div>
